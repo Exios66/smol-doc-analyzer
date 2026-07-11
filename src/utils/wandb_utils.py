@@ -202,7 +202,8 @@ def start_run(
         "job_type": job_type,
         "config": config or {},
         "tags": list(dict.fromkeys([*resolved.tags, *(tags or ())])),
-        "reinit": True,
+        # Finish any prior run in this process so train→eval chaining is safe.
+        "reinit": "finish_previous",
     }
     if resolved.entity:
         init_kwargs["entity"] = resolved.entity
