@@ -10,6 +10,7 @@ def compact_analysis(result: dict[str, Any], *, max_memo_chars: int = 1200) -> d
     classification = result.get("classification") or {}
     extraction = result.get("extraction") or {}
     vision = result.get("vision") or {}
+    outcome = result.get("outcome") or {}
     summary = result.get("summary") or {}
     markdown = result.get("markdown") or {}
 
@@ -44,6 +45,13 @@ def compact_analysis(result: dict[str, Any], *, max_memo_chars: int = 1200) -> d
         or classification.get("label")
         or classification.get("predicted_label"),
         "classification_confidence": classification.get("confidence"),
+        "expected_outcome": result.get("expected_outcome")
+        or outcome.get("expected_outcome")
+        or outcome.get("outcome_label"),
+        "outcome_confidence": outcome.get("confidence"),
+        "outcome_description": outcome.get("description"),
+        "gold_outcome": outcome.get("gold_outcome"),
+        "outcome_correct": outcome.get("correct"),
         "fields": fields,
         "memo": memo,
         "flags": result.get("flags") or [],
@@ -65,6 +73,17 @@ def format_discord_summary(compact: dict[str, Any]) -> str:
     if compact.get("claim_id") or compact.get("record_id"):
         rid = compact.get("claim_id") or compact.get("record_id")
         lines.append(f"**Record:** `{rid}`")
+
+    outcome = compact.get("expected_outcome")
+    if outcome:
+        oconf = compact.get("outcome_confidence")
+        oconf_s = f" ({float(oconf):.0%})" if isinstance(oconf, (int, float)) else ""
+        lines.append(f"**Predicted outcome:** `{outcome}`{oconf_s}")
+        if compact.get("outcome_description"):
+            lines.append(f"-# {compact['outcome_description']}")
+        if compact.get("gold_outcome") is not None:
+            mark = "✓" if compact.get("outcome_correct") else "✗"
+            lines.append(f"**Gold outcome:** `{compact['gold_outcome']}` {mark}")
 
     fields = compact.get("fields") or {}
     if fields:

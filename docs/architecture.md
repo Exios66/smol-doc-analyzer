@@ -10,7 +10,8 @@ execute chronologically; each stage reacts to prior stage outputs:
 2. **Classification** — DeBERTa-v3 encoder (heuristic fallback) maps document text → taxonomy label; optionally a **ViT** image classifier maps rendered page images → the same taxonomy
 3. **Extraction** — LayoutLMv3 / token classifier (heuristic fallback) pulls structured fields; conditioned on the predicted document type
 4. **Vision LLM refine** — markdown-first local multimodal/text model (default target: Qwen2-VL class) corrects fields using classify+extract context; optional page image via `VISION_LLM_USE_IMAGE=1`
-5. **Summarization** — generative LLM or template memo grounded in upstream markdown + payloads (not ground-truth skeletons)
+5. **Predict outcome** — deterministic claim-disposition prediction (`pay_full` / `pay_partial` / `deny` / `investigate` / `close_without_payment`) from extracted features; gold `expected_outcome` on synthetic skeletons enables accuracy tracking alongside classification / extraction metrics
+6. **Summarization** — generative LLM or template memo grounded in upstream markdown + payloads + predicted outcome (not ground-truth skeletons)
 
 Entry points:
 
@@ -70,7 +71,7 @@ which runs the same chronological pipeline as the CLI. See
 Public corpora → profiles → skeletons → documents (+ noisy) → classifier (text and/or ViT on renders) / extractor
                                          └→ memos (Phase 4 training targets)
 
-Inbound PNG/PDF/text → to_markdown → classify → extract → vision_llm → summarize
+Inbound PNG/PDF/text → to_markdown → classify → extract → vision_llm → predict_outcome → summarize
                               ↓
                      structured markdown (LLM context)
 ```
@@ -86,6 +87,7 @@ reorders by name. Each stage receives an accumulating `AnalysisContext`:
 | classify | markdown plain_text (preferred) | `classification.document_type`, confidence |
 | extract | markdown + classification | `extraction.fields*`, optional page render |
 | vision_llm | markdown (+ optional image) + classify + extract | `vision.refined_fields` (merged into extraction) |
+| predict_outcome | extraction (+ vision refine) + text cues | `outcome.expected_outcome`, confidence, optional gold compare |
 | summarize | markdown + all prior payloads | `summary.memo` |
 
 Low-confidence stages append flags (`low_confidence_classification`, etc.)

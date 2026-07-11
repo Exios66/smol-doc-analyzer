@@ -12,6 +12,7 @@ import yaml
 
 from src.extraction.render_forms import FIELD_PATTERNS, label_words, render_page
 from src.pipeline.markdown_convert import approx_token_count, convert_to_markdown
+from src.pipeline.outcome import OUTCOME_LABELS, predict_outcome
 from src.pipeline.types import AnalysisContext, StageResult
 from src.utils.config import Config
 from src.utils.io import read_json
@@ -671,9 +672,79 @@ def _parse_json_object(text: str) -> dict[str, Any]:
 
 
 @dataclass
+class PredictOutcomeStage:
+    """
+    Predict expected claim disposition from upstream classify/extract/vision features.
+
+    Gold `expected_outcome` on synthetic skeletons uses the same deterministic rule,
+    so outcome accuracy is a predictive tracking metric alongside classification /
+    extraction reports.
+    """
+
+    cfg: Config
+    order: int = 4
+    name: str = "predict_outcome"
+
+    def run(self, ctx: AnalysisContext) -> StageResult:
+        flags: list[str] = []
+        try:
+            flat = dict((ctx.extraction or {}).get("fields_flat") or {})
+            if ctx.vision and ctx.vision.get("refined_fields"):
+                flat.update({k: v for k, v in ctx.vision["refined_fields"].items() if v})
+
+            meta = ctx.document.metadata or {}
+            skeleton = meta.get("skeleton") if isinstance(meta.get("skeleton"), dict) else None
+            if skeleton is None and isinstance(meta.get("expected_outcome"), str):
+                skeleton = {"expected_outcome": meta["expected_outcome"]}
+
+            # Prefer narrative complexity from metadata/skeleton when present.
+            complexity = None
+            if skeleton:
+                complexity = skeleton.get("narrative_complexity")
+            complexity = complexity or meta.get("narrative_complexity")
+
+            prediction = predict_outcome(
+                fields=flat,
+                document_type=(ctx.classification or {}).get("document_type"),
+                text=ctx.content_for_encoder(),
+                narrative_complexity=complexity if isinstance(complexity, str) else None,
+                gold_skeleton=skeleton,
+            )
+
+            confidence = float(prediction.get("confidence") or 0.0)
+            if confidence < LOW_CONFIDENCE:
+                flags.append("low_confidence_outcome")
+            if prediction.get("features", {}).get("estimated_damage") is None:
+                flags.append("outcome_missing_damage")
+            if prediction.get("gold_outcome") is not None and not prediction.get("correct"):
+                flags.append("outcome_mismatch_vs_gold")
+
+            return StageResult(
+                stage=self.name,
+                order=self.order,
+                ok=True,
+                confidence=confidence,
+                flags=flags,
+                payload=prediction,
+            )
+        except Exception as exc:
+            logger.exception("PredictOutcome stage failed")
+            return StageResult(
+                stage=self.name,
+                order=self.order,
+                ok=False,
+                confidence=0.0,
+                flags=["predict_outcome_failed"],
+                error=str(exc),
+                payload={"label_set": list(OUTCOME_LABELS)},
+            )
+
+
+@dataclass
 class SummarizeStage:
     """
-    Memo generation — reacts to markdown, classification, extraction, and vision.
+    Memo generation — reacts to markdown, classification, extraction, vision,
+    and predicted claim outcome.
 
     Uses a local generative model when configured; otherwise a deterministic
     template grounded only in upstream stage payloads (no skeleton peeking).
@@ -681,7 +752,7 @@ class SummarizeStage:
     """
 
     cfg: Config
-    order: int = 4
+    order: int = 5
     name: str = "summarize"
     _model: Any = None
     _tokenizer: Any = None
@@ -717,6 +788,7 @@ class SummarizeStage:
         clf = ctx.classification or {}
         ext = ctx.extraction or {}
         vision = ctx.vision or {}
+        outcome = ctx.outcome or {}
         md_meta = ctx.markdown or {}
         flat = dict(ext.get("fields_flat") or {})
         if vision.get("refined_fields"):
@@ -735,6 +807,13 @@ class SummarizeStage:
         coverage = flat.get("coverage_type") or "unspecified coverage"
         state = flat.get("state") or ""
         doc_type = clf.get("document_type") or "unknown"
+        predicted = (
+            outcome.get("expected_outcome")
+            or outcome.get("outcome_label")
+            or "unspecified"
+        )
+        outcome_conf = outcome.get("confidence", "n/a")
+        outcome_desc = outcome.get("description") or ""
 
         flags = list(dict.fromkeys(ctx.flags))
         review = "Yes — low-confidence upstream stage(s)" if any(
@@ -762,6 +841,9 @@ class SummarizeStage:
                 f"- Source classification confidence: {clf.get('confidence', 'n/a')}",
                 f"- Extraction backend: {ext.get('backend', 'n/a')}",
                 f"- Vision backend: {(vision or {}).get('backend', 'skipped')}",
+                f"- Predicted claim outcome: `{predicted}` "
+                f"(confidence {outcome_conf})"
+                + (f" — {outcome_desc}" if outcome_desc else ""),
                 f"- Markdown backend: {md_meta.get('backend', 'n/a')} "
                 f"(~{md_meta.get('approx_tokens', 'n/a')} tokens; "
                 f"saved ≈{md_meta.get('token_saved_est', 'n/a')})",
@@ -770,8 +852,8 @@ class SummarizeStage:
                 "Issue: whether coverage appears supported by extracted claim facts. "
                 "Rule: coverage turns on the policy declarations, conditions, and applicable exclusions. "
                 f"Application: extracted fields from the inbound document at {location}. "
-                "Conclusion: proceed with investigation and reserve adequacy review pending human confirmation "
-                "of low-confidence fields.",
+                f"Conclusion: predicted disposition `{predicted}`; proceed with investigation "
+                "and reserve adequacy review pending human confirmation of low-confidence fields.",
                 "",
                 "Next Steps",
                 "- Confirm coverage grant/denial points in writing",
@@ -814,6 +896,8 @@ class SummarizeStage:
                 flags.append("summarize_missing_classification")
             if ctx.extraction is None:
                 flags.append("summarize_missing_extraction")
+            if ctx.outcome is None:
+                flags.append("summarize_missing_outcome")
 
             if self._backend == "transformers":
                 try:

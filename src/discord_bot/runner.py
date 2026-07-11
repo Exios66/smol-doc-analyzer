@@ -61,9 +61,8 @@ def _overlay_secrets(raw: dict) -> dict:
                 ("google-gla:", "google-vertex:", "openai:", "anthropic:", "xai:", "groq:")
             ) and "/" not in model.split(":", 1)[-1]
             if chloride_native or not model:
-                data["AI_MODEL_NAME"] = os.getenv(
-                    "DISCORD_AI_MODEL", "anthropic/claude-sonnet-4.5"
-                )
+                override = os.getenv("DISCORD_AI_MODEL", "").strip()
+                data["AI_MODEL_NAME"] = override or "anthropic/claude-sonnet-4.5"
 
     return data
 

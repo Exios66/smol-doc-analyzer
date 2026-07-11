@@ -36,6 +36,12 @@ def test_compact_analysis_and_discord_summary():
         "classification": {"document_type": "loss_notice", "confidence": 0.91},
         "extraction": {"fields": {"claim_number": "CLM-1", "date_of_loss": "2024-01-15"}},
         "vision": {"refined_fields": {"loss_type": "collision"}},
+        "outcome": {
+            "expected_outcome": "pay_partial",
+            "confidence": 0.72,
+            "description": "Settle for less than claimed",
+        },
+        "expected_outcome": "pay_partial",
         "summary": {"memo": "Short memo about the loss."},
         "memo": "Short memo about the loss.",
         "flags": ["low_confidence_extract"],
@@ -55,12 +61,14 @@ def test_compact_analysis_and_discord_summary():
     assert compact["document_type"] == "loss_notice"
     assert compact["fields"]["claim_number"] == "CLM-1"
     assert compact["fields"]["loss_type"] == "collision"
+    assert compact["expected_outcome"] == "pay_partial"
     assert compact["memo"] == "Short memo about the loss."
 
     text = format_discord_summary(compact)
     assert "## Document analysis" in text
     assert "loss_notice" in text
     assert "CLM-1" in text
+    assert "pay_partial" in text
     assert "Short memo" in text
     assert "low_confidence_extract" in text
 
@@ -69,6 +77,7 @@ def test_overlay_secrets_fills_placeholders(monkeypatch):
     monkeypatch.setenv("DISCORD_TOKEN", "discord-test-token")
     monkeypatch.setenv("OPENROUTER_API_KEY", "or-test-key")
     monkeypatch.setenv("DISCORD_USE_OPENROUTER", "1")
+    monkeypatch.delenv("DISCORD_AI_MODEL", raising=False)
     raw = {
         "DISCORD_TOKEN": "Paste your Discord token here.",
         "AI_API_KEY": "Put your API key here.",

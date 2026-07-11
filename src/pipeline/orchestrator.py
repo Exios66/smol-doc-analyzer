@@ -2,7 +2,7 @@
 Chronological document-analysis orchestrator.
 
 One analyze action chains every initiated stage in initiation order:
-  to_markdown → classify → extract → vision_llm → summarize
+  to_markdown → classify → extract → vision_llm → predict_outcome → summarize
 
 PNG/PDF (and plain text) are converted to structured markdown first so
 downstream LLM stages consume compact, layout-aware context instead of
@@ -23,6 +23,7 @@ from src.pipeline.stages import (
     ExtractStage,
     MarkdownConvertStage,
     PipelineStage,
+    PredictOutcomeStage,
     SummarizeStage,
     VisionLLMStage,
 )
@@ -60,7 +61,8 @@ class DocumentAnalysisOrchestrator:
                 ClassifyStage(cfg=self.cfg, model_dir=classifier_dir, order=1),
                 ExtractStage(cfg=self.cfg, model_dir=extractor_dir, order=2),
                 VisionLLMStage(cfg=self.cfg, order=3, enabled=vision_enabled),
-                SummarizeStage(cfg=self.cfg, order=4),
+                PredictOutcomeStage(cfg=self.cfg, order=4),
+                SummarizeStage(cfg=self.cfg, order=5),
             ]
         # Preserve initiation order; do not re-sort by name.
         self.stages.sort(key=lambda s: s.order)
@@ -199,7 +201,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Run the full document-analysis chain in one action: "
-            "to_markdown → classify → extract → vision_llm → summarize"
+            "to_markdown → classify → extract → vision_llm → predict_outcome → summarize"
         )
     )
     parser.add_argument(

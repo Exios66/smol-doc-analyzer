@@ -131,7 +131,17 @@ Details: [discord/smol-doc-analyzer/README.md](discord/smol-doc-analyzer/README.
 
 ## Evaluation
 
-Reports land in `evaluation/reports/` (`classification_report.*`, `vit_classification_report.*`, `extraction_report.json`, `failure_modes.md`).
+Reports land in `evaluation/reports/` (`classification_report.*`, `vit_classification_report.*`, `extraction_report.json`, `outcome_prediction_report.*`, `failure_modes.md`).
+
+Claim **outcome prediction** accuracy is a complementary metric to classification / extraction:
+
+```bash
+python -m src.pipeline.eval_outcome \
+  --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl \
+  --no-wandb --limit 50
+```
+
+Gold `expected_outcome` is written on synthetic skeletons and scored against the `predict_outcome` pipeline stage.
 
 ## Experiment tracking (Weights & Biases)
 

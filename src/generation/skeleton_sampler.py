@@ -17,6 +17,7 @@ import yaml
 from src.utils.config import Config
 from src.utils.io import read_json, write_json, write_jsonl
 from src.utils.provenance import ProvenanceRecord, log_provenance
+from src.pipeline.outcome import derive_expected_outcome, features_from_skeleton
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,7 @@ def sample_skeleton(
         "multi_doc_group_id": multi_doc_group_id,
         "target_outputs": {"document_text": None, "memo_text": None},
     }
+    skeleton["expected_outcome"] = derive_expected_outcome(features_from_skeleton(skeleton))
     return skeleton
 
 

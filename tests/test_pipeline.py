@@ -103,21 +103,24 @@ def test_analyze_single_chains_stages_in_order():
         "classify",
         "extract",
         "vision_llm",
+        "predict_outcome",
         "summarize",
     ]
-    assert [s["order"] for s in result["stages"]] == [0, 1, 2, 3, 4]
+    assert [s["order"] for s in result["stages"]] == [0, 1, 2, 3, 4, 5]
     assert all(s["ok"] for s in result["stages"])
     assert result["markdown"]["markdown"]
     assert "| Field | Value |" in result["markdown"]["markdown"]
     assert result["classification"]["document_type"] == "loss_notice"
     assert result["extraction"]["fields_flat"].get("date_of_loss")
+    assert result["expected_outcome"]
     assert result["memo"] and "ADJUSTER MEMO" in result["memo"]
-    # Summarize must react to prior stages including markdown
+    # Summarize must react to prior stages including markdown + outcome
     grounded = result["summary"]["grounded_in"]
     assert "to_markdown" in grounded
     assert "classify" in grounded
     assert "extract" in grounded
     assert "vision_llm" in grounded
+    assert "predict_outcome" in grounded
     assert result["summary"]["input_from"] == "markdown"
     assert result["vision"]["llm_input_mode"] == "markdown"
 
@@ -174,6 +177,7 @@ def test_vision_skipped_when_disabled():
         "classify",
         "extract",
         "vision_llm",
+        "predict_outcome",
         "summarize",
     ]
     ctx = orch.analyze(AnalysisDocument.from_row(load_jsonl(FIXTURES)[0]))
@@ -199,14 +203,17 @@ def test_batch_runner_writes_review_queue(tmp_path: Path):
         "classify",
         "extract",
         "vision_llm",
+        "predict_outcome",
         "summarize",
     ]
     results = load_jsonl(tmp_path / "batch" / "batch_results.jsonl")
     assert len(results) == 3
     assert all(r.get("memo") for r in results)
+    assert all(r.get("expected_outcome") for r in results)
     assert all((r.get("markdown") or {}).get("markdown") for r in results)
     assert (tmp_path / "batch" / "human_review_queue.jsonl").exists()
     assert (tmp_path / "batch" / "batch_summary.json").exists()
+    assert "outcome_metrics" in summary
 
 
 def test_extraction_reacts_to_classification():

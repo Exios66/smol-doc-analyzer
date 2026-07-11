@@ -57,6 +57,7 @@
     "ambiguous": 0.22,
     "fraud_flagged": 0.08
   },
+  "expected_outcome_notes": "Gold expected_outcome is derived deterministically from narrative_complexity + financials + injuries (see src/pipeline/outcome.py). Tracked in evaluation/reports/outcome_prediction_report.*",
   "police_report_rate": 0.42,
   "injuries_reported_rate": 0.18,
   "acord_form_by_document_type": {
