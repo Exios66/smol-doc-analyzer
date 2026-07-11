@@ -143,6 +143,11 @@ def train(
                 "labels": torch.tensor(labels, dtype=torch.long),
             }
 
+        total_steps_hint = max_steps if max_steps is not None and max_steps > 0 else max(
+            1, int(len(train_ds) / max(1, (8 if not smoke else 2)) * epochs)
+        )
+        warmup_steps = max(1, int(0.1 * total_steps_hint)) if not smoke else 0
+
         args = TrainingArguments(
             output_dir=str(out / "checkpoints"),
             learning_rate=2e-4 if not smoke else 5e-4,
@@ -158,7 +163,7 @@ def train(
             report_to=wb.report_to,
             run_name=run_name,
             seed=42,
-            warmup_ratio=0.1,
+            warmup_steps=warmup_steps,
         )
         trainer = Trainer(
             model=model,

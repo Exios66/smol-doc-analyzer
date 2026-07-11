@@ -1,0 +1,19 @@
+{
+  "train": 28,
+  "val": 6,
+  "test": 6,
+  "labels": [
+    "application_commercial",
+    "application_personal",
+    "certificate_evidence",
+    "loss_notice",
+    "claims_correspondence",
+    "policy_change_endorsement",
+    "repair_estimate",
+    "supporting_evidence"
+  ],
+  "skipped": 0,
+  "source": "data/synthetic/documents/rendered_vit_smoke/rendered.jsonl",
+  "modality": "image",
+  "model_family": "vit"
+}
