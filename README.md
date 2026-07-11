@@ -1,0 +1,1 @@
+# smol-doc-analyzer
