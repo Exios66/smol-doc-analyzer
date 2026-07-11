@@ -9,12 +9,48 @@ from src.utils.provenance import ProvenanceRecord, log_provenance, read_provenan
 
 def test_config_load_defaults(tmp_path, monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("WANDB_API_KEY", raising=False)
+    monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.setenv("SKELETON_OUTPUT_DIR", str(tmp_path / "skeletons"))
     cfg = Config.load()
     assert cfg.taxonomy_path == REPO_ROOT / "taxonomy" / "acord_form_categories.yaml"
     assert cfg.claim_schema_path.exists()
     assert cfg.skeleton_output_dir == tmp_path / "skeletons"
     assert cfg.profiles_dir.name == "profiles"
+
+
+def test_placeholder_secrets_treated_as_unset(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-v1-your-key-here")
+    monkeypatch.setenv("WANDB_API_KEY", "changeme")
+    cfg = Config.load()
+    assert cfg.openrouter_api_key == ""
+    assert cfg.wandb_api_key == ""
+
+
+def test_dotenv_loads_secrets(tmp_path, monkeypatch):
+    from src.utils import config as config_mod
+
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "OPENROUTER_API_KEY=sk-or-v1-test-secret\nWANDB_API_KEY=wandb-test-secret\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config_mod, "REPO_ROOT", tmp_path)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("WANDB_API_KEY", raising=False)
+    # Real process env must not already carry these
+    cfg = config_mod.Config.load()
+    assert cfg.openrouter_api_key == "sk-or-v1-test-secret"
+    assert cfg.wandb_api_key == "wandb-test-secret"
+
+
+def test_secrets_status_never_leaks_values(monkeypatch):
+    from src.utils.config import secrets_status
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-v1-real-looking")
+    status = secrets_status()
+    assert status["OPENROUTER_API_KEY"] is True
+    assert "sk-or" not in str(status)
 
 
 def test_provenance_roundtrip(tmp_path):
