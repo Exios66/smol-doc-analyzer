@@ -1,4 +1,4 @@
-"""Project configuration loaded from environment variables."""
+"""Project configuration loaded from environment variables and optional `.env`."""
 
 from __future__ import annotations
 
@@ -7,6 +7,42 @@ from dataclasses import dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# Values that look set but are only documentation placeholders.
+_PLACEHOLDER_SECRETS = {
+    "",
+    "sk-or-v1-your-key-here",
+    "your-key-here",
+    "changeme",
+    "replace-me",
+    "<your-openrouter-api-key>",
+    "<your-wandb-api-key>",
+    "<your-hf-token>",
+}
+
+
+def _load_dotenv() -> Path | None:
+    """Load repo-root `.env` into os.environ without overriding real env vars."""
+    env_path = REPO_ROOT / ".env"
+    if not env_path.exists():
+        return None
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        # Fallback parser so a missing optional install still works in a pinch.
+        for raw in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip("'").strip('"')
+            if key and key not in os.environ:
+                os.environ[key] = value
+        return env_path
+
+    load_dotenv(env_path, override=False)
+    return env_path
 
 
 def _path(env_key: str, default: str) -> Path:
@@ -22,6 +58,30 @@ def _bool(env_key: str, default: bool = False) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _secret(env_key: str, default: str = "") -> str:
+    """Read a secret env var; treat documentation placeholders as unset."""
+    raw = os.getenv(env_key, default)
+    if raw is None:
+        return ""
+    value = raw.strip()
+    if value.lower() in {p.lower() for p in _PLACEHOLDER_SECRETS}:
+        return ""
+    return value
+
+
+def secrets_status() -> dict[str, bool]:
+    """Return whether each known secret is present (never returns the values)."""
+    _load_dotenv()
+    return {
+        "OPENROUTER_API_KEY": bool(_secret("OPENROUTER_API_KEY")),
+        "WANDB_API_KEY": bool(_secret("WANDB_API_KEY")),
+        "HF_TOKEN": bool(_secret("HF_TOKEN") or _secret("HUGGING_FACE_HUB_TOKEN")),
+        "VISION_LLM_MODEL_PATH": bool(os.getenv("VISION_LLM_MODEL_PATH", "").strip()),
+        "SUMMARIZER_MODEL_PATH": bool(os.getenv("SUMMARIZER_MODEL_PATH", "").strip()),
+        "dotenv_file": (REPO_ROOT / ".env").exists(),
+    }
 
 
 @dataclass(frozen=True)
@@ -62,12 +122,28 @@ class Config:
     wandb_mode: str
     wandb_api_key: str
 
+    # Optional Hugging Face Hub token (model/dataset downloads)
+    hf_token: str
+
     @classmethod
     def load(cls) -> "Config":
+        _load_dotenv()
+
         vision_path = os.getenv("VISION_LLM_MODEL_PATH", "").strip()
         summarizer_path = os.getenv("SUMMARIZER_MODEL_PATH", "").strip()
+        openrouter_key = _secret("OPENROUTER_API_KEY")
+        wandb_key = _secret("WANDB_API_KEY")
+        hf_token = _secret("HF_TOKEN") or _secret("HUGGING_FACE_HUB_TOKEN")
+
+        # Propagate secrets so third-party SDKs (wandb, huggingface_hub) see them.
+        if wandb_key and not os.getenv("WANDB_API_KEY"):
+            os.environ["WANDB_API_KEY"] = wandb_key
+        if hf_token:
+            os.environ.setdefault("HF_TOKEN", hf_token)
+            os.environ.setdefault("HUGGING_FACE_HUB_TOKEN", hf_token)
+
         return cls(
-            openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
+            openrouter_api_key=openrouter_key,
             generation_model=os.getenv("GENERATION_MODEL", "anthropic/claude-sonnet-4.5"),
             max_concurrency=int(os.getenv("GENERATION_MAX_CONCURRENCY", "4")),
             max_retries=int(os.getenv("GENERATION_MAX_RETRIES", "5")),
@@ -101,5 +177,6 @@ class Config:
             wandb_project=os.getenv("WANDB_PROJECT", "smol-doc-analyzer"),
             wandb_entity=os.getenv("WANDB_ENTITY", ""),
             wandb_mode=os.getenv("WANDB_MODE", "online"),
-            wandb_api_key=os.getenv("WANDB_API_KEY", ""),
+            wandb_api_key=wandb_key,
+            hf_token=hf_token,
         )

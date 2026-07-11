@@ -46,6 +46,14 @@ Every synthetic record is logged in `data/provenance_log.jsonl` with its generat
 # install
 pip install -e ".[dev]"
 
+# create local secrets file (gitignored) — paste keys into .env
+python scripts/setup_env.py
+# then edit .env:
+#   OPENROUTER_API_KEY=...   # https://openrouter.ai/keys
+#   WANDB_API_KEY=...        # https://wandb.ai/authorize
+#   HF_TOKEN=...             # optional, https://huggingface.co/settings/tokens
+python scripts/setup_env.py --status   # confirms which secrets are set (never prints values)
+
 # refresh profiles (optional Hub ingest: add --ingest)
 python -m src.generation.run_seed_pipeline --n 240
 
@@ -96,6 +104,10 @@ On high-RAM local hosts, point `VISION_LLM_MODEL_PATH` at a downloaded Qwen2-VL
 (or similar) checkpoint and set `VISION_LLM_LOAD=1` to refine extraction from
 page images inside the same chain.
 
+On high-RAM local hosts, point `VISION_LLM_MODEL_PATH` at a downloaded Qwen2-VL
+(or similar) checkpoint and set `VISION_LLM_LOAD=1` to refine extraction from
+page images inside the same chain.
+
 ## Repository structure
 
 See [docs/architecture.md](docs/architecture.md).
@@ -137,7 +149,7 @@ Training, evaluation, and the seed generation pipeline log to [Weights & Biases]
 
 ```bash
 # copy env and set your key (https://wandb.ai/authorize)
-cp .env.example .env
+python scripts/setup_env.py
 # WANDB_API_KEY=...  WANDB_PROJECT=smol-doc-analyzer
 
 # offline / no key still works (local wandb/ cache)
