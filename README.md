@@ -22,7 +22,8 @@ Phases 0–3 and Phase 5 (chained inference orchestrator) implemented:
 - Synthetic skeleton → document → memo → OCR-noise pipeline (template fallback; optional OpenRouter LLM)
 - Document-type classifier train/eval
 - Field extraction train/eval with noisy stress reporting
-- **Single-action analysis chain**: classify → extract → vision_llm → summarize (`src/pipeline/`)
+- **Single-action analysis chain**: to_markdown → classify → extract → vision_llm → summarize (`src/pipeline/`)
+- PNG/PDF → structured markdown before LLM stages (token + context optimization)
 
 Phase 4 (fine-tuned summarizer LoRA) still pending — the chain currently uses a
 template memo grounded in upstream extraction/vision outputs, with a hook for a
@@ -60,10 +61,14 @@ python -m src.extraction.train_extractor --prepared data/synthetic/documents/ren
 python -m src.extraction.eval --model-dir models/extractor_smoke --prepared data/synthetic/documents/rendered/extraction_prepared
 
 # --- one action: full document analysis chain ---
+# PNG/PDF are converted to structured markdown before LLM stages (token-efficient).
 python -m src.pipeline.orchestrator \
   --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl \
   --out data/pipeline/analysis.jsonl \
   --vision --limit 20
+
+python -m src.pipeline.orchestrator --image path/to/scan.png --vision
+python -m src.pipeline.orchestrator --pdf path/to/claim.pdf --vision
 
 python -m src.pipeline.batch_runner \
   --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl \

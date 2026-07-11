@@ -126,7 +126,7 @@ def _count_flags(results: list[dict[str, Any]]) -> dict[str, int]:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(
-        description="Batch-run the chained classify→extract→vision→summarize pipeline"
+        description="Batch-run the chained to_markdown→classify→extract→vision→summarize pipeline"
     )
     parser.add_argument("--in", dest="inp", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, default=None)

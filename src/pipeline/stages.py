@@ -11,6 +11,7 @@ from typing import Any, Protocol
 import yaml
 
 from src.extraction.render_forms import FIELD_PATTERNS, label_words, render_page
+from src.pipeline.markdown_convert import approx_token_count, convert_to_markdown
 from src.pipeline.types import AnalysisContext, StageResult
 from src.utils.config import Config
 from src.utils.io import read_json
@@ -64,12 +65,92 @@ def _heuristic_classify(text: str, labels: list[str]) -> tuple[str, float]:
 
 
 @dataclass
+class MarkdownConvertStage:
+    """
+    First stage: PNG / PDF / text → compact structured markdown.
+
+    Downstream LLM stages consume this markdown instead of raw page images,
+    cutting vision/token cost while preserving headings and field structure.
+    """
+
+    cfg: Config
+    order: int = 0
+    name: str = "to_markdown"
+
+    def run(self, ctx: AnalysisContext) -> StageResult:
+        flags: list[str] = []
+        try:
+            # Persist converted markdown under pipeline cache for inspection / reuse
+            cache_dir = self.cfg.pipeline_cache_dir / "markdown"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            safe_id = ctx.document.record_id.replace("::", "__").replace("/", "_")
+
+            conversion = convert_to_markdown(
+                text=ctx.document.text or None,
+                image_path=ctx.document.image_path,
+                pdf_path=ctx.document.pdf_path,
+                source_path=ctx.document.source_path,
+            )
+            md_path = cache_dir / f"{safe_id}.md"
+            md_path.write_text(conversion.markdown, encoding="utf-8")
+
+            raw_chars = len(ctx.document.text or "")
+            raw_tokens = approx_token_count(ctx.document.text or "")
+            # Rough image-token stand-in: a page image often costs ~1k–2k+ vision tokens
+            image_token_proxy = 1600 if (ctx.document.image_path or ctx.document.pdf_path) else 0
+            baseline_tokens = max(raw_tokens, image_token_proxy)
+            saved = max(0, baseline_tokens - conversion.approx_tokens)
+
+            if conversion.source_kind in {"png", "pdf", "image"}:
+                flags.append(f"markdown_from_{conversion.source_kind}")
+            if conversion.backend in {"failed", "empty", "none", "pytesseract_failed"}:
+                flags.append("low_confidence_markdown")
+            if not conversion.plain_text.strip() and not conversion.markdown.strip():
+                flags.append("markdown_empty")
+
+            confidence = 0.9
+            if conversion.source_kind == "empty":
+                confidence = 0.1
+            elif conversion.backend.endswith("failed") or conversion.backend == "none":
+                confidence = 0.35
+            elif conversion.extras and conversion.extras.get("used_fallback_text"):
+                confidence = 0.7
+                flags.append("markdown_image_fallback_text")
+
+            payload = conversion.to_dict()
+            payload["markdown_path"] = str(md_path)
+            payload["token_baseline"] = baseline_tokens
+            payload["token_saved_est"] = saved
+            payload["fed_to_llm_as"] = "markdown"
+
+            return StageResult(
+                stage=self.name,
+                order=self.order,
+                ok=True,
+                confidence=confidence,
+                flags=flags,
+                payload=payload,
+            )
+        except Exception as exc:
+            logger.exception("Markdown conversion failed")
+            return StageResult(
+                stage=self.name,
+                order=self.order,
+                ok=False,
+                confidence=0.0,
+                flags=["markdown_failed"],
+                error=str(exc),
+                payload={},
+            )
+
+
+@dataclass
 class ClassifyStage:
     """Document-type classification (DeBERTa / DistilBERT, with heuristic fallback)."""
 
     cfg: Config
     model_dir: Path | None = None
-    order: int = 0
+    order: int = 1
     name: str = "classify"
     _model: Any = None
     _tokenizer: Any = None
@@ -107,11 +188,12 @@ class ClassifyStage:
         self._ensure_loaded()
         labels = _taxonomy_labels(self.cfg)
         flags: list[str] = []
+        text = ctx.content_for_encoder()
         try:
             if self._backend == "transformers":
                 assert self._model is not None and self._tokenizer is not None
                 inputs = self._tokenizer(
-                    ctx.document.text,
+                    text,
                     return_tensors="pt",
                     truncation=True,
                     max_length=512,
@@ -124,7 +206,7 @@ class ClassifyStage:
                 label = self._id2label.get(pred_id, labels[0])
                 backend = "transformers"
             else:
-                label, confidence = _heuristic_classify(ctx.document.text, labels)
+                label, confidence = _heuristic_classify(text, labels)
                 backend = "heuristic"
                 flags.append("classify_heuristic")
 
@@ -141,6 +223,7 @@ class ClassifyStage:
                     "document_type": label,
                     "confidence": confidence,
                     "backend": backend,
+                    "input_from": "markdown" if ctx.markdown else "text",
                     "model_dir": str(self.model_dir) if self.model_dir else None,
                 },
             )
@@ -158,7 +241,7 @@ class ClassifyStage:
 
 
 def _heuristic_extract(text: str) -> dict[str, list[str]]:
-    """Regex / prefix extraction aligned with FIELD_PATTERNS."""
+    """Regex / prefix extraction aligned with FIELD_PATTERNS (+ markdown tables)."""
     fields: dict[str, list[str]] = {}
     for field, prefix in FIELD_PATTERNS:
         # Match "Prefix: value" on a line
@@ -169,6 +252,27 @@ def _heuristic_extract(text: str) -> dict[str, list[str]]:
                 value = m.group(1).strip()
                 if value:
                     fields.setdefault(field, []).append(value)
+
+    # Markdown table rows: | **Date Of Loss** | 2023-02-17 |
+    table_pat = re.compile(
+        r"^\|\s*\*?\*?([^*\n|]+?)\*?\*?\s*\|\s*(.*?)\s*\|$",
+        re.MULTILINE,
+    )
+    label_to_field = {
+        field.replace("_", " ").lower(): field for field, _ in FIELD_PATTERNS
+    }
+    for prefix, field in ((p, f) for f, p in FIELD_PATTERNS):
+        label_to_field[prefix.rstrip(":").lower()] = field
+        label_to_field[field.lower()] = field
+
+    for match in table_pat.finditer(text):
+        label = match.group(1).strip().lower()
+        value = match.group(2).strip()
+        if label in {"field", "---"} or not value or value == "---":
+            continue
+        field = label_to_field.get(label)
+        if field and value:
+            fields.setdefault(field, []).append(value)
     return fields
 
 
@@ -184,7 +288,7 @@ class ExtractStage:
 
     cfg: Config
     model_dir: Path | None = None
-    order: int = 1
+    order: int = 2
     name: str = "extract"
     render_image: bool = True
     _model: Any = None
@@ -246,12 +350,15 @@ class ExtractStage:
         self._ensure_loaded()
         flags: list[str] = []
         doc_type = (ctx.classification or {}).get("document_type") or ctx.document.document_type_hint
+        source_text = ctx.content_for_encoder() or ctx.document.text
+        # Prefer markdown for heuristic field tables when available
+        md_text = ctx.content_for_llm() if ctx.markdown else source_text
         try:
             # Ensure an image exists for layout / vision stages when we only have text.
             image_path = ctx.document.image_path
             words_meta: list[dict[str, Any]] = []
-            if self.render_image and not image_path and ctx.document.text:
-                img, words_meta = render_page(ctx.document.text)
+            if self.render_image and not image_path and source_text:
+                img, words_meta = render_page(source_text)
                 out_dir = self.cfg.pipeline_cache_dir / "renders"
                 out_dir.mkdir(parents=True, exist_ok=True)
                 safe_id = ctx.document.record_id.replace("::", "__").replace("/", "_")
@@ -261,20 +368,20 @@ class ExtractStage:
                 labeled = label_words(words_meta)
                 tokens = [w["text"] for w in labeled]
             else:
-                tokens = ctx.document.text.split()
+                tokens = source_text.split()
 
             if self._backend == "transformers" and tokens:
                 fields = self._model_extract(tokens)
                 backend = "transformers"
                 # Fill gaps with heuristics so sparse smoke models still yield usable fields
-                heuristic = _heuristic_extract(ctx.document.text)
+                heuristic = _heuristic_extract(md_text)
                 for k, v in heuristic.items():
                     if k not in fields or not fields[k]:
                         fields[k] = v
                         flags.append(f"extract_heuristic_fill:{k}")
                 confidence = 0.7 if fields else 0.3
             else:
-                fields = _heuristic_extract(ctx.document.text)
+                fields = _heuristic_extract(md_text)
                 backend = "heuristic"
                 flags.append("extract_heuristic")
                 confidence = 0.65 if fields else 0.25
@@ -301,6 +408,7 @@ class ExtractStage:
                     "backend": backend,
                     "image_path": str(image_path) if image_path else None,
                     "n_fields": len(fields),
+                    "input_from": "markdown" if ctx.markdown else "text",
                     "model_dir": str(self.model_dir) if self.model_dir else None,
                 },
             )
@@ -320,16 +428,16 @@ class ExtractStage:
 @dataclass
 class VisionLLMStage:
     """
-    Local Vision-LLM stage that reacts to classify + extract outputs.
+    Local Vision-LLM / markdown-LLM stage that reacts to classify + extract.
 
-    On systems with sufficient RAM/VRAM this can load a multimodal model
-    (default: Qwen2-VL class via transformers) to refine fields from the
-    rendered/scanned page image. Without a configured model it runs a
-    deterministic vision-heuristic refine so the chain stays intact.
+    Prefer feeding upstream structured markdown (token-efficient). Optionally
+    attach the page image when VISION_LLM_USE_IMAGE=1 for visual verification
+    on high-RAM hosts. Without a configured model it runs a deterministic
+    refine so the chain stays intact.
     """
 
     cfg: Config
-    order: int = 2
+    order: int = 3
     name: str = "vision_llm"
     enabled: bool = True
     _processor: Any = None
@@ -380,66 +488,101 @@ class VisionLLMStage:
             self._backend = "heuristic"
 
     def _vlm_refine(self, ctx: AnalysisContext) -> dict[str, Any]:
-        from PIL import Image
-
         assert self._model is not None and self._processor is not None
-        image_path = ctx.document.image_path or (ctx.extraction or {}).get("image_path")
-        if not image_path:
-            raise RuntimeError("No image available for Vision LLM")
-        image = Image.open(image_path).convert("RGB")
         prior_fields = (ctx.extraction or {}).get("fields_flat") or {}
         doc_type = (ctx.classification or {}).get("document_type", "unknown")
+        md = ctx.content_for_llm()
+        # Cap markdown fed to the model to keep generation focused
+        md_excerpt = md if len(md) <= 6000 else md[:6000] + "\n\n…(truncated)…"
         prompt = (
             "You are an insurance document analyst. "
             f"Document type: {doc_type}. "
-            f"Prior extracted fields: {prior_fields}. "
-            "Read the page image and return a short JSON object of corrected key fields "
+            f"Prior extracted fields: {prior_fields}.\n\n"
+            "Document as markdown (preferred over raw page pixels for token efficiency):\n"
+            f"{md_excerpt}\n\n"
+            "Return a short JSON object of corrected key fields "
             "(claim_id, policy_number, policyholder_name, date_of_loss, estimated_damage, "
             "deductible, location). JSON only."
         )
-        # Prefer chat-template processors when available; fall back to plain text+image.
-        try:
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image"},
-                        {"type": "text", "text": prompt},
-                    ],
-                }
-            ]
-            text = self._processor.apply_chat_template(messages, add_generation_prompt=True)
-            inputs = self._processor(text=[text], images=[image], return_tensors="pt")
-        except Exception:
-            inputs = self._processor(images=image, text=prompt, return_tensors="pt")
+
+        use_image = _bool_env("VISION_LLM_USE_IMAGE", default=False)
+        image_path = ctx.document.image_path or (ctx.extraction or {}).get("image_path")
+        if use_image and image_path:
+            from PIL import Image
+
+            image = Image.open(image_path).convert("RGB")
+            try:
+                messages = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "image"},
+                            {"type": "text", "text": prompt},
+                        ],
+                    }
+                ]
+                text = self._processor.apply_chat_template(messages, add_generation_prompt=True)
+                inputs = self._processor(text=[text], images=[image], return_tensors="pt")
+            except Exception:
+                inputs = self._processor(images=image, text=prompt, return_tensors="pt")
+            mode = "markdown+image"
+        else:
+            # Markdown-only path — avoids large vision token budgets
+            try:
+                messages = [
+                    {
+                        "role": "user",
+                        "content": [{"type": "text", "text": prompt}],
+                    }
+                ]
+                text = self._processor.apply_chat_template(messages, add_generation_prompt=True)
+                inputs = self._processor(text=[text], return_tensors="pt")
+            except Exception:
+                inputs = self._processor(text=prompt, return_tensors="pt")
+            mode = "markdown"
+
         device = next(self._model.parameters()).device
         inputs = {k: v.to(device) if hasattr(v, "to") else v for k, v in inputs.items()}
         with self._torch.no_grad():
             generated = self._model.generate(**inputs, max_new_tokens=256)
         raw = self._processor.batch_decode(generated, skip_special_tokens=True)[0]
-        return {"raw_response": raw, "refined_fields": _parse_json_object(raw)}
+        return {
+            "raw_response": raw,
+            "refined_fields": _parse_json_object(raw),
+            "llm_input_mode": mode,
+            "markdown_chars": len(md),
+            "markdown_approx_tokens": approx_token_count(md),
+        }
 
     def _heuristic_refine(self, ctx: AnalysisContext) -> dict[str, Any]:
         """
-        Lightweight visual-proxy refine: re-scan labeled words from a render
-        and prefer values co-located with known prefixes. Keeps the chain
-        reactive without requiring a heavy VLM download in CI.
+        Lightweight refine over markdown / plain text field tables.
+        Keeps the chain reactive without requiring a heavy VLM download in CI.
         """
         fields = dict((ctx.extraction or {}).get("fields_flat") or {})
-        text = ctx.document.text
+        text = ctx.content_for_llm() or ctx.document.text
         heuristic = {k: (v[0] if v else None) for k, v in _heuristic_extract(text).items()}
         refined = {**heuristic, **{k: v for k, v in fields.items() if v}}
-        # Prefer heuristic when model left a field empty
         for k, v in heuristic.items():
             if not refined.get(k) and v:
                 refined[k] = v
         notes = []
         image_path = ctx.document.image_path or (ctx.extraction or {}).get("image_path")
+        if ctx.markdown:
+            notes.append("markdown_context")
+            notes.append(f"markdown_tokens≈{(ctx.markdown or {}).get('approx_tokens')}")
         if image_path:
             notes.append(f"image_present:{image_path}")
         else:
             notes.append("no_image")
-        return {"refined_fields": refined, "notes": notes, "raw_response": None}
+        return {
+            "refined_fields": refined,
+            "notes": notes,
+            "raw_response": None,
+            "llm_input_mode": "markdown",
+            "markdown_chars": len(text),
+            "markdown_approx_tokens": approx_token_count(text),
+        }
 
     def run(self, ctx: AnalysisContext) -> StageResult:
         if not self.enabled:
@@ -530,14 +673,15 @@ def _parse_json_object(text: str) -> dict[str, Any]:
 @dataclass
 class SummarizeStage:
     """
-    Memo generation — reacts to classification, extraction, and vision outputs.
+    Memo generation — reacts to markdown, classification, extraction, and vision.
 
     Uses a local generative model when configured; otherwise a deterministic
     template grounded only in upstream stage payloads (no skeleton peeking).
+    LLM prompts receive structured markdown rather than raw page images.
     """
 
     cfg: Config
-    order: int = 3
+    order: int = 4
     name: str = "summarize"
     _model: Any = None
     _tokenizer: Any = None
@@ -573,6 +717,7 @@ class SummarizeStage:
         clf = ctx.classification or {}
         ext = ctx.extraction or {}
         vision = ctx.vision or {}
+        md_meta = ctx.markdown or {}
         flat = dict(ext.get("fields_flat") or {})
         if vision.get("refined_fields"):
             flat.update({k: v for k, v in vision["refined_fields"].items() if v})
@@ -617,6 +762,9 @@ class SummarizeStage:
                 f"- Source classification confidence: {clf.get('confidence', 'n/a')}",
                 f"- Extraction backend: {ext.get('backend', 'n/a')}",
                 f"- Vision backend: {(vision or {}).get('backend', 'skipped')}",
+                f"- Markdown backend: {md_meta.get('backend', 'n/a')} "
+                f"(~{md_meta.get('approx_tokens', 'n/a')} tokens; "
+                f"saved ≈{md_meta.get('token_saved_est', 'n/a')})",
                 "",
                 "Analysis",
                 "Issue: whether coverage appears supported by extracted claim facts. "
@@ -640,11 +788,14 @@ class SummarizeStage:
         flat = dict((ctx.extraction or {}).get("fields_flat") or {})
         if ctx.vision and ctx.vision.get("refined_fields"):
             flat.update({k: v for k, v in ctx.vision["refined_fields"].items() if v})
+        md = ctx.content_for_llm()
+        md_excerpt = md if len(md) <= 4000 else md[:4000] + "\n\n…(truncated)…"
         prompt = (
-            "Write a concise insurance adjuster memo grounded only in these extracted fields. "
-            "Do not invent claim details.\n"
+            "Write a concise insurance adjuster memo grounded only in the markdown "
+            "document and extracted fields. Do not invent claim details.\n"
             f"Document type: {(ctx.classification or {}).get('document_type')}\n"
-            f"Fields: {flat}\n"
+            f"Fields: {flat}\n\n"
+            f"Document markdown:\n{md_excerpt}\n\n"
             "Memo:\n"
         )
         inputs = self._tokenizer(prompt, return_tensors="pt")
@@ -657,6 +808,8 @@ class SummarizeStage:
         flags: list[str] = []
         try:
             # Require prior stages to have run (chronological reaction)
+            if ctx.markdown is None:
+                flags.append("summarize_missing_markdown")
             if ctx.classification is None:
                 flags.append("summarize_missing_classification")
             if ctx.extraction is None:
@@ -689,6 +842,8 @@ class SummarizeStage:
                 payload={
                     "memo": memo,
                     "backend": backend,
+                    "input_from": "markdown",
+                    "markdown_approx_tokens": (ctx.markdown or {}).get("approx_tokens"),
                     "grounded_in": [
                         s.stage for s in ctx.stages if s.ok and s.stage != self.name
                     ],

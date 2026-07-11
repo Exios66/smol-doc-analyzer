@@ -2,10 +2,12 @@
 Chronological document-analysis orchestrator.
 
 One analyze action chains every initiated stage in initiation order:
-  classify → extract → vision_llm → summarize
+  to_markdown → classify → extract → vision_llm → summarize
 
-Each stage receives the accumulating AnalysisContext and may react to
-prior stage payloads (document type, extracted fields, vision refinements).
+PNG/PDF (and plain text) are converted to structured markdown first so
+downstream LLM stages consume compact, layout-aware context instead of
+raw page images. Each stage receives the accumulating AnalysisContext and
+may react to prior stage payloads.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from typing import Any, Sequence
 from src.pipeline.stages import (
     ClassifyStage,
     ExtractStage,
+    MarkdownConvertStage,
     PipelineStage,
     SummarizeStage,
     VisionLLMStage,
@@ -53,10 +56,11 @@ class DocumentAnalysisOrchestrator:
                 self.cfg.vision_llm_enabled if enable_vision is None else enable_vision
             )
             self.stages = [
-                ClassifyStage(cfg=self.cfg, model_dir=classifier_dir, order=0),
-                ExtractStage(cfg=self.cfg, model_dir=extractor_dir, order=1),
-                VisionLLMStage(cfg=self.cfg, order=2, enabled=vision_enabled),
-                SummarizeStage(cfg=self.cfg, order=3),
+                MarkdownConvertStage(cfg=self.cfg, order=0),
+                ClassifyStage(cfg=self.cfg, model_dir=classifier_dir, order=1),
+                ExtractStage(cfg=self.cfg, model_dir=extractor_dir, order=2),
+                VisionLLMStage(cfg=self.cfg, order=3, enabled=vision_enabled),
+                SummarizeStage(cfg=self.cfg, order=4),
             ]
         # Preserve initiation order; do not re-sort by name.
         self.stages.sort(key=lambda s: s.order)
@@ -101,11 +105,13 @@ class DocumentAnalysisOrchestrator:
 
 
 def analyze_document(
-    text: str,
+    text: str = "",
     *,
     record_id: str = "adhoc",
     claim_id: str | None = None,
     image_path: str | Path | None = None,
+    pdf_path: str | Path | None = None,
+    source_path: str | Path | None = None,
     cfg: Config | None = None,
     enable_vision: bool | None = None,
 ) -> dict[str, Any]:
@@ -114,9 +120,11 @@ def analyze_document(
     ctx = orch.analyze(
         AnalysisDocument(
             record_id=record_id,
-            text=text,
+            text=text or "",
             claim_id=claim_id,
             image_path=image_path,
+            pdf_path=pdf_path,
+            source_path=source_path,
         )
     )
     return ctx.to_dict()
@@ -149,6 +157,20 @@ def run_file(
         "chain": orch.stage_names,
         "low_confidence": sum(1 for r in results if r.get("low_confidence")),
         "flagged": sum(1 for r in results if r.get("flags")),
+        "avg_markdown_tokens": _avg(
+            [
+                (r.get("markdown") or {}).get("approx_tokens")
+                for r in results
+                if (r.get("markdown") or {}).get("approx_tokens") is not None
+            ]
+        ),
+        "avg_tokens_saved_est": _avg(
+            [
+                (r.get("markdown") or {}).get("token_saved_est")
+                for r in results
+                if (r.get("markdown") or {}).get("token_saved_est") is not None
+            ]
+        ),
     }
     write_json(out.with_suffix(".summary.json"), summary)
     log_provenance(
@@ -165,19 +187,26 @@ def run_file(
     return out
 
 
+def _avg(vals: list[Any]) -> float | None:
+    nums = [float(v) for v in vals if v is not None]
+    if not nums:
+        return None
+    return sum(nums) / len(nums)
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(
         description=(
             "Run the full document-analysis chain in one action: "
-            "classify → extract → vision_llm → summarize"
+            "to_markdown → classify → extract → vision_llm → summarize"
         )
     )
     parser.add_argument(
         "--in",
         dest="inp",
         type=Path,
-        help="Input JSONL of documents (record_id, text, optional image_path)",
+        help="Input JSONL of documents (record_id, text, optional image_path/pdf_path)",
     )
     parser.add_argument(
         "--out",
@@ -186,6 +215,8 @@ def main() -> None:
         help="Output JSONL for chained analysis results",
     )
     parser.add_argument("--text", type=str, default=None, help="Analyze a single text blob")
+    parser.add_argument("--image", type=Path, default=None, help="PNG/JPEG page to convert → markdown")
+    parser.add_argument("--pdf", type=Path, default=None, help="PDF to convert → markdown")
     parser.add_argument("--record-id", type=str, default="adhoc")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--classifier-dir", type=Path, default=None)
@@ -193,7 +224,7 @@ def main() -> None:
     parser.add_argument(
         "--vision",
         action="store_true",
-        help="Enable Vision LLM stage (local VLM or heuristic refine)",
+        help="Enable Vision LLM stage (markdown-first; optional image via VISION_LLM_USE_IMAGE)",
     )
     parser.add_argument(
         "--no-vision",
@@ -211,10 +242,12 @@ def main() -> None:
     else:
         enable_vision = None
 
-    if args.text:
+    if args.text is not None or args.image or args.pdf:
         result = analyze_document(
-            args.text,
+            args.text or "",
             record_id=args.record_id,
+            image_path=args.image,
+            pdf_path=args.pdf,
             cfg=cfg,
             enable_vision=enable_vision if enable_vision is not None else True,
         )
@@ -222,7 +255,7 @@ def main() -> None:
         return
 
     if not args.inp:
-        parser.error("Provide --in JSONL or --text")
+        parser.error("Provide --in JSONL, or --text / --image / --pdf")
 
     out = args.out or (cfg.pipeline_output_dir / f"analysis_{args.inp.stem}.jsonl")
     path = run_file(
