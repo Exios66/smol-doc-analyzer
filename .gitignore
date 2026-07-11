@@ -1,0 +1,19 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Generated synthetic data is large and reproducible from the scripts +
+# a seed -- don't commit it. Keep the schema/taxonomy, not the outputs.
+data/synthetic/skeletons/*.jsonl
+data/synthetic/documents/*.jsonl
+data/synthetic/memos/*.jsonl
+data/provenance_log.jsonl
+data/raw/*
+!data/raw/.gitkeep
+
+.DS_Store
