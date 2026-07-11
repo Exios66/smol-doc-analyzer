@@ -12,9 +12,17 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 
 from src.utils.config import Config
 from src.utils.io import load_jsonl, read_json, write_json
+from src.utils.wandb_utils import WandbSettings, add_wandb_cli_flags, settings_from_args, start_run
 
 
-def evaluate(model_dir: Path, prepared_dir: Path, cfg: Config, split: str = "test") -> dict:
+def evaluate(
+    model_dir: Path,
+    prepared_dir: Path,
+    cfg: Config,
+    split: str = "test",
+    wandb_settings: WandbSettings | None = None,
+    wandb_run_name: str | None = None,
+) -> dict:
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
@@ -80,6 +88,7 @@ def evaluate(model_dir: Path, prepared_dir: Path, cfg: Config, split: str = "tes
         "model_dir": str(model_dir),
     }
 
+    cfg.evaluation_reports_dir.mkdir(parents=True, exist_ok=True)
     out_json = cfg.evaluation_reports_dir / "classification_report.json"
     write_json(out_json, report)
     md = [
@@ -100,6 +109,67 @@ def evaluate(model_dir: Path, prepared_dir: Path, cfg: Config, split: str = "tes
         md.append("- None")
     md_path = cfg.evaluation_reports_dir / "classification_report.md"
     md_path.write_text("\n".join(md) + "\n", encoding="utf-8")
+
+    run_name = wandb_run_name or f"clf-eval-{Path(model_dir).name}-{split}"
+    with start_run(
+        name=run_name,
+        job_type="eval",
+        config={
+            "task": "classification_eval",
+            "model_dir": str(model_dir),
+            "prepared_dir": str(prepared_dir),
+            "split": split,
+            "n": len(rows),
+        },
+        tags=["classification", "eval", split],
+        settings=wandb_settings,
+    ) as wb:
+        wb.summary(
+            {
+                "accuracy": acc,
+                "macro_f1": macro_f1,
+                "n": len(rows),
+                "split": split,
+            }
+        )
+        wb.log({"eval/accuracy": acc, "eval/macro_f1": macro_f1, "eval/n": len(rows)})
+        wb.log_confusion_matrix(
+            key="eval/confusion_matrix",
+            y_true=y_true,
+            y_pred=y_pred,
+            class_names=labels_order,
+        )
+        per_class_rows = []
+        for label in labels_order:
+            stats = per_class.get(label, {})
+            if isinstance(stats, dict):
+                per_class_rows.append(
+                    [
+                        label,
+                        stats.get("precision", 0.0),
+                        stats.get("recall", 0.0),
+                        stats.get("f1-score", 0.0),
+                        stats.get("support", 0),
+                    ]
+                )
+        wb.log_table(
+            "eval/per_class",
+            ["label", "precision", "recall", "f1", "support"],
+            per_class_rows,
+        )
+        if pairs:
+            wb.log_table(
+                "eval/top_confusion_pairs",
+                ["true", "pred", "count"],
+                [[p["true"], p["pred"], p["count"]] for p in pairs[:15]],
+            )
+        wb.log_artifact_files(
+            name=f"classification-report-{Path(model_dir).name}-{split}",
+            paths=[out_json, md_path],
+            artifact_type="evaluation",
+            metadata={"accuracy": acc, "macro_f1": macro_f1, "split": split},
+        )
+
     return report
 
 
@@ -108,9 +178,17 @@ def main() -> None:
     parser.add_argument("--model-dir", type=Path, required=True)
     parser.add_argument("--prepared", type=Path, required=True)
     parser.add_argument("--split", type=str, default="test")
+    add_wandb_cli_flags(parser)
     args = parser.parse_args()
     cfg = Config.load()
-    report = evaluate(args.model_dir, args.prepared, cfg, args.split)
+    report = evaluate(
+        args.model_dir,
+        args.prepared,
+        cfg,
+        args.split,
+        wandb_settings=settings_from_args(args),
+        wandb_run_name=args.wandb_run_name,
+    )
     print(json.dumps({"accuracy": report["accuracy"], "macro_f1": report["macro_f1"]}, indent=2))
 
 
