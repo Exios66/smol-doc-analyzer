@@ -1,35 +1,11 @@
-"""
-Centralized configuration, loaded from environment variables / .env.
-
-Nothing in this file should contain secrets directly -- values are read
-from the environment so .env (gitignored) is the only place real keys live.
-"""
-
-from __future__ import annotations
-
-import os
-from dataclasses import dataclass
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-
-
-def _path(env_var: str, default: str) -> Path:
-    raw = os.getenv(env_var, default)
-    p = Path(raw)
-    return p if p.is_absolute() else REPO_ROOT / p
-
-
 @dataclass(frozen=True)
 class Config:
-    anthropic_api_key: str
+    openrouter_api_key: str
     generation_model: str
     max_concurrency: int
     max_retries: int
+    openrouter_app_url: str
+    openrouter_app_name: str
 
     skeleton_output_dir: Path
     document_output_dir: Path
@@ -42,10 +18,12 @@ class Config:
     @classmethod
     def load(cls) -> "Config":
         return cls(
-            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
-            generation_model=os.getenv("GENERATION_MODEL", "claude-sonnet-5"),
+            openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
+            generation_model=os.getenv("GENERATION_MODEL", "anthropic/claude-sonnet-4.5"),
             max_concurrency=int(os.getenv("GENERATION_MAX_CONCURRENCY", "4")),
             max_retries=int(os.getenv("GENERATION_MAX_RETRIES", "5")),
+            openrouter_app_url=os.getenv("OPENROUTER_APP_URL", ""),
+            openrouter_app_name=os.getenv("OPENROUTER_APP_NAME", ""),
             skeleton_output_dir=_path("SKELETON_OUTPUT_DIR", "data/synthetic/skeletons"),
             document_output_dir=_path("DOCUMENT_OUTPUT_DIR", "data/synthetic/documents"),
             memo_output_dir=_path("MEMO_OUTPUT_DIR", "data/synthetic/memos"),
@@ -53,14 +31,3 @@ class Config:
             taxonomy_path=REPO_ROOT / "taxonomy" / "acord_form_categories.yaml",
             claim_schema_path=REPO_ROOT / "data" / "schemas" / "claim_skeleton.schema.json",
         )
-
-    def ensure_dirs(self) -> None:
-        for d in (self.skeleton_output_dir, self.document_output_dir, self.memo_output_dir):
-            d.mkdir(parents=True, exist_ok=True)
-        self.provenance_log_path.parent.mkdir(parents=True, exist_ok=True)
-
-
-def get_config() -> Config:
-    cfg = Config.load()
-    cfg.ensure_dirs()
-    return cfg
