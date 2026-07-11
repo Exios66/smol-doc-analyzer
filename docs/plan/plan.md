@@ -102,10 +102,13 @@ Tasks:
 - Build `batch_runner.py` for processing document batches
 - Add error handling/fallback paths (e.g., low-confidence classification flags for human review rather than silent failure)
 - End-to-end test on a held-out synthetic set spanning all taxonomy categories
+- Include a Vision LLM refine stage in the same chronological chain (local VLM when RAM/VRAM allows; heuristic refine otherwise)
 
 Deliverable: working end-to-end pipeline, runnable via CLI.
 
 Exit criterion: pipeline processes a batch of held-out documents end to end without manual intervention, with confidence scores/flags surfaced for low-certainty cases.
+
+**Status:** Implemented in `src/pipeline/` — stages execute in initiation order and each reacts to prior payloads. Inbound PNG/PDF/text is converted to structured markdown before LLM stages. Summarization uses template grounding until Phase 4 LoRA lands; Vision LLM loads only when `VISION_LLM_MODEL_PATH` / `VISION_LLM_LOAD` is configured (markdown-first by default).
 
 ---
 

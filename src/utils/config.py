@@ -17,6 +17,13 @@ def _path(env_key: str, default: str) -> Path:
     return path
 
 
+def _bool(env_key: str, default: bool = False) -> bool:
+    raw = os.getenv(env_key)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass(frozen=True)
 class Config:
     openrouter_api_key: str
@@ -40,6 +47,16 @@ class Config:
     evaluation_reports_dir: Path
     models_dir: Path
 
+    # Chained inference pipeline (Phase 5)
+    pipeline_output_dir: Path
+    pipeline_cache_dir: Path
+    vision_llm_enabled: bool
+    vision_llm_model: str
+    vision_llm_model_path: Path | None
+    summarizer_model: str
+    summarizer_model_path: Path | None
+
+    # Weights & Biases experiment tracking
     wandb_project: str
     wandb_entity: str
     wandb_mode: str
@@ -47,6 +64,8 @@ class Config:
 
     @classmethod
     def load(cls) -> "Config":
+        vision_path = os.getenv("VISION_LLM_MODEL_PATH", "").strip()
+        summarizer_path = os.getenv("SUMMARIZER_MODEL_PATH", "").strip()
         return cls(
             openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
             generation_model=os.getenv("GENERATION_MODEL", "anthropic/claude-sonnet-4.5"),
@@ -66,6 +85,19 @@ class Config:
             splits_path=_path("SPLITS_PATH", "data/synthetic/splits.json"),
             evaluation_reports_dir=_path("EVALUATION_REPORTS_DIR", "evaluation/reports"),
             models_dir=_path("MODELS_DIR", "models"),
+            pipeline_output_dir=_path("PIPELINE_OUTPUT_DIR", "data/pipeline"),
+            pipeline_cache_dir=_path("PIPELINE_CACHE_DIR", "data/pipeline/cache"),
+            vision_llm_enabled=_bool("VISION_LLM_ENABLED", default=True),
+            vision_llm_model=os.getenv(
+                "VISION_LLM_MODEL", "Qwen/Qwen2-VL-2B-Instruct"
+            ),
+            vision_llm_model_path=_path("VISION_LLM_MODEL_PATH", vision_path)
+            if vision_path
+            else None,
+            summarizer_model=os.getenv("SUMMARIZER_MODEL", ""),
+            summarizer_model_path=_path("SUMMARIZER_MODEL_PATH", summarizer_path)
+            if summarizer_path
+            else None,
             wandb_project=os.getenv("WANDB_PROJECT", "smol-doc-analyzer"),
             wandb_entity=os.getenv("WANDB_ENTITY", ""),
             wandb_mode=os.getenv("WANDB_MODE", "online"),

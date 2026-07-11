@@ -16,12 +16,18 @@ All three run offline, on modest hardware, with no per-token API costs.
 
 ## Status
 
-Phases 0–3 implemented:
+Phases 0–3 and Phase 5 (chained inference orchestrator) implemented:
 
 - Characteristic profiles from public document/layout/legal-style priors
 - Synthetic skeleton → document → memo → OCR-noise pipeline (template fallback; optional OpenRouter LLM)
 - Document-type classifier train/eval
 - Field extraction train/eval with noisy stress reporting
+- **Single-action analysis chain**: to_markdown → classify → extract → vision_llm → summarize (`src/pipeline/`)
+- PNG/PDF → structured markdown before LLM stages (token + context optimization)
+
+Phase 4 (fine-tuned summarizer LoRA) still pending — the chain currently uses a
+template memo grounded in upstream extraction/vision outputs, with a hook for a
+local generative model when configured.
 
 ## Data disclosure
 
@@ -54,6 +60,24 @@ python -m src.extraction.prepare_dataset --in data/synthetic/documents/rendered/
 python -m src.extraction.train_extractor --prepared data/synthetic/documents/rendered/extraction_prepared --smoke
 python -m src.extraction.eval --model-dir models/extractor_smoke --prepared data/synthetic/documents/rendered/extraction_prepared
 
+# --- one action: full document analysis chain ---
+# PNG/PDF are converted to structured markdown before LLM stages (token-efficient).
+python -m src.pipeline.orchestrator \
+  --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl \
+  --out data/pipeline/analysis.jsonl \
+  --vision --limit 20
+
+python -m src.pipeline.orchestrator --image path/to/scan.png --vision
+python -m src.pipeline.orchestrator --pdf path/to/claim.pdf --vision
+
+python -m src.pipeline.batch_runner \
+  --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl \
+  --out-dir data/pipeline/batch_demo \
+  --vision --limit 20
+
+# ad-hoc single document
+python -m src.pipeline.orchestrator --vision --text "LOSS NOTICE\nClaim Number: CLM-1\nDate of Loss: 2024-01-15\n..."
+
 # full-scale generation (when ready)
 python -m src.generation.skeleton_sampler --n 5000 --out data/synthetic/skeletons/
 python -m src.generation.stage_a_document_gen --in data/synthetic/skeletons/skeletons_n5000_seed42.jsonl
@@ -61,6 +85,10 @@ python -m src.generation.stage_b_memo_gen --in data/synthetic/documents/document
 ```
 
 For GPU training, omit `--smoke` and use the default DeBERTa-v3 / LayoutLMv3 model names.
+
+On high-RAM local hosts, point `VISION_LLM_MODEL_PATH` at a downloaded Qwen2-VL
+(or similar) checkpoint and set `VISION_LLM_LOAD=1` to refine extraction from
+page images inside the same chain.
 
 ## Repository structure
 
