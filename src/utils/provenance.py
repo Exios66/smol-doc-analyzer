@@ -31,6 +31,7 @@ ProvenanceStage = Literal[
     "stage_b_memo_gen",
     "noise_injection",
     "classification_train",
+    "classification_vit_train",
     "extraction_train",
 ]
 

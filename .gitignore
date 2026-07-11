@@ -12,7 +12,9 @@ venv/
 data/synthetic/skeletons/*.jsonl
 data/synthetic/documents/*.jsonl
 data/synthetic/documents/classification_prepared/
+data/synthetic/documents/vit_classification_prepared/
 data/synthetic/documents/rendered/
+data/synthetic/documents/rendered_*/
 data/synthetic/documents/rendered_noisy/
 data/synthetic/memos/*.jsonl
 data/synthetic/noisy/**
