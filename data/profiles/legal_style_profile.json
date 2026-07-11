@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "source": "public_legal_writing_style_priors_vocab_only",
+  "description": "Vocabulary and reasoning style for narrative insurance fields. Not legal document labels.",
+  "discourse_markers": [
+    "accordingly",
+    "whereas",
+    "notwithstanding",
+    "in light of the foregoing",
+    "to the extent that",
+    "for the reasons set forth below",
+    "on the present record",
+    "as a threshold matter",
+    "it follows that",
+    "by contrast"
+  ],
+  "reasoning_templates": [
+    "Issue: whether {issue}. Rule: coverage turns on {rule}. Application: the facts show {application}. Conclusion: {conclusion}.",
+    "Duty: the insured owed {duty}. Breach: {breach}. Causation: {causation}. Damages: {damages}.",
+    "The record supports a finding that {finding}, because {because}. Alternative explanations are less consistent with {evidence}."
+  ],
+  "vocabulary_ngrams": [
+    "proximate cause",
+    "material fact",
+    "coverage determination",
+    "reservation of rights",
+    "duty to defend",
+    "indemnify and hold harmless",
+    "preponderance of the evidence",
+    "reasonable care",
+    "foreseeable risk",
+    "policy exclusion",
+    "named insured",
+    "additional insured",
+    "subrogation interest",
+    "bad faith claim handling",
+    "timely notice of loss",
+    "mitigation of damages",
+    "comparative negligence",
+    "independent medical examination",
+    "statement under oath",
+    "proof of loss"
+  ],
+  "phrase_bank": [
+    "The facts as presently developed indicate",
+    "Subject to further investigation",
+    "Coverage appears implicated under",
+    "The claimant alleges",
+    "Documentation in the file supports",
+    "There remains a factual dispute regarding",
+    "Based on the available evidence",
+    "The adjuster recommends"
+  ],
+  "apply_to_document_types": [
+    "claims_correspondence",
+    "supporting_evidence",
+    "loss_notice"
+  ]
+}

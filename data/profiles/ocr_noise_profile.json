@@ -1,0 +1,62 @@
+{
+  "version": "1.0.0",
+  "source": "estimated_from_noisy_scanned_form_text_patterns",
+  "char_substitution_rate": 0.025,
+  "char_deletion_rate": 0.008,
+  "char_insertion_rate": 0.006,
+  "word_split_rate": 0.012,
+  "word_merge_rate": 0.01,
+  "digit_confusion": {
+    "0": [
+      "O",
+      "o",
+      "Q"
+    ],
+    "1": [
+      "l",
+      "I",
+      "|"
+    ],
+    "2": [
+      "Z"
+    ],
+    "5": [
+      "S"
+    ],
+    "8": [
+      "B"
+    ],
+    "6": [
+      "G",
+      "b"
+    ]
+  },
+  "letter_confusion": {
+    "rn": [
+      "m"
+    ],
+    "cl": [
+      "d"
+    ],
+    "li": [
+      "h"
+    ],
+    "O": [
+      "0"
+    ],
+    "S": [
+      "5"
+    ],
+    "B": [
+      "8"
+    ]
+  },
+  "common_ocr_artifacts": [
+    "|",
+    "~",
+    "`",
+    "¬",
+    "¤"
+  ],
+  "line_break_noise_rate": 0.04
+}

@@ -1,0 +1,186 @@
+{
+  "split": "test",
+  "n": 36,
+  "accuracy": 0.4444444444444444,
+  "macro_f1": 0.32653061224489793,
+  "labels": [
+    "application_commercial",
+    "application_personal",
+    "certificate_evidence",
+    "loss_notice",
+    "claims_correspondence",
+    "policy_change_endorsement",
+    "repair_estimate",
+    "supporting_evidence"
+  ],
+  "confusion_matrix": [
+    [
+      0,
+      0,
+      0,
+      0,
+      4,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      5,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      6,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      4,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      5,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      6,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      6,
+      0,
+      0,
+      0
+    ]
+  ],
+  "per_class": {
+    "application_commercial": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 4.0
+    },
+    "application_personal": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 5.0
+    },
+    "certificate_evidence": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 0.0
+    },
+    "loss_notice": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 6.0
+    },
+    "claims_correspondence": {
+      "precision": 0.16666666666666666,
+      "recall": 1.0,
+      "f1-score": 0.2857142857142857,
+      "support": 4.0
+    },
+    "policy_change_endorsement": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 5.0
+    },
+    "repair_estimate": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 6.0
+    },
+    "supporting_evidence": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 6.0
+    },
+    "accuracy": 0.4444444444444444,
+    "macro avg": {
+      "precision": 0.27083333333333337,
+      "recall": 0.375,
+      "f1-score": 0.2857142857142857,
+      "support": 36.0
+    },
+    "weighted avg": {
+      "precision": 0.35185185185185186,
+      "recall": 0.4444444444444444,
+      "f1-score": 0.36507936507936506,
+      "support": 36.0
+    }
+  },
+  "top_confusion_pairs": [
+    {
+      "true": "supporting_evidence",
+      "pred": "claims_correspondence",
+      "count": 6
+    },
+    {
+      "true": "application_personal",
+      "pred": "claims_correspondence",
+      "count": 5
+    },
+    {
+      "true": "policy_change_endorsement",
+      "pred": "claims_correspondence",
+      "count": 5
+    },
+    {
+      "true": "application_commercial",
+      "pred": "claims_correspondence",
+      "count": 4
+    }
+  ],
+  "taxonomy_version_note": "acord_form_categories.yaml v1",
+  "taxonomy_category_count": 9,
+  "model_dir": "models/classifier_smoke"
+}

@@ -23,11 +23,22 @@ from typing import Any, Literal
 
 _lock = threading.Lock()
 
+ProvenanceStage = Literal[
+    "corpus_ingest",
+    "characteristic_profiling",
+    "skeleton_sampling",
+    "stage_a_document_gen",
+    "stage_b_memo_gen",
+    "noise_injection",
+    "classification_train",
+    "extraction_train",
+]
+
 
 @dataclass
 class ProvenanceRecord:
     record_id: str
-    stage: Literal["skeleton_sampling", "stage_a_document_gen", "stage_b_memo_gen", "noise_injection"]
+    stage: ProvenanceStage
     source: str
     prompt_version: str
     model: str | None

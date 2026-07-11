@@ -11,9 +11,20 @@ venv/
 # a seed -- don't commit it. Keep the schema/taxonomy, not the outputs.
 data/synthetic/skeletons/*.jsonl
 data/synthetic/documents/*.jsonl
+data/synthetic/documents/classification_prepared/
+data/synthetic/documents/rendered/
+data/synthetic/documents/rendered_noisy/
 data/synthetic/memos/*.jsonl
+data/synthetic/noisy/**
+!data/synthetic/noisy/.gitkeep
+data/synthetic/splits.json
 data/provenance_log.jsonl
 data/raw/*
 !data/raw/.gitkeep
+models/**
+!models/.gitkeep
+*.pt
+*.bin
+*.safetensors
 
 .DS_Store
