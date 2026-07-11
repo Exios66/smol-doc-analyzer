@@ -1,0 +1,123 @@
+{
+  "version": "1.0.0",
+  "source": "funsd_like_field_lexicon_plus_doclaynet_priors",
+  "layout_class_weights": {
+    "Caption": 0.04,
+    "Footnote": 0.02,
+    "Formula": 0.01,
+    "List-item": 0.08,
+    "Page-footer": 0.05,
+    "Page-header": 0.06,
+    "Picture": 0.03,
+    "Section-header": 0.12,
+    "Table": 0.1,
+    "Text": 0.35,
+    "Title": 0.14
+  },
+  "field_labels": [
+    "Policy Number",
+    "Named Insured",
+    "Date of Loss",
+    "Loss Location",
+    "Claim Number",
+    "Coverage Type",
+    "Deductible",
+    "Estimated Damage",
+    "Adjuster Name",
+    "Claimant Name",
+    "Effective Date",
+    "State",
+    "Description of Loss",
+    "Police Report Filed",
+    "Injuries Reported",
+    "Reserve Amount",
+    "ACORD Form",
+    "Producer Name",
+    "Agency Code",
+    "Certificate Holder"
+  ],
+  "section_headers_by_document_type": {
+    "application_commercial": [
+      "Applicant Information",
+      "Coverage Sections",
+      "Loss History",
+      "Signatures"
+    ],
+    "application_personal": [
+      "Applicant",
+      "Vehicle / Property",
+      "Drivers / Occupants",
+      "Prior Insurance"
+    ],
+    "certificate_evidence": [
+      "Certificate Holder",
+      "Coverages",
+      "Limits",
+      "Cancellation Notice"
+    ],
+    "loss_notice": [
+      "Insured",
+      "Loss Details",
+      "Police / Fire",
+      "Description"
+    ],
+    "claims_correspondence": [
+      "Re:",
+      "Claim Status",
+      "Requested Action",
+      "Next Steps"
+    ],
+    "policy_change_endorsement": [
+      "Policy Change Request",
+      "Endorsement Details",
+      "Effective Date of Change"
+    ],
+    "repair_estimate": [
+      "Shop / Contractor",
+      "Line Items",
+      "Labor",
+      "Parts",
+      "Total"
+    ],
+    "supporting_evidence": [
+      "Report Summary",
+      "Findings",
+      "Attachments",
+      "Certification"
+    ]
+  },
+  "typical_word_count": {
+    "application_commercial": {
+      "mean": 650,
+      "std": 120
+    },
+    "application_personal": {
+      "mean": 480,
+      "std": 90
+    },
+    "certificate_evidence": {
+      "mean": 320,
+      "std": 60
+    },
+    "loss_notice": {
+      "mean": 420,
+      "std": 80
+    },
+    "claims_correspondence": {
+      "mean": 380,
+      "std": 140
+    },
+    "policy_change_endorsement": {
+      "mean": 300,
+      "std": 70
+    },
+    "repair_estimate": {
+      "mean": 360,
+      "std": 100
+    },
+    "supporting_evidence": {
+      "mean": 520,
+      "std": 150
+    }
+  }
+}

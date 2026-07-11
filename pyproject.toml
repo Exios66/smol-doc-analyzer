@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smol-doc-analyzer"
+version = "0.1.0"
+description = "Local insurance document classification, extraction, and memo generation pipeline"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "accelerate>=0.33.0",
+  "datasets>=2.20.0",
+  "evaluate>=0.4.2",
+  "jsonschema>=4.22.0",
+  "numpy>=1.26.0",
+  "openai>=1.40.0",
+  "pandas>=2.2.0",
+  "pillow>=10.4.0",
+  "pyyaml>=6.0.1",
+  "reportlab>=4.2.0",
+  "scikit-learn>=1.5.0",
+  "tenacity>=8.5.0",
+  "torch>=2.2.0",
+  "transformers>=4.44.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2.0",
+  "ruff>=0.5.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

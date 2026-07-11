@@ -1,0 +1,116 @@
+{
+  "version": "1.0.0",
+  "source": "rvl_cdip_style_mapping_to_insurance_taxonomy",
+  "description": "Maps public document-surface classes to insurance taxonomy for style conditioning only.",
+  "rvl_to_taxonomy_style": {
+    "form": [
+      "application_commercial",
+      "application_personal",
+      "loss_notice",
+      "policy_change_endorsement"
+    ],
+    "letter": [
+      "claims_correspondence"
+    ],
+    "email": [
+      "claims_correspondence"
+    ],
+    "memo": [
+      "claims_correspondence"
+    ],
+    "invoice": [
+      "repair_estimate"
+    ],
+    "questionnaire": [
+      "application_personal",
+      "application_commercial"
+    ],
+    "specification": [
+      "supporting_evidence",
+      "repair_estimate"
+    ],
+    "budget": [
+      "repair_estimate"
+    ]
+  },
+  "formality": {
+    "application_commercial": "high",
+    "application_personal": "medium_high",
+    "certificate_evidence": "high",
+    "loss_notice": "medium",
+    "claims_correspondence": "medium",
+    "policy_change_endorsement": "high",
+    "repair_estimate": "medium_low",
+    "supporting_evidence": "medium_high"
+  },
+  "opening_cues": {
+    "application_commercial": [
+      "COMMERCIAL INSURANCE APPLICATION",
+      "ACORD APPLICATION"
+    ],
+    "application_personal": [
+      "PERSONAL LINES APPLICATION",
+      "AUTO / HOMEOWNERS APPLICATION"
+    ],
+    "certificate_evidence": [
+      "CERTIFICATE OF LIABILITY INSURANCE",
+      "EVIDENCE OF PROPERTY INSURANCE"
+    ],
+    "loss_notice": [
+      "PROPERTY LOSS NOTICE",
+      "AUTOMOBILE LOSS NOTICE"
+    ],
+    "claims_correspondence": [
+      "Re: Claim",
+      "Claim Status Update",
+      "Dear Claimant"
+    ],
+    "policy_change_endorsement": [
+      "POLICY CHANGE REQUEST",
+      "ENDORSEMENT / REMARKS"
+    ],
+    "repair_estimate": [
+      "REPAIR ESTIMATE",
+      "STATEMENT OF CHARGES"
+    ],
+    "supporting_evidence": [
+      "INCIDENT REPORT",
+      "INSPECTION REPORT",
+      "POLICE REPORT SUMMARY"
+    ]
+  },
+  "closing_cues": {
+    "application_commercial": [
+      "Applicant Signature",
+      "Date Signed"
+    ],
+    "application_personal": [
+      "Applicant Signature",
+      "Date"
+    ],
+    "certificate_evidence": [
+      "Authorized Representative",
+      "Date"
+    ],
+    "loss_notice": [
+      "Reported By",
+      "Date Reported"
+    ],
+    "claims_correspondence": [
+      "Sincerely",
+      "Claims Department"
+    ],
+    "policy_change_endorsement": [
+      "Requested By",
+      "Effective Date of Change"
+    ],
+    "repair_estimate": [
+      "Estimator",
+      "Estimate Total"
+    ],
+    "supporting_evidence": [
+      "Prepared By",
+      "Report Date"
+    ]
+  }
+}

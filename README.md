@@ -10,51 +10,65 @@ Rather than one large model trying to do everything, this pipeline splits the pr
 
 1. **Classification** — a small fine-tuned encoder (DeBERTa-v3 class) identifies document type and category
 2. **Extraction** — a layout-aware model (LayoutLMv3/Donut class) pulls structured fields from forms, including scanned/OCR'd documents
-3. **Summarization** — a small fine-tuned generative LLM (7-8B, quantized) writes adjuster-style memos and analysis from the extracted content
+3. **Summarization** — a small fine-tuned generative LLM (7–8B, quantized) writes adjuster-style memos and analysis from the extracted content
 
 All three run offline, on modest hardware, with no per-token API costs.
 
 ## Status
 
-Early development. Synthetic data generation and taxonomy definition in progress. No trained models yet.
+Phases 0–3 implemented:
+
+- Characteristic profiles from public document/layout/legal-style priors
+- Synthetic skeleton → document → memo → OCR-noise pipeline (template fallback; optional OpenRouter LLM)
+- Document-type classifier train/eval
+- Field extraction train/eval with noisy stress reporting
 
 ## Data disclosure
 
 This project uses **no real insurance company data**. All training data is either:
-- Publicly available (ACORD form templates, public document-layout datasets, public Kaggle insurance datasets used for realistic field distributions), or
-- Synthetically generated (fictional claims, documents, and memos produced via LLM generation from randomized skeletons)
 
-Every synthetic record is logged in `data/provenance_log.jsonl` with its generation source. See `docs/data_provenance.md` for full detail.
+- Publicly available (ACORD form templates, public document-layout datasets, public insurance distribution shapes, legal writing used for **vocabulary/reasoning style only**), or
+- Synthetically generated (fictional claims, documents, and memos produced from randomized skeletons)
 
-This project began as an exploratory build related to a document-processing problem discussed with American Family Insurance in a consulting context. No AmFam data, documents, or proprietary information were used in this repository. See `docs/handoff/amfam_pipeline_recipe.md` for the separate internal deliverable design (pipeline/recipe only, meant to be run by AmFam on their own data).
+Legal corpora never become classification labels. See [docs/data_provenance.md](docs/data_provenance.md).
 
-## Quickstart (once implemented)
+Every synthetic record is logged in `data/provenance_log.jsonl` with its generation source.
+
+## Quickstart
 
 ```bash
 # install
-pip install -e .
+pip install -e ".[dev]"
 
-# generate synthetic training data
+# refresh profiles (optional Hub ingest: add --ingest)
+python -m src.generation.run_seed_pipeline --n 240
+
+# prepare + train classifier (smoke uses DistilBERT on CPU)
+python -m src.classification.prepare_dataset --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl
+python -m src.classification.train_classifier --prepared data/synthetic/documents/classification_prepared --smoke
+python -m src.classification.eval --model-dir models/classifier_smoke --prepared data/synthetic/documents/classification_prepared
+
+# render forms + train extractor (smoke path)
+python -m src.extraction.render_forms --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl --out data/synthetic/documents/rendered
+python -m src.extraction.prepare_dataset --in data/synthetic/documents/rendered/rendered.jsonl
+python -m src.extraction.train_extractor --prepared data/synthetic/documents/rendered/extraction_prepared --smoke
+python -m src.extraction.eval --model-dir models/extractor_smoke --prepared data/synthetic/documents/rendered/extraction_prepared
+
+# full-scale generation (when ready)
 python -m src.generation.skeleton_sampler --n 5000 --out data/synthetic/skeletons/
-python -m src.generation.stage_a_document_gen --in data/synthetic/skeletons/ --out data/synthetic/documents/
-python -m src.generation.stage_b_memo_gen --in data/synthetic/documents/ --out data/synthetic/memos/
-
-# train components
-python -m src.classification.train_classifier
-python -m src.extraction.train_extractor
-python -m src.summarization.train_lora
-
-# run full pipeline on a document
-python -m src.pipeline.orchestrator --input path/to/document.pdf
+python -m src.generation.stage_a_document_gen --in data/synthetic/skeletons/skeletons_n5000_seed42.jsonl
+python -m src.generation.stage_b_memo_gen --in data/synthetic/documents/documents_from_skeletons_n5000_seed42.jsonl
 ```
+
+For GPU training, omit `--smoke` and use the default DeBERTa-v3 / LayoutLMv3 model names.
 
 ## Repository structure
 
-See `docs/architecture.md` for the full design rationale and repository map.
+See [docs/architecture.md](docs/architecture.md).
 
 ## Evaluation
 
-Benchmarks compare this pipeline's accuracy and cost-per-document against a frontier-model API baseline. See `evaluation/benchmarks.py` and `evaluation/reports/`.
+Reports land in `evaluation/reports/` (`classification_report.*`, `extraction_report.json`, `failure_modes.md`).
 
 ## License
 
