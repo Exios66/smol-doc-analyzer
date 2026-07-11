@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ClaimSkeleton",
+  "description": "Structured intermediate representation used to generate synthetic insurance documents and memos. This is entirely fictional data -- see docs/data_provenance.md.",
+  "type": "object",
+  "required": ["claim_id", "document_type", "policy", "loss_event", "parties", "financials", "narrative_complexity"],
+  "properties": {
+    "claim_id": {
+      "type": "string",
+      "description": "Synthetic claim identifier, e.g. CLM-2026-004471"
+    },
+    "document_type": {
+      "type": "string",
+      "description": "Must match a label in taxonomy/acord_form_categories.yaml",
+      "enum": [
+        "application_commercial",
+        "application_personal",
+        "certificate_evidence",
+        "loss_notice",
+        "claims_correspondence",
+        "policy_change_endorsement",
+        "repair_estimate",
+        "supporting_evidence"
+      ]
+    },
+    "acord_form_number": {
+      "type": ["string", "null"],
+      "description": "Specific ACORD form number if applicable, else null"
+    },
+    "policy": {
+      "type": "object",
+      "required": ["policy_number", "policyholder_name", "state", "coverage_type", "effective_date"],
+      "properties": {
+        "policy_number": {"type": "string"},
+        "policyholder_name": {"type": "string"},
+        "state": {"type": "string", "description": "Two-letter US state code"},
+        "coverage_type": {
+          "type": "string",
+          "enum": ["personal_auto", "homeowners", "commercial_general_liability", "commercial_property", "commercial_auto", "workers_comp", "umbrella", "dwelling_fire"]
+        },
+        "effective_date": {"type": "string", "format": "date"}
+      }
+    },
+    "loss_event": {
+      "type": "object",
+      "required": ["date_of_loss", "loss_type", "location", "description_seed"],
+      "properties": {
+        "date_of_loss": {"type": "string", "format": "date"},
+        "loss_type": {
+          "type": "string",
+          "enum": ["collision", "fire", "theft", "water_damage", "wind_hail", "liability_third_party", "workers_comp_injury", "vandalism", "other"]
+        },
+        "location": {"type": "string"},
+        "description_seed": {
+          "type": "string",
+          "description": "Short human-written seed phrase used to guide the LLM narrative generation, e.g. 'rear-end collision at intersection, moderate speed'"
+        },
+        "police_report_filed": {"type": "boolean"},
+        "injuries_reported": {"type": "boolean"}
+      }
+    },
+    "parties": {
+      "type": "object",
+      "required": ["insured", "adjuster_assigned"],
+      "properties": {
+        "insured": {"type": "string"},
+        "claimant": {"type": ["string", "null"]},
+        "adjuster_assigned": {"type": "string"}
+      }
+    },
+    "financials": {
+      "type": "object",
+      "required": ["estimated_damage", "deductible", "reserve_set"],
+      "properties": {
+        "estimated_damage": {"type": "number", "minimum": 0},
+        "deductible": {"type": "number", "minimum": 0},
+        "reserve_set": {"type": "number", "minimum": 0}
+      }
+    },
+    "narrative_complexity": {
+      "type": "string",
+      "enum": ["clean", "standard", "ambiguous", "fraud_flagged"],
+      "description": "Controls how straightforward vs. messy/edge-case the generated document and memo should be."
+    },
+    "multi_doc_group_id": {
+      "type": ["string", "null"],
+      "description": "If set, links this skeleton to other skeletons that belong to the same claim file (e.g. loss notice + repair estimate + adjuster memo all sharing a claim_id)."
+    },
+    "target_outputs": {
+      "type": "object",
+      "properties": {
+        "document_text": {"type": ["string", "null"]},
+        "memo_text": {"type": ["string", "null"]}
+      }
+    }
+  }
+}
