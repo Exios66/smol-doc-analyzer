@@ -136,14 +136,14 @@ def main(config_dir: str | Path | None = None) -> None:
 
     import discord
 
-    intents = discord.Intents.all()
-    client = CoralBot(
-        config=config,
-        agent=agent,
-        model=model,
-        intents=intents,
-        engine=engine,
-    )
+    # Prefer minimal intents. Chloride upstream uses Intents.all(), which also
+    # requires Presence + Server Members privileged intents. We only need
+    # Message Content (+ guild message events) for analyze_insurance_document.
+    intents = discord.Intents.default()
+    intents.message_content = True
+    intents.guilds = True
+    intents.guild_messages = True
+    intents.dm_messages = True
 
     token = config.DISCORD_TOKEN or os.getenv("DISCORD_TOKEN")
     if not token:
@@ -154,12 +154,53 @@ def main(config_dir: str | Path | None = None) -> None:
         )
         raise SystemExit(1)
 
+    def _make_client(active_intents: discord.Intents) -> "CoralBot":
+        return CoralBot(
+            config=config,
+            agent=agent,
+            model=model,
+            intents=active_intents,
+            engine=engine,
+        )
+
     typer.secho(
         f"Starting Chloride Discord bot from {cfg_dir} "
         f"(tools include analyze_insurance_document)…",
         fg="green",
     )
-    client.run(token)
+
+    try:
+        client = _make_client(intents)
+        client.run(token)
+    except discord.errors.PrivilegedIntentsRequired:
+        typer.secho(
+            "\nPrivileged intents are not enabled for this bot application.\n"
+            "Open the Discord Developer Portal → your app → Bot → Privileged Gateway Intents\n"
+            "and enable **Message Content Intent**, then restart.\n"
+            f"Direct link: https://discord.com/developers/applications/"
+            f"{_client_id_from_token(token)}/bot\n"
+            "Falling back to non-privileged intents so the process stays online "
+            "(message text will be empty until Message Content Intent is enabled).",
+            fg="yellow",
+        )
+        fallback = discord.Intents.default()
+        fallback.guilds = True
+        fallback.guild_messages = True
+        fallback.dm_messages = True
+        client = _make_client(fallback)
+        client.run(token)
+
+
+def _client_id_from_token(token: str) -> str:
+    """Best-effort bot application id from the token's first segment (base64 user id)."""
+    import base64
+
+    try:
+        part = token.split(".", 1)[0]
+        pad = "=" * (-len(part) % 4)
+        return base64.b64decode(part + pad).decode("utf-8")
+    except Exception:
+        return "YOUR_APP_ID"
 
 
 if __name__ == "__main__":

@@ -22,8 +22,13 @@ cp discord/smol-doc-analyzer/config.yaml.example discord/smol-doc-analyzer/confi
 ```
 
 Create a Discord application + bot at https://discord.com/developers/applications,
-enable **Message Content Intent**, invite the bot to your server, and paste the token
-into `.env` as `DISCORD_TOKEN`.
+enable **Message Content Intent** (Bot → Privileged Gateway Intents), invite the bot
+to your server, and paste the token into `.env` as `DISCORD_TOKEN`.
+
+This integration requests only Message Content (not Presence / Server Members).
+Invite URL pattern:
+
+`https://discord.com/oauth2/authorize?client_id=YOUR_APP_ID&permissions=274878295040&scope=bot%20applications.commands`
 
 For **outbound-only** notifications (no interactive replies), create a channel webhook
 (Channel settings → Integrations → Webhooks) and set `DISCORD_WEBHOOK_URL` in `.env`.
