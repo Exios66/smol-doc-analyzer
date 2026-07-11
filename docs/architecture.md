@@ -7,7 +7,7 @@ as **one chained analysis action**. Stages are initiated in a fixed order and
 execute chronologically; each stage reacts to prior stage outputs:
 
 1. **To markdown** — PNG / PDF / text → compact structured markdown (headings + field tables) before any LLM call, to cut tokens and preserve layout cues
-2. **Classification** — DeBERTa-v3 encoder (heuristic fallback) maps document text → taxonomy label
+2. **Classification** — DeBERTa-v3 encoder (heuristic fallback) maps document text → taxonomy label; optionally a **ViT** image classifier maps rendered page images → the same taxonomy
 3. **Extraction** — LayoutLMv3 / token classifier (heuristic fallback) pulls structured fields; conditioned on the predicted document type
 4. **Vision LLM refine** — markdown-first local multimodal/text model (default target: Qwen2-VL class) corrects fields using classify+extract context; optional page image via `VISION_LLM_USE_IMAGE=1`
 5. **Summarization** — generative LLM or template memo grounded in upstream markdown + payloads (not ground-truth skeletons)
@@ -39,7 +39,7 @@ Legal corpora contribute **vocabulary and reasoning style only**. Classification
 ```
 src/
   generation/       # corpus ingest, profiling, skeleton/Stage A/B, noise
-  classification/   # dataset prep, DeBERTa train/eval
+  classification/   # text DeBERTa + ViT image train/eval
   extraction/       # form render, LayoutLMv3 train/eval
   pipeline/         # orchestrator + markdown convert + batch_runner
   utils/            # config, provenance, LLM client, WandB tracking
@@ -56,7 +56,7 @@ evaluation/reports/ # classification + extraction eval outputs
 ## Data flow
 
 ```
-Public corpora → profiles → skeletons → documents (+ noisy) → classifier / extractor
+Public corpora → profiles → skeletons → documents (+ noisy) → classifier (text and/or ViT on renders) / extractor
                                          └→ memos (Phase 4 training targets)
 
 Inbound PNG/PDF/text → to_markdown → classify → extract → vision_llm → summarize
