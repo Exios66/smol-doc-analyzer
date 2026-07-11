@@ -1,0 +1,90 @@
+# Document classification taxonomy (v1)
+#
+# Sourced from the publicly available ACORD Forms Index (acord.org).
+# This taxonomy is a starting point for the classifier's label set.
+# Revisit after Phase 2 error analysis -- categories that are frequently
+# confused for one another may need merging or splitting.
+#
+# Each entry:
+#   label        -- the classification target used in training
+#   acord_forms  -- representative ACORD form numbers (not exhaustive)
+#   description  -- what this document type contains / is used for
+#   lifecycle_stage -- where this sits in the policy/claim lifecycle
+
+categories:
+
+  - label: application_commercial
+    acord_forms: ["125", "126", "140", "127", "130", "131", "146"]
+    description: >
+      Commercial insurance applications and coverage-specific sections
+      (general liability, property, auto, workers comp, umbrella, equipment).
+    lifecycle_stage: underwriting_intake
+
+  - label: application_personal
+    acord_forms: ["90", "80", "83", "84"]
+    description: >
+      Personal lines applications: auto, homeowners, umbrella, dwelling fire.
+    lifecycle_stage: underwriting_intake
+
+  - label: certificate_evidence
+    acord_forms: ["24", "25", "27", "28"]
+    description: >
+      Certificates and evidence of insurance -- proof of coverage documents
+      provided to third parties (liability and property).
+    lifecycle_stage: policy_servicing
+
+  - label: loss_notice
+    acord_forms: ["1", "2"]
+    description: >
+      First notice of loss documents for property and automobile claims.
+    lifecycle_stage: claim_intake
+
+  - label: claims_correspondence
+    acord_forms: []
+    description: >
+      Free-text correspondence related to an open claim: adjuster notes,
+      emails, letters to claimants, status updates. Not a standard ACORD
+      form -- structurally variable, mostly narrative text.
+    lifecycle_stage: claim_processing
+
+  - label: adjuster_memo
+    acord_forms: []
+    description: >
+      Internal case memos written by adjusters summarizing claim status,
+      coverage determination, and next steps. This is the TARGET OUTPUT
+      of the summarization component, not an input document type, but is
+      included here so the classifier can also recognize memos already
+      present in a document set (e.g. re-processing historical files).
+    lifecycle_stage: claim_processing
+
+  - label: policy_change_endorsement
+    acord_forms: ["101"]
+    description: >
+      Requests to modify an active policy: endorsements, remarks,
+      state-specific supplements and riders.
+    lifecycle_stage: policy_servicing
+
+  - label: repair_estimate
+    acord_forms: []
+    description: >
+      Third-party repair/replacement cost estimates attached to a claim
+      (auto body shop estimates, contractor estimates for property claims).
+      Not a standard ACORD form -- included because it's a common claim
+      attachment.
+    lifecycle_stage: claim_processing
+
+  - label: supporting_evidence
+    acord_forms: []
+    description: >
+      Police reports, photos (described, not the images themselves),
+      inspection reports, and other third-party documentation attached
+      to a claim file.
+    lifecycle_stage: claim_processing
+
+notes: >
+  This taxonomy intentionally includes a few non-ACORD categories
+  (claims_correspondence, repair_estimate, supporting_evidence) because
+  real claim files contain plenty of documents that aren't standardized
+  ACORD forms. Confirm/refine this list with domain stakeholders before
+  Phase 2 training if possible -- but the pipeline should not depend on
+  that confirmation to make progress.
