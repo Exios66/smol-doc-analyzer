@@ -4,7 +4,7 @@
 
 Insurance document intake is split into three specialized local components:
 
-1. **Classification** — DeBERTa-v3 encoder maps document text → taxonomy label
+1. **Classification** — DeBERTa-v3 encoder maps document text → taxonomy label; optionally a **ViT** image classifier maps rendered page images → the same taxonomy (Kaggle/HF-style document image classification)
 2. **Extraction** — LayoutLMv3 pulls structured fields from rendered/OCR'd forms
 3. **Summarization** (Phase 4+) — small generative LLM writes adjuster-style memos
 
@@ -21,7 +21,7 @@ Legal corpora contribute **vocabulary and reasoning style only**. Classification
 ```
 src/
   generation/       # corpus ingest, profiling, skeleton/Stage A/B, noise
-  classification/   # dataset prep, DeBERTa train/eval
+  classification/   # text DeBERTa + ViT image train/eval
   extraction/       # form render, LayoutLMv3 train/eval
   pipeline/         # orchestrator (Phase 5)
   utils/            # config, provenance, LLM client, WandB tracking
@@ -37,7 +37,7 @@ evaluation/reports/ # classification + extraction eval outputs
 ## Data flow
 
 ```
-Public corpora → profiles → skeletons → documents (+ noisy) → classifier / extractor
+Public corpora → profiles → skeletons → documents (+ noisy) → classifier (text and/or ViT on renders) / extractor
                                          └→ memos (Phase 4 training targets)
 ```
 

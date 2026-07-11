@@ -20,7 +20,7 @@ Phases 0–3 implemented:
 
 - Characteristic profiles from public document/layout/legal-style priors
 - Synthetic skeleton → document → memo → OCR-noise pipeline (template fallback; optional OpenRouter LLM)
-- Document-type classifier train/eval
+- Document-type classifier train/eval (text DeBERTa + optional ViT image path)
 - Field extraction train/eval with noisy stress reporting
 
 ## Data disclosure
@@ -48,6 +48,12 @@ python -m src.classification.prepare_dataset --in data/synthetic/documents/docum
 python -m src.classification.train_classifier --prepared data/synthetic/documents/classification_prepared --smoke
 python -m src.classification.eval --model-dir models/classifier_smoke --prepared data/synthetic/documents/classification_prepared
 
+# ViT document-image classifier (Kaggle/HF-style image classification on rendered pages)
+python -m src.extraction.render_forms --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl --out data/synthetic/documents/rendered
+python -m src.classification.prepare_image_dataset --in data/synthetic/documents/rendered/rendered.jsonl
+python -m src.classification.train_vit_classifier --prepared data/synthetic/documents/rendered/vit_classification_prepared --smoke
+python -m src.classification.eval_vit --model-dir models/vit_classifier_smoke --prepared data/synthetic/documents/rendered/vit_classification_prepared
+
 # render forms + train extractor (smoke path)
 python -m src.extraction.render_forms --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl --out data/synthetic/documents/rendered
 python -m src.extraction.prepare_dataset --in data/synthetic/documents/rendered/rendered.jsonl
@@ -60,7 +66,7 @@ python -m src.generation.stage_a_document_gen --in data/synthetic/skeletons/skel
 python -m src.generation.stage_b_memo_gen --in data/synthetic/documents/documents_from_skeletons_n5000_seed42.jsonl
 ```
 
-For GPU training, omit `--smoke` and use the default DeBERTa-v3 / LayoutLMv3 model names.
+For GPU training, omit `--smoke` and use the default DeBERTa-v3 / ViT / LayoutLMv3 model names.
 
 ## Repository structure
 
@@ -68,14 +74,14 @@ See [docs/architecture.md](docs/architecture.md).
 
 ## Evaluation
 
-Reports land in `evaluation/reports/` (`classification_report.*`, `extraction_report.json`, `failure_modes.md`).
+Reports land in `evaluation/reports/` (`classification_report.*`, `vit_classification_report.*`, `extraction_report.json`, `failure_modes.md`).
 
 ## Experiment tracking (Weights & Biases)
 
 Training, evaluation, and the seed generation pipeline log to [Weights & Biases](https://wandb.ai) by default:
 
-- **Train**: Hugging Face Trainer metrics (`loss`, eval accuracy / F1), run config, `train_meta.json` artifacts
-- **Eval**: summary metrics, per-class / field tables, confusion matrix (classifier), report + failure-mode artifacts
+- **Train**: Hugging Face Trainer metrics (`loss`, eval accuracy / F1), run config, `train_meta.json` artifacts (text DeBERTa, **ViT image**, and LayoutLMv3 extractors)
+- **Eval**: summary metrics, per-class / field tables, confusion matrix (classifier + ViT), report + failure-mode artifacts
 - **Generation**: stage progress and output path summaries for `run_seed_pipeline`
 
 ```bash
