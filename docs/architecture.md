@@ -2,11 +2,29 @@
 
 ## Pipeline
 
-Insurance document intake is split into three specialized local components:
+Insurance document intake is split into specialized local components that run
+as **one chained analysis action**. Stages are initiated in a fixed order and
+execute chronologically; each stage reacts to prior stage outputs:
 
-1. **Classification** — DeBERTa-v3 encoder maps document text → taxonomy label; optionally a **ViT** image classifier maps rendered page images → the same taxonomy (Kaggle/HF-style document image classification)
-2. **Extraction** — LayoutLMv3 pulls structured fields from rendered/OCR'd forms
-3. **Summarization** (Phase 4+) — small generative LLM writes adjuster-style memos
+1. **To markdown** — PNG / PDF / text → compact structured markdown (headings + field tables) before any LLM call, to cut tokens and preserve layout cues
+2. **Classification** — DeBERTa-v3 encoder (heuristic fallback) maps document text → taxonomy label; optionally a **ViT** image classifier maps rendered page images → the same taxonomy
+3. **Extraction** — LayoutLMv3 / token classifier (heuristic fallback) pulls structured fields; conditioned on the predicted document type
+4. **Vision LLM refine** — markdown-first local multimodal/text model (default target: Qwen2-VL class) corrects fields using classify+extract context; optional page image via `VISION_LLM_USE_IMAGE=1`
+5. **Summarization** — generative LLM or template memo grounded in upstream markdown + payloads (not ground-truth skeletons)
+
+Entry points:
+
+```bash
+# one document or JSONL — full chain in a single action
+python -m src.pipeline.orchestrator --in data/synthetic/documents/documents.jsonl --out data/pipeline/analysis.jsonl --vision
+
+# PNG or PDF directly (converted to markdown before LLM stages)
+python -m src.pipeline.orchestrator --image scan.png --vision
+python -m src.pipeline.orchestrator --pdf claim.pdf --vision
+
+# batch with human-review queue for low-confidence cases
+python -m src.pipeline.batch_runner --in data/synthetic/documents/documents.jsonl --out-dir data/pipeline/batch_run --vision
+```
 
 Upstream of training, an enhanced Phase 1 pipeline:
 
@@ -23,13 +41,14 @@ src/
   generation/       # corpus ingest, profiling, skeleton/Stage A/B, noise
   classification/   # text DeBERTa + ViT image train/eval
   extraction/       # form render, LayoutLMv3 train/eval
-  pipeline/         # orchestrator (Phase 5)
+  pipeline/         # orchestrator + markdown convert + batch_runner
   utils/            # config, provenance, LLM client, WandB tracking
 data/
   schemas/          # claim_skeleton.schema.json
   profiles/         # committed characteristic profiles (small JSON)
   raw/              # downloaded public samples (gitignored)
   synthetic/        # generated skeletons/documents/memos (gitignored)
+  pipeline/         # inference outputs + markdown/render cache (gitignored)
 taxonomy/           # ACORD-inspired document type labels
 evaluation/reports/ # classification + extraction eval outputs
 ```
@@ -39,7 +58,53 @@ evaluation/reports/ # classification + extraction eval outputs
 ```
 Public corpora → profiles → skeletons → documents (+ noisy) → classifier (text and/or ViT on renders) / extractor
                                          └→ memos (Phase 4 training targets)
+
+Inbound PNG/PDF/text → to_markdown → classify → extract → vision_llm → summarize
+                              ↓
+                     structured markdown (LLM context)
 ```
+
+## Chronological reaction contract
+
+`DocumentAnalysisOrchestrator` registers stages in initiation order and never
+reorders by name. Each stage receives an accumulating `AnalysisContext`:
+
+| Stage | Reads | Writes |
+|-------|-------|--------|
+| to_markdown | text / `image_path` / `pdf_path` | `markdown` (+ plain_text, token estimates) |
+| classify | markdown plain_text (preferred) | `classification.document_type`, confidence |
+| extract | markdown + classification | `extraction.fields*`, optional page render |
+| vision_llm | markdown (+ optional image) + classify + extract | `vision.refined_fields` (merged into extraction) |
+| summarize | markdown + all prior payloads | `summary.memo` |
+
+Low-confidence stages append flags (`low_confidence_classification`, etc.)
+rather than aborting the chain; `batch_runner` collects them into
+`human_review_queue.jsonl`.
+
+## Markdown conversion (token optimization)
+
+`src/pipeline/markdown_convert.py` turns page content into compact markdown:
+
+- **Text** → title / section headings + `| Field | Value |` tables for `Label: value` lines
+- **PDF** → PyMuPDF (preferred) or pypdf text extract → same structuring
+- **PNG** → optional `pytesseract` OCR (`pip install -e ".[ocr]"`), else fallback text when provided
+
+Downstream LLM stages read this markdown instead of raw vision tokens by default.
+Set `VISION_LLM_USE_IMAGE=1` only when you want an extra visual pass on high-RAM hosts.
+
+## Local Vision LLM
+
+On hosts with sufficient RAM/VRAM, set:
+
+```bash
+VISION_LLM_ENABLED=true
+VISION_LLM_MODEL_PATH=/path/to/Qwen2-VL-2B-Instruct   # preferred
+# or: VISION_LLM_LOAD=1 with VISION_LLM_MODEL=Qwen/Qwen2-VL-2B-Instruct
+VISION_LLM_USE_IMAGE=0   # keep markdown-only LLM context (default)
+```
+
+Without local weights the vision stage still runs (heuristic refine over markdown)
+so the single-action chain remains intact for development and CI.
 
 ## Design constraints
 
@@ -47,4 +112,6 @@ Public corpora → profiles → skeletons → documents (+ noisy) → classifier
 - Every synthetic record logged to `data/provenance_log.jsonl`
 - Fixed held-out split (`data/synthetic/splits.json`) reused across Phases 2–5
 - Template fallback for Stage A/B when OpenRouter is unavailable
+- Inference chain falls back to heuristics when fine-tuned weights are absent
+- LLM context prefers markdown over raw PNG/PDF pixels
 - Training / eval / seed-pipeline runs tracked in Weights & Biases (`src/utils/wandb_utils.py`); disable with `--no-wandb` or `WANDB_MODE=disabled`
