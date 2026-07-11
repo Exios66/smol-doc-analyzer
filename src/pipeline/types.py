@@ -50,6 +50,31 @@ class AnalysisDocument:
                 pdf_path = source_path
             elif suffix in {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}:
                 image_path = source_path
+        reserved = {
+            "record_id",
+            "text",
+            "claim_id",
+            "image_path",
+            "pdf_path",
+            "source_path",
+            "path",
+            "file_path",
+            "document_type",
+            "words",
+            "markdown",
+            "metadata",
+        }
+        meta: dict[str, Any] = {}
+        nested = row.get("metadata")
+        if isinstance(nested, dict):
+            meta.update(nested)
+        meta.update({k: v for k, v in row.items() if k not in reserved})
+        # Keep gold outcome / skeleton available to predict_outcome even when
+        # callers only set top-level keys.
+        if "skeleton" in row and "skeleton" not in meta:
+            meta["skeleton"] = row["skeleton"]
+        if "expected_outcome" in row and "expected_outcome" not in meta:
+            meta["expected_outcome"] = row["expected_outcome"]
         return cls(
             record_id=record_id,
             text=text,
@@ -59,25 +84,7 @@ class AnalysisDocument:
             source_path=source_path,
             document_type_hint=row.get("document_type"),
             markdown=row.get("markdown"),
-            metadata={
-                k: v
-                for k, v in row.items()
-                if k
-                not in {
-                    "record_id",
-                    "text",
-                    "claim_id",
-                    "image_path",
-                    "pdf_path",
-                    "source_path",
-                    "path",
-                    "file_path",
-                    "document_type",
-                    "words",
-                    "skeleton",
-                    "markdown",
-                }
-            },
+            metadata=meta,
         )
 
     def llm_text(self) -> str:
@@ -102,6 +109,7 @@ class AnalysisContext:
     classification: dict[str, Any] | None = None
     extraction: dict[str, Any] | None = None
     vision: dict[str, Any] | None = None
+    outcome: dict[str, Any] | None = None
     summary: dict[str, Any] | None = None
     flags: list[str] = field(default_factory=list)
 
@@ -129,6 +137,8 @@ class AnalysisContext:
             self.extraction = result.payload
         elif result.stage == "vision_llm":
             self.vision = result.payload
+        elif result.stage == "predict_outcome":
+            self.outcome = result.payload
         elif result.stage == "summarize":
             self.summary = result.payload
 
@@ -156,6 +166,7 @@ class AnalysisContext:
             "classification": self.classification,
             "extraction": self.extraction,
             "vision": self.vision,
+            "outcome": self.outcome,
             "summary": self.summary,
             "flags": list(dict.fromkeys(self.flags)),
             "stages": [
@@ -171,9 +182,10 @@ class AnalysisContext:
                 for s in self.stages
             ],
             "memo": (self.summary or {}).get("memo"),
+            "expected_outcome": (self.outcome or {}).get("expected_outcome"),
             "low_confidence": any(
                 s.confidence < 0.55 and s.ok
                 for s in self.stages
-                if s.stage in {"classify", "extract", "to_markdown"}
+                if s.stage in {"classify", "extract", "to_markdown", "predict_outcome"}
             ),
         }

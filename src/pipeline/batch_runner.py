@@ -79,6 +79,7 @@ def run_batch(
         "review_queue_path": str(review_path),
         "by_document_type": _count_by_type(results),
         "flag_counts": _count_flags(results),
+        "outcome_metrics": _outcome_metrics(results, rows),
     }
     write_json(summary_path, summary)
     log_provenance(
@@ -123,10 +124,45 @@ def _count_flags(results: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
+def _outcome_metrics(
+    results: list[dict[str, Any]], rows: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Accuracy of predicted claim outcomes vs gold when labels are available."""
+    from src.pipeline.outcome import derive_expected_outcome, features_from_skeleton
+
+    y_true: list[str] = []
+    y_pred: list[str] = []
+    for row, result in zip(rows, results):
+        gold = row.get("expected_outcome")
+        skeleton = row.get("skeleton")
+        if not gold and isinstance(skeleton, dict):
+            gold = skeleton.get("expected_outcome") or derive_expected_outcome(
+                features_from_skeleton(skeleton)
+            )
+        pred = (result.get("outcome") or {}).get("expected_outcome")
+        if not gold or not pred:
+            continue
+        y_true.append(str(gold))
+        y_pred.append(str(pred))
+
+    if not y_true:
+        return {
+            "n_scored": 0,
+            "accuracy": None,
+            "note": "no gold expected_outcome on inputs",
+        }
+    correct = sum(1 for a, b in zip(y_true, y_pred) if a == b)
+    return {
+        "n_scored": len(y_true),
+        "n_correct": correct,
+        "accuracy": correct / len(y_true),
+    }
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(
-        description="Batch-run the chained to_markdown→classify→extract→vision→summarize pipeline"
+        description="Batch-run the chained to_markdown→classify→extract→vision→predict_outcome→summarize pipeline"
     )
     parser.add_argument("--in", dest="inp", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, default=None)

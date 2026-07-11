@@ -3,7 +3,7 @@
   "title": "ClaimSkeleton",
   "description": "Structured intermediate representation used to generate synthetic insurance documents and memos. This is entirely fictional data -- see docs/data_provenance.md.",
   "type": "object",
-  "required": ["claim_id", "document_type", "policy", "loss_event", "parties", "financials", "narrative_complexity"],
+  "required": ["claim_id", "document_type", "policy", "loss_event", "parties", "financials", "narrative_complexity", "expected_outcome"],
   "properties": {
     "claim_id": {
       "type": "string",
@@ -81,6 +81,17 @@
       "type": "string",
       "enum": ["clean", "standard", "ambiguous", "fraud_flagged"],
       "description": "Controls how straightforward vs. messy/edge-case the generated document and memo should be."
+    },
+    "expected_outcome": {
+      "type": "string",
+      "enum": [
+        "pay_full",
+        "pay_partial",
+        "deny",
+        "investigate",
+        "close_without_payment"
+      ],
+      "description": "Synthetic supervisory label for predicted claim disposition. Deterministic from skeleton features so pipeline outcome accuracy tracks end-to-end feature recovery."
     },
     "multi_doc_group_id": {
       "type": ["string", "null"],
