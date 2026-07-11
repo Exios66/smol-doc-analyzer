@@ -1,6 +1,0 @@
-{"record_id": "CLM-2023-120957::loss_notice::5", "image_path": "data/synthetic/documents/rendered_vit_smoke/images/CLM-2023-120957__loss_notice__5.png", "label": "loss_notice", "label_id": 3, "is_noisy": false}
-{"record_id": "CLM-2026-436876::supporting_evidence::10", "image_path": "data/synthetic/documents/rendered_vit_smoke/images/CLM-2026-436876__supporting_evidence__10.png", "label": "supporting_evidence", "label_id": 7, "is_noisy": false}
-{"record_id": "CLM-2024-757231::loss_notice::12", "image_path": "data/synthetic/documents/rendered_vit_smoke/images/CLM-2024-757231__loss_notice__12.png", "label": "loss_notice", "label_id": 3, "is_noisy": false}
-{"record_id": "CLM-2025-087966::loss_notice::15", "image_path": "data/synthetic/documents/rendered_vit_smoke/images/CLM-2025-087966__loss_notice__15.png", "label": "loss_notice", "label_id": 3, "is_noisy": false}
-{"record_id": "CLM-2023-264445::claims_correspondence::19", "image_path": "data/synthetic/documents/rendered_vit_smoke/images/CLM-2023-264445__claims_correspondence__19.png", "label": "claims_correspondence", "label_id": 4, "is_noisy": false}
-{"record_id": "CLM-2025-763397::supporting_evidence::35", "image_path": "data/synthetic/documents/rendered_vit_smoke/images/CLM-2025-763397__supporting_evidence__35.png", "label": "supporting_evidence", "label_id": 7, "is_noisy": false}
