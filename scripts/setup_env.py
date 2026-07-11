@@ -40,7 +40,10 @@ def main() -> int:
         else:
             shutil.copyfile(example, target)
             print(f"wrote {target}")
-            print("Edit that file and paste OPENROUTER_API_KEY / WANDB_API_KEY / HF_TOKEN.")
+            print(
+                "Edit that file and paste OPENROUTER_API_KEY / WANDB_API_KEY / "
+                "HF_TOKEN / DISCORD_TOKEN (Discord optional)."
+            )
 
     # Import after copy so Config can see the new file
     sys.path.insert(0, str(REPO_ROOT))
@@ -60,6 +63,11 @@ def main() -> int:
     print("  OPENROUTER_API_KEY  https://openrouter.ai/keys")
     print("  WANDB_API_KEY       https://wandb.ai/authorize")
     print("  HF_TOKEN            https://huggingface.co/settings/tokens  (optional)")
+    print("  DISCORD_TOKEN       https://discord.com/developers/applications  (optional bot)")
+    print("")
+    print("Discord bot (Chloride): pip install -e \".[discord]\" then")
+    print("  python -m src.discord_bot")
+    print("  See discord/smol-doc-analyzer/README.md")
     print("")
     print("Cursor Cloud Agents: add the same keys as Environment Secrets in the")
     print("Cursor dashboard for this repo/environment so cloud runs can use them.")

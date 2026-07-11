@@ -7,7 +7,7 @@ name = "smol-doc-analyzer"
 version = "0.1.0"
 description = "Local insurance document classification, extraction, and memo generation pipeline"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
   "accelerate>=0.33.0",
   "datasets>=2.20.0",
@@ -38,6 +38,10 @@ dev = [
 ocr = [
   "pytesseract>=0.3.10",
 ]
+discord = [
+  # Chloride (Coral Discord agent): https://github.com/S4IL21/chloride
+  "chloride @ git+https://github.com/S4IL21/chloride.git@ebe61ec6aa460ba16c1ad94666144675da9cabff",
+]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
@@ -48,4 +52,4 @@ pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"

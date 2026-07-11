@@ -1,0 +1,17 @@
+# Discord bot — docker-compose (optional)
+
+services:
+  bot:
+    build:
+      context: ../..
+      dockerfile: discord/smol-doc-analyzer/Dockerfile
+    container_name: smol-doc-analyzer-discord
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      DISCORD_BOT_CONFIG_DIR: /workspace/discord/smol-doc-analyzer
+    volumes:
+      - ../..:/workspace
+    working_dir: /workspace
+    command: ["python", "-m", "src.discord_bot", "--config-dir", "discord/smol-doc-analyzer"]

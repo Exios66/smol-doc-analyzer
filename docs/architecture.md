@@ -42,7 +42,10 @@ src/
   classification/   # text DeBERTa + ViT image train/eval
   extraction/       # form render, LayoutLMv3 train/eval
   pipeline/         # orchestrator + markdown convert + batch_runner
+  discord_bot/      # Chloride Discord front-end + analyze_insurance_document tool
   utils/            # config, provenance, LLM client, WandB tracking
+discord/
+  smol-doc-analyzer/  # Chloride bot workspace (config templates, compose)
 data/
   schemas/          # claim_skeleton.schema.json
   profiles/         # committed characteristic profiles (small JSON)
@@ -52,6 +55,14 @@ data/
 taxonomy/           # ACORD-inspired document type labels
 evaluation/reports/ # classification + extraction eval outputs
 ```
+
+## Discord (Chloride)
+
+Optional Discord agent powered by [Chloride](https://github.com/S4IL21/chloride).
+Install `pip install -e ".[discord]"`, set `DISCORD_TOKEN` (+ OpenRouter/AI key),
+then `python -m src.discord_bot`. The bot exposes `analyze_insurance_document`,
+which runs the same chronological pipeline as the CLI. See
+[discord/smol-doc-analyzer/README.md](../discord/smol-doc-analyzer/README.md).
 
 ## Data flow
 
