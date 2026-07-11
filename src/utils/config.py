@@ -40,6 +40,11 @@ class Config:
     evaluation_reports_dir: Path
     models_dir: Path
 
+    wandb_project: str
+    wandb_entity: str
+    wandb_mode: str
+    wandb_api_key: str
+
     @classmethod
     def load(cls) -> "Config":
         return cls(
@@ -61,4 +66,8 @@ class Config:
             splits_path=_path("SPLITS_PATH", "data/synthetic/splits.json"),
             evaluation_reports_dir=_path("EVALUATION_REPORTS_DIR", "evaluation/reports"),
             models_dir=_path("MODELS_DIR", "models"),
+            wandb_project=os.getenv("WANDB_PROJECT", "smol-doc-analyzer"),
+            wandb_entity=os.getenv("WANDB_ENTITY", ""),
+            wandb_mode=os.getenv("WANDB_MODE", "online"),
+            wandb_api_key=os.getenv("WANDB_API_KEY", ""),
         )

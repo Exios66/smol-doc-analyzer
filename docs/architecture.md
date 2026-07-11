@@ -24,7 +24,7 @@ src/
   classification/   # dataset prep, DeBERTa train/eval
   extraction/       # form render, LayoutLMv3 train/eval
   pipeline/         # orchestrator (Phase 5)
-  utils/            # config, provenance, LLM client
+  utils/            # config, provenance, LLM client, WandB tracking
 data/
   schemas/          # claim_skeleton.schema.json
   profiles/         # committed characteristic profiles (small JSON)
@@ -47,3 +47,4 @@ Public corpora → profiles → skeletons → documents (+ noisy) → classifier
 - Every synthetic record logged to `data/provenance_log.jsonl`
 - Fixed held-out split (`data/synthetic/splits.json`) reused across Phases 2–5
 - Template fallback for Stage A/B when OpenRouter is unavailable
+- Training / eval / seed-pipeline runs tracked in Weights & Biases (`src/utils/wandb_utils.py`); disable with `--no-wandb` or `WANDB_MODE=disabled`

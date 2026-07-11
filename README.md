@@ -70,6 +70,29 @@ See [docs/architecture.md](docs/architecture.md).
 
 Reports land in `evaluation/reports/` (`classification_report.*`, `extraction_report.json`, `failure_modes.md`).
 
+## Experiment tracking (Weights & Biases)
+
+Training, evaluation, and the seed generation pipeline log to [Weights & Biases](https://wandb.ai) by default:
+
+- **Train**: Hugging Face Trainer metrics (`loss`, eval accuracy / F1), run config, `train_meta.json` artifacts
+- **Eval**: summary metrics, per-class / field tables, confusion matrix (classifier), report + failure-mode artifacts
+- **Generation**: stage progress and output path summaries for `run_seed_pipeline`
+
+```bash
+# copy env and set your key (https://wandb.ai/authorize)
+cp .env.example .env
+# WANDB_API_KEY=...  WANDB_PROJECT=smol-doc-analyzer
+
+# offline / no key still works (local wandb/ cache)
+WANDB_MODE=offline python -m src.classification.train_classifier --prepared ... --smoke
+
+# disable for a single invocation
+python -m src.classification.train_classifier --prepared ... --smoke --no-wandb
+```
+
+Useful flags on train/eval/seed CLIs: `--wandb`, `--no-wandb`, `--wandb-project`, `--wandb-run-name`.
+Set `WANDB_MODE=disabled` or `WANDB_DISABLED=true` to turn tracking off globally.
+
 ## License
 
 TBD — add before making repository public.
