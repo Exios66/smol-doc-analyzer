@@ -10,7 +10,8 @@ Discord front-end for **smol-doc-analyzer**, powered by
 pip install -e ".[discord]"
 python scripts/setup_env.py
 # edit .env:
-#   DISCORD_TOKEN=...          # Discord bot token
+#   DISCORD_TOKEN=...          # Discord bot token (interactive Chloride agent)
+#   DISCORD_WEBHOOK_URL=...    # optional inbound webhook for outbound posts
 #   OPENROUTER_API_KEY=...     # used as the bot LLM via OpenRouter
 # optional:
 #   DISCORD_AI_API_KEY=...     # override LLM key
@@ -23,6 +24,24 @@ cp discord/smol-doc-analyzer/config.yaml.example discord/smol-doc-analyzer/confi
 Create a Discord application + bot at https://discord.com/developers/applications,
 enable **Message Content Intent**, invite the bot to your server, and paste the token
 into `.env` as `DISCORD_TOKEN`.
+
+For **outbound-only** notifications (no interactive replies), create a channel webhook
+(Channel settings → Integrations → Webhooks) and set `DISCORD_WEBHOOK_URL` in `.env`.
+A webhook cannot replace the Chloride bot — it only posts messages.
+
+## Webhook notifications (outbound)
+
+```bash
+python -m src.discord_bot.webhook --check
+python -m src.discord_bot.webhook --text "LOSS NOTICE
+Claim Number: CLM-1
+Date of Loss: 2024-01-15
+Loss Type: collision"
+python -m src.discord_bot.webhook --pdf path/to/claim.pdf
+```
+
+Never commit webhook URLs. If one was pasted into chat or a ticket, rotate it in
+Discord (Edit Webhook → Reset Token / delete & recreate).
 
 ## Run (local)
 

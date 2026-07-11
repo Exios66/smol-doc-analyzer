@@ -125,3 +125,49 @@ def test_analyze_impl_on_text():
     assert out.get("ok") is True
     assert "discord_summary" in out
     assert out["analysis"]["record_id"] == "test-discord-text"
+
+
+def test_post_webhook_requires_url(monkeypatch):
+    monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+    from src.discord_bot import webhook as wh
+
+    # Ensure dotenv empty path doesn't revive a leaked env in CI.
+    monkeypatch.setattr(wh, "webhook_url", lambda: "")
+    out = wh.post_webhook("hi", url="")
+    assert out["ok"] is False
+    assert "not set" in out["error"]
+
+
+def test_post_webhook_rejects_non_discord_url():
+    from src.discord_bot.webhook import post_webhook
+
+    out = post_webhook("hi", url="https://example.com/not-a-webhook")
+    assert out["ok"] is False
+    assert "does not look like" in out["error"]
+
+
+def test_post_webhook_success_mocked(monkeypatch):
+    from src.discord_bot import webhook as wh
+
+    class _Resp:
+        status = 204
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def getcode(self):
+            return 204
+
+    def fake_urlopen(req, timeout=30):
+        assert req.full_url.endswith("/webhooks/1/abc")
+        return _Resp()
+
+    monkeypatch.setattr(wh.urllib.request, "urlopen", fake_urlopen)
+    out = wh.post_webhook(
+        "hello",
+        url="https://discord.com/api/webhooks/1/abc",
+    )
+    assert out == {"ok": True, "status": 204}

@@ -79,6 +79,7 @@ def secrets_status() -> dict[str, bool]:
         "WANDB_API_KEY": bool(_secret("WANDB_API_KEY")),
         "HF_TOKEN": bool(_secret("HF_TOKEN") or _secret("HUGGING_FACE_HUB_TOKEN")),
         "DISCORD_TOKEN": bool(_secret("DISCORD_TOKEN")),
+        "DISCORD_WEBHOOK_URL": bool(_secret("DISCORD_WEBHOOK_URL")),
         "DISCORD_AI_API_KEY": bool(
             _secret("DISCORD_AI_API_KEY")
             or _secret("AI_API_KEY")
