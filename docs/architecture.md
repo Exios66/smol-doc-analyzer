@@ -42,7 +42,7 @@ src/
   classification/   # dataset prep, DeBERTa train/eval
   extraction/       # form render, LayoutLMv3 train/eval
   pipeline/         # orchestrator + markdown convert + batch_runner
-  utils/            # config, provenance, LLM client
+  utils/            # config, provenance, LLM client, WandB tracking
 data/
   schemas/          # claim_skeleton.schema.json
   profiles/         # committed characteristic profiles (small JSON)
@@ -114,3 +114,4 @@ so the single-action chain remains intact for development and CI.
 - Template fallback for Stage A/B when OpenRouter is unavailable
 - Inference chain falls back to heuristics when fine-tuned weights are absent
 - LLM context prefers markdown over raw PNG/PDF pixels
+- Training / eval / seed-pipeline runs tracked in Weights & Biases (`src/utils/wandb_utils.py`); disable with `--no-wandb` or `WANDB_MODE=disabled`

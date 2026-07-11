@@ -25,6 +25,7 @@ dependencies = [
   "tenacity>=8.5.0",
   "torch>=2.2.0",
   "transformers>=4.44.0",
+  "wandb>=0.17.0",
 ]
 
 [project.optional-dependencies]

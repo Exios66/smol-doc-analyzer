@@ -56,6 +56,12 @@ class Config:
     summarizer_model: str
     summarizer_model_path: Path | None
 
+    # Weights & Biases experiment tracking
+    wandb_project: str
+    wandb_entity: str
+    wandb_mode: str
+    wandb_api_key: str
+
     @classmethod
     def load(cls) -> "Config":
         vision_path = os.getenv("VISION_LLM_MODEL_PATH", "").strip()
@@ -92,4 +98,8 @@ class Config:
             summarizer_model_path=_path("SUMMARIZER_MODEL_PATH", summarizer_path)
             if summarizer_path
             else None,
+            wandb_project=os.getenv("WANDB_PROJECT", "smol-doc-analyzer"),
+            wandb_entity=os.getenv("WANDB_ENTITY", ""),
+            wandb_mode=os.getenv("WANDB_MODE", "online"),
+            wandb_api_key=os.getenv("WANDB_API_KEY", ""),
         )

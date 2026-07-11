@@ -29,4 +29,8 @@ models/**
 *.bin
 *.safetensors
 
+# Weights & Biases local run cache (synced when online)
+wandb/
+offline-run-*/
+
 .DS_Store

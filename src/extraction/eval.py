@@ -9,10 +9,11 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-from sklearn.metrics import classification_report, f1_score
+from sklearn.metrics import f1_score
 
 from src.utils.config import Config
 from src.utils.io import load_jsonl, read_json, write_json
+from src.utils.wandb_utils import WandbSettings, add_wandb_cli_flags, settings_from_args, start_run
 
 
 def _decode_entities(tokens: list[str], labels: list[str]) -> dict[str, list[str]]:
@@ -52,12 +53,10 @@ def _partial_match(a: str, b: str) -> bool:
     return na in nb or nb in na
 
 
-def evaluate(
+def _evaluate_core(
     model_dir: Path,
     prepared_dir: Path,
-    cfg: Config,
     split: str = "test",
-    noisy_prepared: Path | None = None,
 ) -> dict:
     import torch
     from transformers import AutoModelForTokenClassification, AutoTokenizer
@@ -107,32 +106,18 @@ def evaluate(
                 gvals = gold_ents.get(field, [])
                 pvals = pred_ents.get(field, [])
                 totals[field] += max(len(gvals), 1)
-                # exact
                 if gvals and pvals and _normalize(gvals[0]) == _normalize(pvals[0]):
                     exact_hits[field] += 1
                 if gvals and pvals and _partial_match(gvals[0], pvals[0]):
                     partial_hits[field] += 1
 
     token_f1 = float(f1_score(token_true, token_pred, average="macro", zero_division=0))
-    field_exact = {
-        f: exact_hits[f] / totals[f] for f in totals
-    }
-    field_partial = {
-        f: partial_hits[f] / totals[f] for f in totals
-    }
+    field_exact = {f: exact_hits[f] / totals[f] for f in totals}
+    field_partial = {f: partial_hits[f] / totals[f] for f in totals}
     overall_exact = float(np.mean(list(field_exact.values()))) if field_exact else 0.0
     overall_partial = float(np.mean(list(field_partial.values()))) if field_partial else 0.0
 
-    noisy_metrics = None
-    if noisy_prepared and (noisy_prepared / f"{split}.jsonl").exists():
-        noisy_metrics = evaluate(model_dir, noisy_prepared, cfg, split=split, noisy_prepared=None)
-        noisy_metrics = {
-            "token_macro_f1": noisy_metrics["token_macro_f1"],
-            "field_exact_mean": noisy_metrics["field_exact_mean"],
-            "field_partial_mean": noisy_metrics["field_partial_mean"],
-        }
-
-    report = {
+    return {
         "split": split,
         "n": len(rows),
         "token_macro_f1": token_f1,
@@ -141,10 +126,36 @@ def evaluate(
         "field_exact": field_exact,
         "field_partial": field_partial,
         "hard_fields": {f: field_partial.get(f, 0.0) for f in hard_fields},
-        "noisy_stress": noisy_metrics,
         "model_dir": str(model_dir),
+        "_hard_fields_list": hard_fields,
     }
-    write_json(cfg.evaluation_reports_dir / "extraction_report.json", report)
+
+
+def evaluate(
+    model_dir: Path,
+    prepared_dir: Path,
+    cfg: Config,
+    split: str = "test",
+    noisy_prepared: Path | None = None,
+    wandb_settings: WandbSettings | None = None,
+    wandb_run_name: str | None = None,
+) -> dict:
+    report = _evaluate_core(model_dir, prepared_dir, split=split)
+    hard_fields = report.pop("_hard_fields_list")
+
+    noisy_metrics = None
+    if noisy_prepared and (noisy_prepared / f"{split}.jsonl").exists():
+        noisy = _evaluate_core(model_dir, noisy_prepared, split=split)
+        noisy_metrics = {
+            "token_macro_f1": noisy["token_macro_f1"],
+            "field_exact_mean": noisy["field_exact_mean"],
+            "field_partial_mean": noisy["field_partial_mean"],
+        }
+
+    report["noisy_stress"] = noisy_metrics
+    cfg.evaluation_reports_dir.mkdir(parents=True, exist_ok=True)
+    report_json = cfg.evaluation_reports_dir / "extraction_report.json"
+    write_json(report_json, report)
 
     failure_md = [
         "# Extraction failure modes",
@@ -172,9 +183,79 @@ def evaluate(
                 f"- field_partial_mean: {noisy_metrics['field_partial_mean']:.3f}",
             ]
         )
-    (cfg.evaluation_reports_dir / "failure_modes.md").write_text(
-        "\n".join(failure_md) + "\n", encoding="utf-8"
-    )
+    failure_path = cfg.evaluation_reports_dir / "failure_modes.md"
+    failure_path.write_text("\n".join(failure_md) + "\n", encoding="utf-8")
+
+    run_name = wandb_run_name or f"ext-eval-{Path(model_dir).name}-{split}"
+    with start_run(
+        name=run_name,
+        job_type="eval",
+        config={
+            "task": "extraction_eval",
+            "model_dir": str(model_dir),
+            "prepared_dir": str(prepared_dir),
+            "noisy_prepared": str(noisy_prepared) if noisy_prepared else None,
+            "split": split,
+            "n": report["n"],
+        },
+        tags=["extraction", "eval", split],
+        settings=wandb_settings,
+    ) as wb:
+        wb.summary(
+            {
+                "token_macro_f1": report["token_macro_f1"],
+                "field_exact_mean": report["field_exact_mean"],
+                "field_partial_mean": report["field_partial_mean"],
+                "n": report["n"],
+                "split": split,
+            }
+        )
+        wb.log(
+            {
+                "eval/token_macro_f1": report["token_macro_f1"],
+                "eval/field_exact_mean": report["field_exact_mean"],
+                "eval/field_partial_mean": report["field_partial_mean"],
+                "eval/n": report["n"],
+            }
+        )
+        field_rows = [
+            [
+                field,
+                report["field_exact"].get(field, 0.0),
+                report["field_partial"].get(field, 0.0),
+            ]
+            for field in sorted(set(report["field_exact"]) | set(report["field_partial"]))
+        ]
+        wb.log_table(
+            "eval/field_scores",
+            ["field", "exact", "partial"],
+            field_rows,
+        )
+        wb.log_table(
+            "eval/hard_fields",
+            ["field", "partial"],
+            [[f, report["hard_fields"].get(f, 0.0)] for f in hard_fields],
+        )
+        if noisy_metrics:
+            wb.log(
+                {
+                    "eval/noisy_token_macro_f1": noisy_metrics["token_macro_f1"],
+                    "eval/noisy_field_exact_mean": noisy_metrics["field_exact_mean"],
+                    "eval/noisy_field_partial_mean": noisy_metrics["field_partial_mean"],
+                }
+            )
+            wb.summary({f"noisy/{k}": v for k, v in noisy_metrics.items()})
+        wb.log_artifact_files(
+            name=f"extraction-report-{Path(model_dir).name}-{split}",
+            paths=[report_json, failure_path],
+            artifact_type="evaluation",
+            metadata={
+                "token_macro_f1": report["token_macro_f1"],
+                "field_exact_mean": report["field_exact_mean"],
+                "split": split,
+            },
+        )
+
     return report
 
 
@@ -184,9 +265,18 @@ def main() -> None:
     parser.add_argument("--prepared", type=Path, required=True)
     parser.add_argument("--noisy-prepared", type=Path, default=None)
     parser.add_argument("--split", default="test")
+    add_wandb_cli_flags(parser)
     args = parser.parse_args()
     cfg = Config.load()
-    report = evaluate(args.model_dir, args.prepared, cfg, args.split, args.noisy_prepared)
+    report = evaluate(
+        args.model_dir,
+        args.prepared,
+        cfg,
+        args.split,
+        args.noisy_prepared,
+        wandb_settings=settings_from_args(args),
+        wandb_run_name=args.wandb_run_name,
+    )
     print(
         json.dumps(
             {
