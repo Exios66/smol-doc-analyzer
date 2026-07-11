@@ -62,6 +62,12 @@ python -m src.classification.prepare_dataset --in data/synthetic/documents/docum
 python -m src.classification.train_classifier --prepared data/synthetic/documents/classification_prepared --smoke
 python -m src.classification.eval --model-dir models/classifier_smoke --prepared data/synthetic/documents/classification_prepared
 
+# classical baseline: TF-IDF + Random Forest on typed text + handwriting/OCR noise
+python -m src.classification.train_random_forest
+# or interactively:
+#   pip install -e ".[notebooks]"
+#   jupyter notebook notebooks/random_forest_text_handwriting_classification.ipynb
+
 # ViT document-image classifier (Kaggle/HF-style image classification on rendered pages)
 python -m src.extraction.render_forms --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl --out data/synthetic/documents/rendered
 python -m src.classification.prepare_image_dataset --in data/synthetic/documents/rendered/rendered.jsonl
@@ -131,7 +137,7 @@ Details: [discord/smol-doc-analyzer/README.md](discord/smol-doc-analyzer/README.
 
 ## Evaluation
 
-Reports land in `evaluation/reports/` (`classification_report.*`, `vit_classification_report.*`, `extraction_report.json`, `failure_modes.md`).
+Reports land in `evaluation/reports/` (`classification_report.*`, `vit_classification_report.*`, `random_forest_classification_report.md`, `extraction_report.json`, `failure_modes.md`).
 
 ## Experiment tracking (Weights & Biases)
 

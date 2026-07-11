@@ -39,7 +39,7 @@ Legal corpora contribute **vocabulary and reasoning style only**. Classification
 ```
 src/
   generation/       # corpus ingest, profiling, skeleton/Stage A/B, noise
-  classification/   # text DeBERTa + ViT image train/eval
+  classification/   # text DeBERTa + ViT image + TF-IDF Random Forest train/eval
   extraction/       # form render, LayoutLMv3 train/eval
   pipeline/         # orchestrator + markdown convert + batch_runner
   discord_bot/      # Chloride Discord front-end + analyze_insurance_document tool
