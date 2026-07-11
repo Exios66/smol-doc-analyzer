@@ -56,12 +56,24 @@ python -m src.discord_bot
 python -m src.discord_bot --config-dir discord/smol-doc-analyzer
 ```
 
-Mention the bot or prefix a message with `--` (configurable via `DISCORD_PREFIX`).
+Mention the bot or prefix a message with `--` (configurable via `DISCORD_PREFIX`),
+**or use slash commands** (synced on bot startup):
 
-Attach a PDF/PNG or paste document text, then ask it to analyze — the agent should
-call `analyze_insurance_document`, which runs:
+| Command | What it does |
+|---------|----------------|
+| `/analyze` | Run the pipeline on pasted `text` and/or a PDF/PNG `attachment` |
+| `/analyze_url` | Download a document from a URL and analyze it |
+| `/status` | Secret/config readiness (never prints secret values) |
+| `/help` | List slash commands |
+| `/ping` | Gateway latency check |
+
+Attach a PDF/PNG or paste document text with `/analyze` — this calls the pipeline
+directly (no LLM tool routing required):
 
 `to_markdown → classify → extract → vision_llm → summarize`
+
+Free-form chat (mention / `--` prefix) still uses the Chloride agent, which can
+call the `analyze_insurance_document` tool.
 
 ## Run (Docker)
 
@@ -75,10 +87,13 @@ docker compose up --build
 
 ## Tools
 
-| Tool | Purpose |
-|------|---------|
-| `analyze_insurance_document` | Local pipeline on text / Discord attachment / URL |
+| Surface | Purpose |
+|---------|---------|
+| `/analyze`, `/analyze_url` | Direct slash commands → local pipeline |
+| `/status`, `/help`, `/ping` | Bot readiness / help / latency |
+| Agent tool `analyze_insurance_document` | Same pipeline via Chloride chat |
 | Chloride built-ins | `analyse_file`, search, shell/code (tier-gated) |
+| Context menu **Ask Me** | Analyze a selected message |
 
 Tier `allowed_tools` in `config.yaml` controls who may call which tools. The
 `default` tier is limited to document analysis + `get_user_info`.

@@ -155,17 +155,22 @@ def main(config_dir: str | Path | None = None) -> None:
         raise SystemExit(1)
 
     def _make_client(active_intents: discord.Intents) -> "CoralBot":
-        return CoralBot(
+        client = CoralBot(
             config=config,
             agent=agent,
             model=model,
             intents=active_intents,
             engine=engine,
         )
+        from src.discord_bot.commands import register_slash_commands
+
+        register_slash_commands(client)
+        return client
 
     typer.secho(
         f"Starting Chloride Discord bot from {cfg_dir} "
-        f"(tools include analyze_insurance_document)…",
+        f"(slash commands: /analyze /analyze_url /status /help /ping; "
+        f"agent tool: analyze_insurance_document)…",
         fg="green",
     )
 

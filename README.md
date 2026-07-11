@@ -93,8 +93,8 @@ python -m src.pipeline.batch_runner \
 python -m src.pipeline.orchestrator --vision --text "LOSS NOTICE\nClaim Number: CLM-1\nDate of Loss: 2024-01-15\n..."
 
 # --- Discord bot (Chloride) ---
-# https://github.com/S4IL21/chloride — Discord agent with sandboxing/tools,
-# extended here with analyze_insurance_document → local pipeline.
+# Slash commands: /analyze /analyze_url /status /help /ping
+# Agent tool: analyze_insurance_document → local pipeline
 pip install -e ".[discord]"
 python scripts/setup_env.py   # set DISCORD_TOKEN (+ OPENROUTER_API_KEY)
 cp discord/smol-doc-analyzer/config.yaml.example discord/smol-doc-analyzer/config.yaml
@@ -113,10 +113,6 @@ On high-RAM local hosts, point `VISION_LLM_MODEL_PATH` at a downloaded Qwen2-VL
 (or similar) checkpoint and set `VISION_LLM_LOAD=1` to refine extraction from
 page images inside the same chain.
 
-On high-RAM local hosts, point `VISION_LLM_MODEL_PATH` at a downloaded Qwen2-VL
-(or similar) checkpoint and set `VISION_LLM_LOAD=1` to refine extraction from
-page images inside the same chain.
-
 ## Repository structure
 
 See [docs/architecture.md](docs/architecture.md).
@@ -125,8 +121,12 @@ See [docs/architecture.md](docs/architecture.md).
 
 Optional Discord front-end via [Chloride](https://github.com/S4IL21/chloride)
 (Coral AI agent). Install the `discord` extra, set `DISCORD_TOKEN`, and run
-`python -m src.discord_bot`. Users can paste claim text or attach PDF/PNG scans;
-the agent calls `analyze_insurance_document` to run the local analysis chain.
+`python -m src.discord_bot`.
+
+Users can:
+- run **slash commands** `/analyze`, `/analyze_url`, `/status`, `/help`, `/ping`
+- or chat with the bot (mention / `--` prefix) so the agent calls `analyze_insurance_document`
+
 Details: [discord/smol-doc-analyzer/README.md](discord/smol-doc-analyzer/README.md).
 
 ## Evaluation

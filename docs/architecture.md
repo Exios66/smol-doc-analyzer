@@ -60,9 +60,15 @@ evaluation/reports/ # classification + extraction eval outputs
 
 Optional Discord agent powered by [Chloride](https://github.com/S4IL21/chloride).
 Install `pip install -e ".[discord]"`, set `DISCORD_TOKEN` (+ OpenRouter/AI key),
-then `python -m src.discord_bot`. The bot exposes `analyze_insurance_document`,
-which runs the same chronological pipeline as the CLI. See
-[discord/smol-doc-analyzer/README.md](../discord/smol-doc-analyzer/README.md).
+then `python -m src.discord_bot`.
+
+**Slash commands** (synced on startup): `/analyze`, `/analyze_url`, `/status`, `/help`,
+`/ping` — run the local pipeline directly from Discord's command picker.
+
+**Chat / tools:** mention the bot or use the `--` prefix; the agent can call
+`analyze_insurance_document`. Right-click → **Ask Me** analyzes a selected message.
+
+See [discord/smol-doc-analyzer/README.md](../discord/smol-doc-analyzer/README.md).
 
 ## Data flow
 
