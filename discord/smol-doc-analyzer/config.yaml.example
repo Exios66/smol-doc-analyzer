@@ -1,0 +1,42 @@
+# Example Chloride bot config for smol-doc-analyzer.
+# Copy to config.yaml (gitignored) and set secrets, OR leave placeholders and
+# put DISCORD_TOKEN + OPENROUTER_API_KEY / DISCORD_AI_API_KEY in the repo .env.
+
+DISCORD_TOKEN: Paste your Discord token here.
+DISCORD_PREFIX: '--'
+
+# Tiered access. First matching non-default tier wins.
+# Replace the admin id with your Discord user or role snowflake.
+tiers:
+  admin:
+    allowed_roles_or_user_ids:
+      - 123456789012345678
+    allowed_tools:
+      - '*'
+    allow_chat: true
+    allow_ping_everyone: false
+  analyst:
+    allowed_roles_or_user_ids:
+      - 123456789012345678
+    allowed_tools:
+      - analyze_insurance_document
+      - analyse_file
+      - duckduckgo_search
+      - get_user_info
+    allow_chat: true
+  default:
+    allowed_tools:
+      - analyze_insurance_document
+      - get_user_info
+    allow_chat: true
+    allow_ping_everyone: false
+
+# Chloride/pydantic-ai model. When OPENROUTER_API_KEY is set in .env, the runner
+# defaults to OpenRouter's OpenAI-compatible endpoint and this model slug.
+AI_MODEL_NAME: anthropic/claude-sonnet-4.5
+AI_API_KEY: Put your API key here.
+AI_OPENAI_COMPATIBLE_BASE_URL: https://openrouter.ai/api/v1
+AI_EXTRA_CONTEXT_PATH: config.md.j2
+AI_EXTRA_CONFIG: {}
+
+DB_PATH: sqlite:///memory.db

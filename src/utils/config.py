@@ -78,6 +78,13 @@ def secrets_status() -> dict[str, bool]:
         "OPENROUTER_API_KEY": bool(_secret("OPENROUTER_API_KEY")),
         "WANDB_API_KEY": bool(_secret("WANDB_API_KEY")),
         "HF_TOKEN": bool(_secret("HF_TOKEN") or _secret("HUGGING_FACE_HUB_TOKEN")),
+        "DISCORD_TOKEN": bool(_secret("DISCORD_TOKEN")),
+        "DISCORD_WEBHOOK_URL": bool(_secret("DISCORD_WEBHOOK_URL")),
+        "DISCORD_AI_API_KEY": bool(
+            _secret("DISCORD_AI_API_KEY")
+            or _secret("AI_API_KEY")
+            or _secret("OPENROUTER_API_KEY")
+        ),
         "VISION_LLM_MODEL_PATH": bool(os.getenv("VISION_LLM_MODEL_PATH", "").strip()),
         "SUMMARIZER_MODEL_PATH": bool(os.getenv("SUMMARIZER_MODEL_PATH", "").strip()),
         "dotenv_file": (REPO_ROOT / ".env").exists(),

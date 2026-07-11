@@ -92,6 +92,15 @@ python -m src.pipeline.batch_runner \
 # ad-hoc single document
 python -m src.pipeline.orchestrator --vision --text "LOSS NOTICE\nClaim Number: CLM-1\nDate of Loss: 2024-01-15\n..."
 
+# --- Discord bot (Chloride) ---
+# https://github.com/S4IL21/chloride — Discord agent with sandboxing/tools,
+# extended here with analyze_insurance_document → local pipeline.
+pip install -e ".[discord]"
+python scripts/setup_env.py   # set DISCORD_TOKEN (+ OPENROUTER_API_KEY)
+cp discord/smol-doc-analyzer/config.yaml.example discord/smol-doc-analyzer/config.yaml
+python -m src.discord_bot
+# See discord/smol-doc-analyzer/README.md
+
 # full-scale generation (when ready)
 python -m src.generation.skeleton_sampler --n 5000 --out data/synthetic/skeletons/
 python -m src.generation.stage_a_document_gen --in data/synthetic/skeletons/skeletons_n5000_seed42.jsonl
@@ -111,6 +120,14 @@ page images inside the same chain.
 ## Repository structure
 
 See [docs/architecture.md](docs/architecture.md).
+
+## Discord bot (Chloride)
+
+Optional Discord front-end via [Chloride](https://github.com/S4IL21/chloride)
+(Coral AI agent). Install the `discord` extra, set `DISCORD_TOKEN`, and run
+`python -m src.discord_bot`. Users can paste claim text or attach PDF/PNG scans;
+the agent calls `analyze_insurance_document` to run the local analysis chain.
+Details: [discord/smol-doc-analyzer/README.md](discord/smol-doc-analyzer/README.md).
 
 ## Evaluation
 
@@ -169,3 +186,5 @@ TBD — add before making repository public.
 ## Acknowledgments
 
 Document taxonomy references publicly available ACORD form structures (acord.org). This project is not affiliated with or endorsed by ACORD.
+
+Discord agent integration uses [Chloride](https://github.com/S4IL21/chloride) (fork of [Coral](https://github.com/uukelele/coral)), MIT licensed.
