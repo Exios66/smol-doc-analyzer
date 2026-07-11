@@ -1,4 +1,4 @@
-# insurance-doc-ai
+# smol-doc-analyzer
 
 A small, locally-deployable LLM pipeline for insurance document classification, extraction, and memo generation — built as a cost-efficient alternative to frontier enterprise models for high-volume document intake.
 
