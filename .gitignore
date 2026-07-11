@@ -21,6 +21,8 @@ data/synthetic/splits.json
 data/provenance_log.jsonl
 data/raw/*
 !data/raw/.gitkeep
+data/pipeline/**
+!data/pipeline/.gitkeep
 models/**
 !models/.gitkeep
 *.pt
