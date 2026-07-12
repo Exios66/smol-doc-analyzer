@@ -1,0 +1,5 @@
+{
+  "model_name": "distilbert-base-uncased",
+  "smoke": true,
+  "n_train": 24
+}

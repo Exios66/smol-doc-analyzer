@@ -1,0 +1,15 @@
+{
+  "train": 34,
+  "val": 7,
+  "test": 7,
+  "labels": [
+    "application_commercial",
+    "application_personal",
+    "certificate_evidence",
+    "loss_notice",
+    "claims_correspondence",
+    "policy_change_endorsement",
+    "repair_estimate",
+    "supporting_evidence"
+  ]
+}

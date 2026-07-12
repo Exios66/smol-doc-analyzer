@@ -1,0 +1,10 @@
+{
+  "application_commercial": 0,
+  "application_personal": 1,
+  "certificate_evidence": 2,
+  "loss_notice": 3,
+  "claims_correspondence": 4,
+  "policy_change_endorsement": 5,
+  "repair_estimate": 6,
+  "supporting_evidence": 7
+}
