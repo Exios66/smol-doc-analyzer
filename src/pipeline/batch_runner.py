@@ -52,7 +52,10 @@ def run_batch(
         payload = ctx.to_dict()
         results.append(payload)
         if payload.get("low_confidence") or any(
-            f.startswith("low_confidence") or f.endswith("_failed") for f in payload.get("flags", [])
+            f.startswith("low_confidence")
+            or f.startswith("upstream_failed")
+            or f.endswith("_failed")
+            for f in payload.get("flags", [])
         ):
             review_queue.append(
                 {

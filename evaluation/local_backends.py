@@ -75,7 +75,10 @@ def build_local_task_endpoints(cfg: Config | None = None) -> dict[str, Callable[
         if hint:
             ctx.classification = {"document_type": hint, "backend": "eval_hint", "confidence": 1.0}
         else:
-            ctx.add(classify.run(ctx))
+            clf = classify.run(ctx)
+            ctx.add(clf)
+            if not clf.ok:
+                raise RuntimeError(clf.error or "local classification failed before extraction")
         result = extract.run(ctx)
         if not result.ok:
             raise RuntimeError(result.error or "local extraction failed")
@@ -98,7 +101,10 @@ def build_local_task_endpoints(cfg: Config | None = None) -> dict[str, Callable[
                 "confidence": 1.0,
             }
         else:
-            ctx.add(classify.run(ctx))
+            clf = classify.run(ctx)
+            ctx.add(clf)
+            if not clf.ok:
+                raise RuntimeError(clf.error or "local classification failed before memo generation")
 
         if isinstance(fields.get("extracted_fields"), dict):
             flat = fields["extracted_fields"]
@@ -108,7 +114,10 @@ def build_local_task_endpoints(cfg: Config | None = None) -> dict[str, Callable[
                 "backend": "eval_hint",
             }
         else:
-            ctx.add(extract.run(ctx))
+            ext = extract.run(ctx)
+            ctx.add(ext)
+            if not ext.ok:
+                raise RuntimeError(ext.error or "local extraction failed before memo generation")
 
         result = summarize.run(ctx)
         if not result.ok:

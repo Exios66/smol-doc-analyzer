@@ -35,8 +35,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from evaluation.cost_model_helpers import local_cost_per_call
+from evaluation.cost_model_helpers import local_cost_per_call, load_pricing_raw
 from evaluation.local_backends import build_local_task_endpoints
+from evaluation.metrics import normalize_label
 from src.utils.config import Config
 from src.utils.llm_client import OpenRouterClient
 from src.utils.prompts import load_prompt
@@ -69,13 +70,19 @@ class EvalResult:
     error: str | None = None
 
 
-def load_pricing() -> tuple[dict[str, ModelPricing], float]:
-    """Returns (frontier model pricing by name, local GPU hourly rate USD)."""
-    import yaml
+def load_pricing(path: Path | None = None) -> tuple[dict[str, ModelPricing], float]:
+    """Returns (frontier model pricing by name, local GPU hourly rate USD).
 
-    with open(PRICING_CONFIG_PATH, encoding="utf-8") as f:
-        raw = yaml.safe_load(f)
-    frontier = {k: ModelPricing(**v) for k, v in raw["frontier_models"].items()}
+    Creates ``evaluation/pricing.yaml`` from defaults when the file is missing.
+    """
+    raw = load_pricing_raw(path or PRICING_CONFIG_PATH, create_if_missing=True)
+    frontier = {
+        k: ModelPricing(
+            input_per_million=float(v["input_per_million"]),
+            output_per_million=float(v["output_per_million"]),
+        )
+        for k, v in raw["frontier_models"].items()
+    }
     local_gpu_hourly_rate = float(raw["local_compute"]["gpu_hourly_rate_usd"])
     return frontier, local_gpu_hourly_rate
 
@@ -161,7 +168,7 @@ class LocalBackend:
 def parse_prediction(task: str, raw_text: str) -> Any:
     """Task-specific parsing of a frontier model's raw text into a comparable structure."""
     if task == "classification":
-        return raw_text.strip().lower()
+        return normalize_label(raw_text)
     if task == "extraction":
         try:
             return json.loads(raw_text)
@@ -185,7 +192,7 @@ def parse_prediction(task: str, raw_text: str) -> Any:
 
 def load_eval_set(path: Path, n_samples: int | None) -> list[dict]:
     examples = [json.loads(line) for line in open(path, encoding="utf-8") if line.strip()]
-    if n_samples:
+    if n_samples is not None:
         # Cap per task so --n-samples is a cost-control knob, not a global slice.
         by_task: dict[str, list[dict]] = {}
         for ex in examples:
@@ -225,6 +232,9 @@ def run_eval(
                         )
                     else:
                         cost = local_cost_per_call(backend.gpu_hourly_rate, latency)
+                    parse_error = (
+                        isinstance(prediction, dict) and prediction.get("_parse_error") is True
+                    )
                     result = EvalResult(
                         run_id=run_id,
                         task=task,
@@ -237,6 +247,7 @@ def run_eval(
                         output_tokens=out_tok,
                         latency_seconds=latency,
                         cost_usd=cost,
+                        error="prediction_parse_error" if parse_error else None,
                     )
                 except Exception as e:  # noqa: BLE001 -- eval harness must not die mid-run
                     result = EvalResult(

@@ -114,6 +114,10 @@ class AnalysisContext:
     def add(self, result: StageResult) -> None:
         self.stages.append(result)
         self.flags.extend(result.flags)
+        # Only commit successful payloads into the slot dicts. Failed stages keep
+        # prior slots as None/previous so downstream ``is None`` checks stay honest.
+        if not result.ok:
+            return
         if result.stage == "to_markdown":
             self.markdown = result.payload
             md = result.payload.get("markdown")

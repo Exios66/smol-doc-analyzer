@@ -70,12 +70,10 @@ def _load_pricing_defaults() -> dict:
             "Memo Generation": 150,
         },
     }
-    if not PRICING_YAML.exists():
-        return defaults
     try:
-        import yaml
+        from evaluation.cost_model_helpers import load_pricing_raw
 
-        raw = yaml.safe_load(PRICING_YAML.read_text(encoding="utf-8")) or {}
+        raw = load_pricing_raw(PRICING_YAML, create_if_missing=True)
         frontier = raw.get("frontier_models") or {}
         if "anthropic" in frontier:
             defaults["anthropic_in"] = float(frontier["anthropic"]["input_per_million"])
@@ -85,10 +83,17 @@ def _load_pricing_defaults() -> dict:
             defaults["openai_out"] = float(frontier["openai"]["output_per_million"])
         local = raw.get("local_compute") or {}
         if "gpu_hourly_rate_usd" in local:
-            # Prefer the committed harness rate but keep yellow fill so presenters confirm.
             defaults["gpu_hourly_rate"] = float(local["gpu_hourly_rate_usd"])
-    except Exception:
-        return defaults
+        # Spreadsheet keeps conservative sustained rates; do not overwrite with
+        # peak reference_docs_per_hour (those are 10x higher and inflate savings).
+    except Exception as exc:  # noqa: BLE001
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "Could not seed cost model from %s (%s); using hardcoded defaults",
+            PRICING_YAML,
+            exc,
+        )
     return defaults
 
 
