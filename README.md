@@ -166,6 +166,21 @@ python -m evaluation.eval_harness \
 Outputs: `eval_results.jsonl` (source of truth) + `eval_results.csv` (cost-model
 spreadsheet feed). Pricing lives in `evaluation/pricing.yaml`.
 
+Score a completed run into the spreadsheet "Eval Results" summary:
+
+```bash
+python -m evaluation.metrics \
+  --results evaluation/results/eval_run_2026-07-13/eval_results.jsonl \
+  --output evaluation/results/eval_run_2026-07-13/summary.csv
+
+# or score immediately after a live harness run
+python -m evaluation.eval_harness ... --output-dir evaluation/results/eval_run_2026-07-13 --score
+```
+
+Classification → accuracy + macro F1; extraction → field micro-F1 (fuzzy fields
+optional); memo generation → rubric coverage (LLM-judge scores merge in when
+present on the JSONL rows).
+
 ## Experiment tracking (Weights & Biases)
 
 Training, evaluation, and the seed generation pipeline log to [Weights & Biases](https://wandb.ai) by default:

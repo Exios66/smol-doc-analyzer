@@ -338,6 +338,11 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Print planned calls without spending money",
     )
+    parser.add_argument(
+        "--score",
+        action="store_true",
+        help="After writing results, run evaluation.metrics and emit summary.csv/json",
+    )
     args = parser.parse_args(argv)
 
     run_id = str(uuid.uuid4())[:8]
@@ -356,6 +361,14 @@ def main(argv: list[str] | None = None) -> None:
     )
     if not args.dry_run:
         write_outputs(results, args.output_dir, provenance)
+        if args.score:
+            from evaluation.metrics import score_results_file
+
+            score_results_file(
+                results_path=args.output_dir / "eval_results.jsonl",
+                output_csv=args.output_dir / "summary.csv",
+                output_json=args.output_dir / "summary.json",
+            )
 
 
 if __name__ == "__main__":
