@@ -181,6 +181,21 @@ Classification → accuracy + macro F1; extraction → field micro-F1 (fuzzy fie
 optional); memo generation → rubric coverage (LLM-judge scores merge in when
 present on the JSONL rows).
 
+### Cost model spreadsheet
+
+Formula-driven workbook comparing frontier vs. local $/doc and monthly cost at
+volume. Paste scores from `summary.csv` into the **Eval Results** sheet:
+
+```bash
+pip install -e ".[cost-model]"   # openpyxl
+python -m evaluation.build_cost_model
+# writes evaluation/cost_model/cost_model.xlsx
+```
+
+Sheets: Legend, Assumptions, Eval Results, Cost Per Doc, Scaling Projection,
+Dashboard (with volume chart). Blue/yellow cells are editable inputs; green
+cells are cross-sheet links; black cells are formulas.
+
 ## Experiment tracking (Weights & Biases)
 
 Training, evaluation, and the seed generation pipeline log to [Weights & Biases](https://wandb.ai) by default:

@@ -56,6 +56,8 @@ taxonomy/           # ACORD-inspired document type labels
 evaluation/         # frontier vs. local eval harness + reports/
   eval_harness.py   # Phase 7 cost/accuracy comparison runner
   metrics.py        # per-(task, backend) scoring → summary.csv
+  build_cost_model.py  # builds evaluation/cost_model/cost_model.xlsx
+  cost_model/       # committed spreadsheet template (formula-driven)
   pricing.yaml      # frontier $/M tokens + local GPU hourly rate
   prompts/          # versioned eval prompt templates
   reports/          # classification + extraction eval outputs
