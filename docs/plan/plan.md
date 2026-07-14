@@ -133,7 +133,7 @@ Exit criterion: pipeline runs successfully in a clean Docker environment from a 
 **Goal:** Cost/accuracy story and final documentation for both audiences (portfolio + AmFam handoff).
 
 Tasks:
-- Build `evaluation/benchmarks.py`: compare pipeline accuracy and cost-per-document against a frontier-model API baseline on the same held-out set
+- Build `evaluation/eval_harness.py` (alias: `evaluation/benchmarks.py`): compare pipeline accuracy and cost-per-document against a frontier-model API baseline on the same held-out set
 - Write `docs/architecture.md` final version (design rationale)
 - Write `docs/data_provenance.md` (full synthetic data sourcing disclosure)
 - Write `docs/handoff/amfam_pipeline_recipe.md` — the consulting deliverable, pointing only at reproducible pipeline/training code, not synthetic data specifics

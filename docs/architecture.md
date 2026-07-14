@@ -53,7 +53,13 @@ data/
   synthetic/        # generated skeletons/documents/memos (gitignored)
   pipeline/         # inference outputs + markdown/render cache (gitignored)
 taxonomy/           # ACORD-inspired document type labels
-evaluation/reports/ # classification + extraction eval outputs
+evaluation/         # frontier vs. local eval harness + reports/
+  eval_harness.py   # Phase 7 cost/accuracy comparison runner
+  metrics.py        # per-(task, backend) scoring → summary.csv
+  pricing.yaml      # frontier $/M tokens + local GPU hourly rate
+  prompts/          # versioned eval prompt templates
+  reports/          # classification + extraction eval outputs
+  results/          # harness JSONL/CSV run logs (gitignored)
 ```
 
 ## Discord (Chloride)

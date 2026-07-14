@@ -1,0 +1,25 @@
+# Frontier API + local GPU pricing used by evaluation/eval_harness.py
+# and evaluation/cost_model_helpers.py.
+#
+# Rates are approximate USD list prices for cost-model spreadsheet feeds.
+# Update when OpenRouter / provider pricing changes.
+
+frontier_models:
+  anthropic:
+    # anthropic/claude-sonnet-4.5 via OpenRouter (approx.)
+    input_per_million: 3.00
+    output_per_million: 15.00
+  openai:
+    # openai/gpt-4o via OpenRouter (approx.)
+    input_per_million: 2.50
+    output_per_million: 10.00
+
+local_compute:
+  # Amortized fully-loaded cost of a single consumer/pro GPU hour used for
+  # local classifier / extractor / LoRA memo inference. Tune to your hardware.
+  gpu_hourly_rate_usd: 0.80
+  # Optional reference throughputs (docs / second) for spreadsheet models.
+  reference_docs_per_hour:
+    classification: 12000
+    extraction: 2400
+    memo_generation: 180

@@ -33,6 +33,7 @@ ProvenanceStage = Literal[
     "classification_train",
     "classification_vit_train",
     "extraction_train",
+    "eval_comparison",
 ]
 
 
@@ -69,3 +70,47 @@ def read_provenance(log_path: Path) -> list[dict[str, Any]]:
             if line:
                 records.append(json.loads(line))
     return records
+
+
+class ProvenanceLogger:
+    """
+    Lightweight dict stamper used by the frontier vs. local eval harness.
+
+    Stamps ``run_id`` / ``provenance_tag`` / ``timestamp`` onto each record and
+    optionally mirrors a compact entry into the project provenance JSONL.
+    """
+
+    def __init__(
+        self,
+        run_id: str,
+        tag: str,
+        log_path: Path | None = None,
+        mirror_to_log: bool = True,
+    ):
+        self.run_id = run_id
+        self.tag = tag
+        self.log_path = log_path
+        self.mirror_to_log = mirror_to_log
+
+    def log(self, record: dict[str, Any]) -> None:
+        record.setdefault("run_id", self.run_id)
+        record.setdefault("provenance_tag", self.tag)
+        record.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
+
+        if self.mirror_to_log and self.log_path is not None:
+            example_id = str(record.get("example_id") or record.get("record_id") or "unknown")
+            mirrored = ProvenanceRecord(
+                record_id=f"eval::{self.run_id}::{example_id}",
+                stage="eval_comparison",
+                source=self.tag,
+                prompt_version=str(record.get("prompt_version") or "eval_harness_v1"),
+                model=str(record.get("model_id")) if record.get("model_id") else None,
+                extra={
+                    "task": record.get("task"),
+                    "backend": record.get("backend"),
+                    "cost_usd": record.get("cost_usd"),
+                    "latency_seconds": record.get("latency_seconds"),
+                    "error": record.get("error"),
+                },
+            )
+            log_provenance(self.log_path, mirrored)

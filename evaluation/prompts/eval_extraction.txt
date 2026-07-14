@@ -1,0 +1,10 @@
+Extract structured claim fields from the insurance document below.
+Return a single JSON object with string values for any fields you can find.
+Use these keys when present: claim_id, policy_number, policyholder_name, state,
+coverage_type, date_of_loss, loss_type, location, estimated_damage, deductible,
+reserve_set, adjuster_assigned.
+
+Return ONLY valid JSON — no markdown fences, no commentary.
+
+Document:
+{document_text}

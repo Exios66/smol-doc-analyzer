@@ -52,7 +52,7 @@ discord = [
 ]
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*"]
+include = ["src*", "evaluation*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
