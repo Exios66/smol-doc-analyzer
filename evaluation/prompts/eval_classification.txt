@@ -1,0 +1,11 @@
+Classify the insurance document into exactly one ACORD taxonomy label.
+
+Allowed labels (lowercase snake_case):
+application_commercial, application_personal, certificate_evidence, loss_notice,
+claims_correspondence, adjuster_memo, policy_change_endorsement, repair_estimate,
+supporting_evidence
+
+Return ONLY the label string — no punctuation, no explanation.
+
+Document:
+{document_text}

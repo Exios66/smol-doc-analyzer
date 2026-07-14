@@ -137,7 +137,34 @@ Details: [discord/smol-doc-analyzer/README.md](discord/smol-doc-analyzer/README.
 
 ## Evaluation
 
-Reports land in `evaluation/reports/` (`classification_report.*`, `vit_classification_report.*`, `random_forest_classification_report.md`, `extraction_report.json`, `failure_modes.md`).
+Per-model reports land in `evaluation/reports/` (`classification_report.*`,
+`vit_classification_report.*`, `random_forest_classification_report.md`,
+`extraction_report.json`, `failure_modes.md`).
+
+### Frontier vs. local harness (Phase 7)
+
+Compare Anthropic / OpenAI (via OpenRouter) against local pipeline models on the
+same held-out set across classification, extraction, and memo generation:
+
+```bash
+# plan calls without spending API budget
+python -m evaluation.eval_harness \
+  --eval-set data/eval/eval_set.jsonl \
+  --tasks classification extraction memo_generation \
+  --backends anthropic openai local \
+  --n-samples 50 \
+  --output-dir evaluation/results/eval_run_2026-07-13 \
+  --dry-run
+
+# live run (requires OPENROUTER_API_KEY for frontier backends)
+python -m evaluation.eval_harness \
+  --eval-set data/eval/eval_set.jsonl \
+  --backends anthropic openai local \
+  --output-dir evaluation/results/eval_run_2026-07-13
+```
+
+Outputs: `eval_results.jsonl` (source of truth) + `eval_results.csv` (cost-model
+spreadsheet feed). Pricing lives in `evaluation/pricing.yaml`.
 
 ## Experiment tracking (Weights & Biases)
 
