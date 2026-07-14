@@ -3,6 +3,9 @@
 #
 # Rates are approximate USD list prices for cost-model spreadsheet feeds.
 # Update when OpenRouter / provider pricing changes.
+#
+# This file is auto-created by evaluation.cost_model_helpers.ensure_pricing_yaml()
+# if missing; committed defaults should stay in sync with OpenRouter list prices.
 
 frontier_models:
   anthropic:
@@ -18,7 +21,8 @@ local_compute:
   # Amortized fully-loaded cost of a single consumer/pro GPU hour used for
   # local classifier / extractor / LoRA memo inference. Tune to your hardware.
   gpu_hourly_rate_usd: 0.80
-  # Optional reference throughputs (docs / second) for spreadsheet models.
+  # Peak / reference throughput (docs per hour) for spreadsheet steady-state $/doc.
+  # Distinct from per-call latency amortization used by the eval harness.
   reference_docs_per_hour:
     classification: 12000
     extraction: 2400

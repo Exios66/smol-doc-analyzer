@@ -35,6 +35,7 @@ dependencies = [
 dev = [
   "pytest>=8.2.0",
   "ruff>=0.5.0",
+  "openpyxl>=3.1.0",
 ]
 notebooks = [
   "jupyter>=1.0.0",
@@ -49,6 +50,9 @@ ocr = [
 discord = [
   # Chloride (Coral Discord agent): https://github.com/S4IL21/chloride
   "chloride @ git+https://github.com/S4IL21/chloride.git@ebe61ec6aa460ba16c1ad94666144675da9cabff",
+]
+cost-model = [
+  "openpyxl>=3.1.0",
 ]
 [tool.setuptools.packages.find]
 where = ["."]

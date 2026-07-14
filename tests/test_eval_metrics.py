@@ -73,6 +73,41 @@ def test_score_extraction_exact_and_fuzzy():
     assert fuzzy == pytest.approx(1.0)
 
 
+def test_score_extraction_mismatch_counts_fp_and_fn():
+    # Wrong value for a present ground-truth field must not report recall=1.0.
+    records = [_ext({"claim_id": "WRONG"}, {"claim_id": "CLM-1"})]
+    f1 = score_extraction(records, fuzzy_fields=set())
+    assert f1 == pytest.approx(0.0)
+
+
+def test_score_classification_normalizes_label_format():
+    records = [
+        _cls("Loss Notice", "loss_notice"),
+        _cls("certificate-evidence", "certificate_evidence"),
+    ]
+    accuracy, _ = score_classification(records)
+    assert accuracy == pytest.approx(1.0)
+
+
+def test_parse_error_treated_as_error_in_annotate():
+    rows = [
+        {
+            "task": "extraction",
+            "backend": "openai",
+            "model_id": "openai/gpt-4o",
+            "prediction": {"_parse_error": True, "_raw": "nope"},
+            "ground_truth": {"claim_id": "CLM-1"},
+            "latency_seconds": 0.1,
+            "cost_usd": 0.01,
+            "error": None,
+        }
+    ]
+    annotated = annotate_records(rows)
+    assert annotated[0]["error"] == "prediction_parse_error"
+    assert annotated[0]["correct"] is False
+    assert annotated[0]["score"] == 0.0
+
+
 def test_score_extraction_handles_list_values_and_parse_errors():
     records = [
         _ext(

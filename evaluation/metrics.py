@@ -83,6 +83,16 @@ def _normalize_text(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip().lower())
 
 
+def normalize_label(value: Any) -> str:
+    """Normalize taxonomy labels (spaces/hyphens → underscores, strip punctuation)."""
+    text = str(value or "").strip().lower()
+    text = text.replace("-", "_").replace(" ", "_")
+    text = "".join(ch for ch in text if ch.isalnum() or ch == "_")
+    while "__" in text:
+        text = text.replace("__", "_")
+    return text.strip("_")
+
+
 def _as_comparable(value: Any) -> Any:
     """Flatten list-valued extractor outputs to a single comparable scalar."""
     if isinstance(value, list):
@@ -94,21 +104,46 @@ def _as_comparable(value: Any) -> Any:
     return value
 
 
-def score_classification(records: list[dict]) -> tuple[float, float]:
-    correct = sum(1 for r in records if r["prediction"] == r["ground_truth"])
-    accuracy = correct / len(records) if records else 0.0
+def _values_equal(p_val: Any, t_val: Any, *, fuzzy: bool) -> bool:
+    if p_val is None or t_val is None:
+        return False
+    if fuzzy:
+        return _normalize_text(str(p_val)) == _normalize_text(str(t_val))
+    if isinstance(p_val, str) and isinstance(t_val, str):
+        return p_val == t_val
+    # Coerce numeric / mixed types via string form for exact equality.
+    return str(p_val).strip() == str(t_val).strip()
 
-    labels = sorted({r["ground_truth"] for r in records})
+
+def score_classification(records: list[dict]) -> tuple[float, float]:
+    normalized = [
+        {
+            **r,
+            "prediction": normalize_label(r.get("prediction")),
+            "ground_truth": normalize_label(r.get("ground_truth")),
+        }
+        for r in records
+    ]
+    correct = sum(1 for r in normalized if r["prediction"] == r["ground_truth"])
+    accuracy = correct / len(normalized) if normalized else 0.0
+
+    labels = sorted({r["ground_truth"] for r in normalized if r["ground_truth"]})
     f1s = []
     for label in labels:
         tp = sum(
-            1 for r in records if r["prediction"] == label and r["ground_truth"] == label
+            1
+            for r in normalized
+            if r["prediction"] == label and r["ground_truth"] == label
         )
         fp = sum(
-            1 for r in records if r["prediction"] == label and r["ground_truth"] != label
+            1
+            for r in normalized
+            if r["prediction"] == label and r["ground_truth"] != label
         )
         fn = sum(
-            1 for r in records if r["prediction"] != label and r["ground_truth"] == label
+            1
+            for r in normalized
+            if r["prediction"] != label and r["ground_truth"] == label
         )
         precision = tp / (tp + fp) if (tp + fp) else 0.0
         recall = tp / (tp + fn) if (tp + fn) else 0.0
@@ -129,6 +164,9 @@ def score_extraction(
 
     ``fuzzy_fields`` get normalized (lowercase, whitespace-collapsed) comparison
     instead of exact match.
+
+    A wrong predicted value against a present ground-truth value counts as both
+    a false positive and a false negative (standard multi-label micro-F1).
     """
     if fuzzy_fields is None:
         fuzzy_fields = set(DEFAULT_FUZZY_FIELDS)
@@ -141,11 +179,14 @@ def score_extraction(
         all_fields = set(pred) | set(truth)
         for field in all_fields:
             p_val, t_val = _as_comparable(pred.get(field)), _as_comparable(truth.get(field))
-            if field in fuzzy_fields and isinstance(p_val, str) and isinstance(t_val, str):
-                p_val, t_val = _normalize_text(p_val), _normalize_text(t_val)
-            if p_val is not None and t_val is not None and p_val == t_val:
-                tp += 1
-            elif p_val is not None and t_val != p_val:
+            fuzzy = field in fuzzy_fields
+            if p_val is not None and t_val is not None:
+                if _values_equal(p_val, t_val, fuzzy=fuzzy):
+                    tp += 1
+                else:
+                    fp += 1
+                    fn += 1
+            elif p_val is not None and t_val is None:
                 fp += 1
             elif p_val is None and t_val is not None:
                 fn += 1
@@ -190,14 +231,18 @@ def annotate_records(
 ) -> list[dict]:
     """Fill per-row ``correct`` / ``score`` fields in-place and return the list."""
     for r in records:
-        if r.get("error"):
+        pred = r.get("prediction")
+        parse_error = isinstance(pred, dict) and pred.get("_parse_error") is True
+        if r.get("error") or parse_error:
+            if parse_error and not r.get("error"):
+                r["error"] = "prediction_parse_error"
             r["correct"] = False
             r["score"] = 0.0
             continue
         task = r.get("task")
-        pred, truth = r.get("prediction"), r.get("ground_truth")
+        truth = r.get("ground_truth")
         if task == "classification":
-            ok = pred == truth
+            ok = normalize_label(pred) == normalize_label(truth)
             r["correct"] = ok
             r["score"] = 1.0 if ok else 0.0
         elif task == "extraction":
@@ -208,9 +253,10 @@ def annotate_records(
             score = score_memo_rubric(str(pred or ""))
             r["score"] = score
             r["correct"] = score >= 0.75
-            # Preserve any prior LLM-judge score under a dedicated key.
-            if r.get("judge_score") is not None and r.get("score_source") != "judge":
-                pass
+            # Prefer LLM-judge score for the row when already present.
+            if r.get("judge_score") is not None:
+                r["score"] = float(r["judge_score"]) / 5.0
+                r["score_source"] = "judge"
         else:
             r.setdefault("correct", None)
             r.setdefault("score", None)
@@ -236,8 +282,13 @@ def summarize(
 
     summaries: list[TaskBackendSummary] = []
     for (task, backend), group in sorted(grouped.items()):
-        errored = [r for r in group if r.get("error")]
-        clean = [r for r in group if not r.get("error")]
+        errored = [
+            r
+            for r in group
+            if r.get("error")
+            or (isinstance(r.get("prediction"), dict) and r["prediction"].get("_parse_error"))
+        ]
+        clean = [r for r in group if r not in errored]
         n = len(group)
 
         accuracy = macro_f1 = judge_score = rubric_cov = None

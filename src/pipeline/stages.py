@@ -123,12 +123,24 @@ class MarkdownConvertStage:
             payload["token_saved_est"] = saved
             payload["fed_to_llm_as"] = "markdown"
 
+            empty_content = not (
+                (conversion.plain_text or "").strip() or (conversion.markdown or "").strip()
+            )
+            failed_backend = conversion.backend in {
+                "failed",
+                "empty",
+                "none",
+                "pytesseract_failed",
+            }
+            ok = not (empty_content and failed_backend)
+
             return StageResult(
                 stage=self.name,
                 order=self.order,
-                ok=True,
-                confidence=confidence,
-                flags=flags,
+                ok=ok,
+                confidence=confidence if ok else 0.0,
+                flags=flags if ok else flags + ["markdown_failed"],
+                error=None if ok else f"markdown conversion empty (backend={conversion.backend})",
                 payload=payload,
             )
         except Exception as exc:
@@ -799,9 +811,12 @@ class SummarizeStage:
             "Memo:\n"
         )
         inputs = self._tokenizer(prompt, return_tensors="pt")
+        input_len = int(inputs["input_ids"].shape[-1])
         with self._torch.no_grad():
             out = self._model.generate(**inputs, max_new_tokens=400)
-        return self._tokenizer.decode(out[0], skip_special_tokens=True)
+        # Decode only newly generated tokens — full-sequence decode includes the prompt.
+        generated = out[0][input_len:]
+        return self._tokenizer.decode(generated, skip_special_tokens=True).strip()
 
     def run(self, ctx: AnalysisContext) -> StageResult:
         self._ensure_loaded()

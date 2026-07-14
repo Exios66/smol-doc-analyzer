@@ -64,6 +64,20 @@ def test_load_eval_set_caps_per_task():
     assert "memo_generation" in tasks
 
 
+def test_load_eval_set_zero_samples_means_empty():
+    path = REPO_ROOT / "data" / "eval" / "eval_set.jsonl"
+    assert load_eval_set(path, n_samples=0) == []
+
+
+def test_load_pricing_creates_missing_file(tmp_path: Path):
+    from evaluation.eval_harness import load_pricing
+
+    path = tmp_path / "pricing.yaml"
+    frontier, rate = load_pricing(path)
+    assert path.exists()
+    assert "anthropic" in frontier and rate > 0
+
+
 def test_dry_run_prints_plan(capsys):
     examples = [
         {
