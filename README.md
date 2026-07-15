@@ -242,10 +242,6 @@ python -m src.classification.train_classifier --prepared ... --smoke --no-wandb
 Useful flags on train/eval/seed CLIs: `--wandb`, `--no-wandb`, `--wandb-project`, `--wandb-run-name`.
 Set `WANDB_MODE=disabled` or `WANDB_DISABLED=true` to turn tracking off globally.
 
-## License
-
-TBD — add before making repository public.
-
 ## Acknowledgments
 
 Document taxonomy references publicly available ACORD form structures (acord.org). This project is not affiliated with or endorsed by ACORD.
