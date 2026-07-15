@@ -5,6 +5,33 @@ from __future__ import annotations
 from typing import Any
 
 
+def _flatten_field_value(value: Any) -> Any:
+    if isinstance(value, list):
+        if not value:
+            return None
+        if len(value) == 1:
+            return value[0]
+        return ", ".join(str(v) for v in value if v not in (None, ""))
+    return value
+
+
+def _extraction_fields(extraction: dict[str, Any]) -> dict[str, Any]:
+    """Prefer scalar fields_flat; fall back to nested fields with list flattening."""
+    flat = extraction.get("fields_flat")
+    if isinstance(flat, dict) and flat:
+        return {k: v for k, v in flat.items() if v not in (None, "", [])}
+
+    nested = extraction.get("fields") or extraction.get("extracted_fields") or {}
+    if not isinstance(nested, dict):
+        return {}
+    out: dict[str, Any] = {}
+    for key, value in nested.items():
+        flat_val = _flatten_field_value(value)
+        if flat_val not in (None, "", []):
+            out[key] = flat_val
+    return out
+
+
 def compact_analysis(result: dict[str, Any], *, max_memo_chars: int = 1200) -> dict[str, Any]:
     """Reduce a full AnalysisContext.to_dict() payload for the agent / Discord."""
     classification = result.get("classification") or {}
@@ -13,12 +40,14 @@ def compact_analysis(result: dict[str, Any], *, max_memo_chars: int = 1200) -> d
     summary = result.get("summary") or {}
     markdown = result.get("markdown") or {}
 
-    fields = extraction.get("fields") or extraction.get("extracted_fields") or {}
+    fields = _extraction_fields(extraction if isinstance(extraction, dict) else {})
     refined = vision.get("refined_fields") or {}
-    if refined:
-        # Prefer refined fields when present.
+    if isinstance(refined, dict) and refined:
         merged = dict(fields)
-        merged.update({k: v for k, v in refined.items() if v not in (None, "", [])})
+        for key, value in refined.items():
+            flat_val = _flatten_field_value(value)
+            if flat_val not in (None, "", []):
+                merged[key] = flat_val
         fields = merged
 
     memo = result.get("memo") or summary.get("memo") or ""

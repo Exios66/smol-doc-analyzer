@@ -227,7 +227,14 @@ def png_to_markdown(path: Path, fallback_text: str | None = None) -> MarkdownCon
     path = Path(path)
     ocr_text, ocr_backend = _ocr_image(path)
     source_text = ocr_text or (fallback_text or "")
-    backend = ocr_backend if ocr_text else ("fallback_text" if fallback_text else "empty")
+    # Preserve the real OCR backend when there is no text so confidence logic
+    # can distinguish failures from intentional empty docs.
+    if ocr_text:
+        backend = ocr_backend
+    elif fallback_text:
+        backend = f"{ocr_backend}+fallback_text" if ocr_backend not in {"", "none"} else "fallback_text"
+    else:
+        backend = ocr_backend if ocr_backend not in {"", "none"} else "empty"
     if not source_text:
         # Last resort: note the image path so downstream stages still have context
         md = f"# Document Image\n\n_Source:_ `{path.name}`\n\n_(No text extracted from image.)_\n"
@@ -240,6 +247,7 @@ def png_to_markdown(path: Path, fallback_text: str | None = None) -> MarkdownCon
             char_count=len(md),
             approx_tokens=approx_token_count(md),
             source_path=str(path),
+            extras={"ocr_backend": ocr_backend, "used_fallback_text": False},
         )
     md = text_to_structured_markdown(source_text, title=None)
     return MarkdownConversion(
@@ -251,7 +259,11 @@ def png_to_markdown(path: Path, fallback_text: str | None = None) -> MarkdownCon
         char_count=len(md),
         approx_tokens=approx_token_count(md),
         source_path=str(path),
-        extras={"ocr_chars": len(ocr_text), "used_fallback_text": bool(fallback_text and not ocr_text)},
+        extras={
+            "ocr_chars": len(ocr_text),
+            "ocr_backend": ocr_backend,
+            "used_fallback_text": bool(fallback_text and not ocr_text),
+        },
     )
 
 
@@ -301,6 +313,12 @@ def pdf_to_markdown(path: Path, fallback_text: str | None = None) -> MarkdownCon
 
     # Drop page markers before structuring, keep page count metadata
     cleaned = re.sub(r"<!-- page \d+ -->\n?", "", raw)
+    if not cleaned.strip() and not (fallback_text or "").strip():
+        if backend not in {"failed", "none", "fallback_text"}:
+            backend = f"{backend}_empty" if backend else "empty"
+        elif backend == "none":
+            backend = "empty"
+
     md = text_to_structured_markdown(cleaned) if cleaned.strip() else (
         f"# PDF Document\n\n_Source:_ `{path.name}`\n\n_(No text extracted.)_\n"
     )
@@ -317,13 +335,14 @@ def pdf_to_markdown(path: Path, fallback_text: str | None = None) -> MarkdownCon
 
     return MarkdownConversion(
         markdown=md if md.endswith("\n") else md + "\n",
-        plain_text=markdown_to_plain(md),
+        plain_text=markdown_to_plain(md) if cleaned.strip() else "",
         source_kind="pdf",
         backend=backend,
         pages=pages,
         char_count=len(md),
         approx_tokens=approx_token_count(md),
         source_path=str(path),
+        extras={"used_fallback_text": bool(fallback_text and "+fallback_text" in backend)},
     )
 
 

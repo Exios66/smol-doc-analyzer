@@ -32,6 +32,7 @@ ProvenanceStage = Literal[
     "noise_injection",
     "classification_train",
     "classification_vit_train",
+    "classification_train_random_forest",
     "extraction_train",
     "eval_comparison",
 ]

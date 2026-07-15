@@ -39,7 +39,7 @@ class AnalysisDocument:
         record_id = str(row.get("record_id") or row.get("claim_id") or "unknown")
         text = str(row.get("text") or "")
         if not text and row.get("words"):
-            text = " ".join(w.get("text", "") for w in row["words"])
+            text = " ".join(str(w.get("text") or "") for w in row["words"])
         source_path = row.get("source_path") or row.get("path") or row.get("file_path")
         image_path = row.get("image_path")
         pdf_path = row.get("pdf_path")

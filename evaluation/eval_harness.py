@@ -191,6 +191,8 @@ def parse_prediction(task: str, raw_text: str) -> Any:
 
 
 def load_eval_set(path: Path, n_samples: int | None) -> list[dict]:
+    if n_samples is not None and n_samples < 0:
+        raise ValueError(f"--n-samples must be >= 0, got {n_samples}")
     examples = [json.loads(line) for line in open(path, encoding="utf-8") if line.strip()]
     if n_samples is not None:
         # Cap per task so --n-samples is a cost-control knob, not a global slice.
@@ -221,8 +223,12 @@ def run_eval(
                 if dry_run:
                     print(f"[dry-run] would call {backend_name} for {task}/{ex['example_id']}")
                     continue
+                start = time.perf_counter()
                 try:
                     prediction, in_tok, out_tok, latency = backend.run(task, ex)
+                    # Prefer harness wall time so failures and successes share one clock.
+                    wall = time.perf_counter() - start
+                    latency = max(float(latency), wall)
                     model_id = getattr(backend, "model_slug", "local")
                     if isinstance(backend, FrontierBackend):
                         cost = compute_cost(
@@ -250,6 +256,11 @@ def run_eval(
                         error="prediction_parse_error" if parse_error else None,
                     )
                 except Exception as e:  # noqa: BLE001 -- eval harness must not die mid-run
+                    latency = time.perf_counter() - start
+                    if isinstance(backend, LocalBackend):
+                        cost = local_cost_per_call(backend.gpu_hourly_rate, latency)
+                    else:
+                        cost = 0.0
                     result = EvalResult(
                         run_id=run_id,
                         task=task,
@@ -260,8 +271,8 @@ def run_eval(
                         ground_truth=ex["ground_truth"],
                         input_tokens=0,
                         output_tokens=0,
-                        latency_seconds=0.0,
-                        cost_usd=0.0,
+                        latency_seconds=latency,
+                        cost_usd=cost,
                         error=str(e),
                     )
                 results.append(result)

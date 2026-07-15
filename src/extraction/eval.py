@@ -53,27 +53,74 @@ def _partial_match(a: str, b: str) -> bool:
     return na in nb or nb in na
 
 
-def _evaluate_core(
+def _score_field_entities(
+    gvals: list[str], pvals: list[str]
+) -> tuple[int, int, int]:
+    """
+    Greedy 1:1 entity matching.
+
+    Returns (exact_hits, partial_hits, totals) where totals is max(len(g), len(p))
+    so unmatched preds count as misses too.
+    """
+    totals = max(len(gvals), len(pvals), 1 if (gvals or pvals) else 0)
+    if totals == 0:
+        return 0, 0, 0
+    used: set[int] = set()
+    exact = 0
+    partial = 0
+    for g in gvals:
+        best_j = None
+        best_exact = False
+        for j, p in enumerate(pvals):
+            if j in used:
+                continue
+            if _normalize(g) == _normalize(p):
+                best_j = j
+                best_exact = True
+                break
+            if best_j is None and _partial_match(g, p):
+                best_j = j
+                best_exact = False
+        if best_j is not None:
+            used.add(best_j)
+            if best_exact:
+                exact += 1
+                partial += 1
+            else:
+                partial += 1
+    return exact, partial, max(len(gvals), len(pvals), 1)
+
+
+def _is_layoutlm_checkpoint(model_dir: Path) -> bool:
+    meta_path = model_dir / "train_meta.json"
+    if meta_path.exists():
+        meta = read_json(meta_path)
+        name = str(meta.get("model_name") or "")
+        if "layoutlm" in name.lower() and not meta.get("smoke"):
+            return True
+    # Processor files indicate a vision+layout checkpoint.
+    return (model_dir / "preprocessor_config.json").exists() or (
+        model_dir / "processor_config.json"
+    ).exists()
+
+
+def _evaluate_text_checkpoint(
     model_dir: Path,
-    prepared_dir: Path,
-    split: str = "test",
-) -> dict:
+    rows: list[dict],
+    id2label: dict[int, str],
+    label2id: dict[str, int],
+) -> tuple[list[int], list[int], dict[str, int], dict[str, int], dict[str, int]]:
     import torch
     from transformers import AutoModelForTokenClassification, AutoTokenizer
-
-    rows = load_jsonl(prepared_dir / f"{split}.jsonl")
-    label2id = {k: int(v) for k, v in read_json(model_dir / "label2id.json").items()}
-    id2label = {v: k for k, v in label2id.items()}
 
     tokenizer = AutoTokenizer.from_pretrained(str(model_dir))
     model = AutoModelForTokenClassification.from_pretrained(str(model_dir))
     model.eval()
 
     token_true, token_pred = [], []
-    exact_hits = defaultdict(int)
-    partial_hits = defaultdict(int)
-    totals = defaultdict(int)
-    hard_fields = ["date_of_loss", "estimated_damage", "deductible", "reserve_set", "location"]
+    exact_hits: dict[str, int] = defaultdict(int)
+    partial_hits: dict[str, int] = defaultdict(int)
+    totals: dict[str, int] = defaultdict(int)
 
     with torch.no_grad():
         for row in rows:
@@ -88,7 +135,7 @@ def _evaluate_core(
             logits = model(**enc).logits[0]
             pred_ids = torch.argmax(logits, dim=-1).tolist()
             aligned_pred = ["O"] * len(row["tokens"])
-            seen = set()
+            seen: set[int] = set()
             for idx, wid in enumerate(word_ids):
                 if wid is None or wid in seen:
                     continue
@@ -105,12 +152,110 @@ def _evaluate_core(
             for field in fields:
                 gvals = gold_ents.get(field, [])
                 pvals = pred_ents.get(field, [])
-                totals[field] += max(len(gvals), 1)
-                if gvals and pvals and _normalize(gvals[0]) == _normalize(pvals[0]):
-                    exact_hits[field] += 1
-                if gvals and pvals and _partial_match(gvals[0], pvals[0]):
-                    partial_hits[field] += 1
+                ex, part, tot = _score_field_entities(gvals, pvals)
+                exact_hits[field] += ex
+                partial_hits[field] += part
+                totals[field] += tot
 
+    return token_true, token_pred, exact_hits, partial_hits, totals
+
+
+def _evaluate_layout_checkpoint(
+    model_dir: Path,
+    rows: list[dict],
+    id2label: dict[int, str],
+    label2id: dict[str, int],
+) -> tuple[list[int], list[int], dict[str, int], dict[str, int], dict[str, int]]:
+    import torch
+    from PIL import Image
+    from transformers import AutoModelForTokenClassification, AutoProcessor
+
+    processor = AutoProcessor.from_pretrained(str(model_dir), apply_ocr=False)
+    model = AutoModelForTokenClassification.from_pretrained(str(model_dir))
+    model.eval()
+
+    token_true, token_pred = [], []
+    exact_hits: dict[str, int] = defaultdict(int)
+    partial_hits: dict[str, int] = defaultdict(int)
+    totals: dict[str, int] = defaultdict(int)
+
+    with torch.no_grad():
+        for row in rows:
+            image = Image.open(row["image_path"]).convert("RGB")
+            encoding = processor(
+                image,
+                row["tokens"],
+                boxes=row["bboxes"],
+                word_labels=row["labels"],
+                truncation=True,
+                padding="max_length",
+                max_length=512,
+                return_tensors="pt",
+            )
+            labels = encoding.pop("labels")[0].tolist()
+            outputs = model(**encoding)
+            pred_ids = torch.argmax(outputs.logits[0], dim=-1).tolist()
+
+            aligned_pred: list[str] = []
+            gold: list[str] = []
+            pred_tokens: list[str] = []
+            # LayoutLMv3 word alignment: use first subword per word via word_ids when present.
+            word_ids = encoding.word_ids(batch_index=0) if hasattr(encoding, "word_ids") else None
+            if word_ids is None:
+                for lab, pred in zip(labels, pred_ids):
+                    if lab == -100:
+                        continue
+                    gold.append(id2label.get(int(lab), "O"))
+                    aligned_pred.append(id2label.get(int(pred), "O"))
+                pred_tokens = list(row["tokens"][: len(gold)])
+            else:
+                seen: set[int] = set()
+                aligned_pred = ["O"] * len(row["tokens"])
+                for idx, wid in enumerate(word_ids):
+                    if wid is None or wid in seen:
+                        continue
+                    seen.add(wid)
+                    aligned_pred[wid] = id2label.get(int(pred_ids[idx]), "O")
+                gold = [id2label.get(int(i), "O") for i in row["labels"]]
+                pred_tokens = row["tokens"]
+
+            for g, p in zip(gold, aligned_pred):
+                token_true.append(label2id.get(g, 0))
+                token_pred.append(label2id.get(p, 0))
+
+            gold_ents = _decode_entities(pred_tokens, gold)
+            pred_ents = _decode_entities(pred_tokens, aligned_pred)
+            fields = set(gold_ents) | set(pred_ents)
+            for field in fields:
+                gvals = gold_ents.get(field, [])
+                pvals = pred_ents.get(field, [])
+                ex, part, tot = _score_field_entities(gvals, pvals)
+                exact_hits[field] += ex
+                partial_hits[field] += part
+                totals[field] += tot
+
+    return token_true, token_pred, exact_hits, partial_hits, totals
+
+
+def _evaluate_core(
+    model_dir: Path,
+    prepared_dir: Path,
+    split: str = "test",
+) -> dict:
+    rows = load_jsonl(prepared_dir / f"{split}.jsonl")
+    label2id = {k: int(v) for k, v in read_json(model_dir / "label2id.json").items()}
+    id2label = {v: k for k, v in label2id.items()}
+
+    if _is_layoutlm_checkpoint(model_dir):
+        token_true, token_pred, exact_hits, partial_hits, totals = _evaluate_layout_checkpoint(
+            model_dir, rows, id2label, label2id
+        )
+    else:
+        token_true, token_pred, exact_hits, partial_hits, totals = _evaluate_text_checkpoint(
+            model_dir, rows, id2label, label2id
+        )
+
+    hard_fields = ["date_of_loss", "estimated_damage", "deductible", "reserve_set", "location"]
     token_f1 = float(f1_score(token_true, token_pred, average="macro", zero_division=0))
     field_exact = {f: exact_hits[f] / totals[f] for f in totals}
     field_partial = {f: partial_hits[f] / totals[f] for f in totals}

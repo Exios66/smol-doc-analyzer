@@ -112,13 +112,18 @@ def llm_document(skeleton: dict[str, Any], cfg: Config, legal: dict[str, Any]) -
         "You generate fictional insurance operations documents for ML training. "
         "Use only the provided skeleton facts. Do not invent real people or real policies. "
         "When narrative is needed, you may use formal legal-adjacent vocabulary and reasoning "
-        "style, but the document must remain an insurance form/correspondence, not a court filing."
+        "style, but the document must remain an insurance form/correspondence, not a court filing. "
+        "You MUST include these exact labeled field lines (with these prefixes) when the "
+        "skeleton provides values: "
+        "'Claim Number:', 'Policy Number:', 'Named Insured:', 'Date of Loss:', 'Loss Type:', "
+        "'Loss Location:', 'Estimated Damage:', 'Deductible:', 'Reserve Amount:', "
+        "'Adjuster Name:', 'Claimant Name:', 'Effective Date:', 'State:', 'Coverage Type:'."
     )
     user = (
         f"Document type: {skeleton['document_type']}\n"
         f"Skeleton JSON:\n{skeleton}\n"
         f"Optional style n-grams: {legal.get('vocabulary_ngrams', [])[:12]}\n"
-        "Write the full document text only."
+        "Write the full document text only, keeping the required field prefixes exactly."
     )
     return client.generate(system, user, max_tokens=1200)
 

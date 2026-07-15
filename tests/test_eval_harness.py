@@ -69,6 +69,12 @@ def test_load_eval_set_zero_samples_means_empty():
     assert load_eval_set(path, n_samples=0) == []
 
 
+def test_load_eval_set_rejects_negative():
+    path = REPO_ROOT / "data" / "eval" / "eval_set.jsonl"
+    with pytest.raises(ValueError, match="n-samples"):
+        load_eval_set(path, n_samples=-1)
+
+
 def test_load_pricing_creates_missing_file(tmp_path: Path):
     from evaluation.eval_harness import load_pricing
 
