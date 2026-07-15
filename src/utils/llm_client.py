@@ -59,43 +59,46 @@ class GenerationClient:
     def __init__(self, cfg: Config):
         self._client = _build_openrouter_client(cfg)
         self._model = cfg.generation_model
-        self._max_retries = cfg.max_retries
+        self._max_retries = max(1, int(cfg.max_retries))
 
     def generate(self, system_prompt: str, user_prompt: str, max_tokens: int = 1024) -> str:
         return self._generate_with_retry(system_prompt, user_prompt, max_tokens)
 
-    @retry(
-        stop=stop_after_attempt(5),
-        wait=wait_exponential(multiplier=1, min=2, max=30),
-        reraise=True,
-    )
     def _generate_with_retry(self, system_prompt: str, user_prompt: str, max_tokens: int) -> str:
-        response = self._client.chat.completions.create(
-            model=self._model,
-            max_tokens=max_tokens,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+        @retry(
+            stop=stop_after_attempt(self._max_retries),
+            wait=wait_exponential(multiplier=1, min=2, max=30),
+            reraise=True,
         )
-
-        if not response.choices:
-            raise ValueError("Empty generation result (no choices) -- retrying.")
-
-        choice = response.choices[0]
-
-        # OpenRouter surfaces upstream provider errors inside a normal 200
-        # response sometimes (e.g. provider overloaded) -- guard for that
-        # instead of assuming message.content is always populated.
-        finish_reason = getattr(choice, "finish_reason", None)
-        content = (choice.message.content or "").strip()
-
-        if not content:
-            raise ValueError(
-                f"Empty generation result (finish_reason={finish_reason}) -- retrying."
+        def _once() -> str:
+            response = self._client.chat.completions.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
             )
 
-        return content
+            if not response.choices:
+                raise ValueError("Empty generation result (no choices) -- retrying.")
+
+            choice = response.choices[0]
+
+            # OpenRouter surfaces upstream provider errors inside a normal 200
+            # response sometimes (e.g. provider overloaded) -- guard for that
+            # instead of assuming message.content is always populated.
+            finish_reason = getattr(choice, "finish_reason", None)
+            content = (choice.message.content or "").strip()
+
+            if not content:
+                raise ValueError(
+                    f"Empty generation result (finish_reason={finish_reason}) -- retrying."
+                )
+
+            return content
+
+        return _once()
 
 
 class OpenRouterClient:
@@ -113,6 +116,7 @@ class OpenRouterClient:
         self.model = model
         self._cfg = cfg or Config.load()
         self._client: OpenAI | None = None
+        self._max_retries = max(1, int(self._cfg.max_retries))
         self._system_prompt = kwargs.get(
             "system_prompt",
             "You are an insurance document analysis assistant. Follow the task instructions exactly.",
@@ -128,38 +132,41 @@ class OpenRouterClient:
         system_prompt = kwargs.get("system_prompt", self._system_prompt)
         return self._complete_with_retry(prompt, max_tokens, system_prompt)
 
-    @retry(
-        stop=stop_after_attempt(5),
-        wait=wait_exponential(multiplier=1, min=2, max=30),
-        reraise=True,
-    )
     def _complete_with_retry(
         self, prompt: str, max_tokens: int, system_prompt: str
     ) -> dict[str, Any]:
-        response = self._ensure_client().chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
+        @retry(
+            stop=stop_after_attempt(self._max_retries),
+            wait=wait_exponential(multiplier=1, min=2, max=30),
+            reraise=True,
         )
-
-        if not response.choices:
-            raise ValueError("Empty completion result (no choices) -- retrying.")
-
-        choice = response.choices[0]
-        finish_reason = getattr(choice, "finish_reason", None)
-        content = (choice.message.content or "").strip()
-
-        if not content:
-            raise ValueError(
-                f"Empty completion result (finish_reason={finish_reason}) -- retrying."
+        def _once() -> dict[str, Any]:
+            response = self._ensure_client().chat.completions.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
             )
 
-        return {
-            "text": content,
-            "usage": _extract_usage(response),
-            "model": self.model,
-            "finish_reason": finish_reason,
-        }
+            if not response.choices:
+                raise ValueError("Empty completion result (no choices) -- retrying.")
+
+            choice = response.choices[0]
+            finish_reason = getattr(choice, "finish_reason", None)
+            content = (choice.message.content or "").strip()
+
+            if not content:
+                raise ValueError(
+                    f"Empty completion result (finish_reason={finish_reason}) -- retrying."
+                )
+
+            return {
+                "text": content,
+                "usage": _extract_usage(response),
+                "model": self.model,
+                "finish_reason": finish_reason,
+            }
+
+        return _once()

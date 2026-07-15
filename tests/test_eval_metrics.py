@@ -149,7 +149,7 @@ def test_annotate_and_summarize(tmp_path: Path):
             "backend": "anthropic",
             "model_id": "anthropic/claude-sonnet-4.5",
             "example_id": "memo-1",
-            "prediction": "ADJUSTER MEMO CLM-1\nCoverage determination pending.\nNext Steps\nAnalysis notes.",
+            "prediction": "ADJUSTER MEMO CLM-1\nCoverage determination pending.\nNext Steps\nAdjuster notes follow.",
             "ground_truth": "reference",
             "latency_seconds": 1.0,
             "cost_usd": 0.01,

@@ -143,8 +143,11 @@ class Config:
         hf_token = _secret("HF_TOKEN") or _secret("HUGGING_FACE_HUB_TOKEN")
 
         # Propagate secrets so third-party SDKs (wandb, huggingface_hub) see them.
-        if wandb_key and not os.getenv("WANDB_API_KEY"):
+        # Also clear placeholder values left in os.environ by .env templates.
+        if wandb_key:
             os.environ["WANDB_API_KEY"] = wandb_key
+        else:
+            os.environ.pop("WANDB_API_KEY", None)
         if hf_token:
             os.environ.setdefault("HF_TOKEN", hf_token)
             os.environ.setdefault("HUGGING_FACE_HUB_TOKEN", hf_token)

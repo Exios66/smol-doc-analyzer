@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
+import pytest
 
 from src.generation.noise_injection import garble_text
 from src.generation.skeleton_sampler import sample_batch, validate_skeleton
@@ -20,6 +20,32 @@ def test_skeleton_sampling_validates():
     assert len(types) >= 6
     for s in skeletons:
         validate_skeleton(s, schema)
+        assert s["loss_event"]["date_of_loss"] >= s["policy"]["effective_date"]
+
+
+def test_multi_doc_bundle_shares_financials():
+    cfg = Config.load()
+    dist = read_json(cfg.profiles_dir / "insurance_distributions.json")
+    schema = read_json(cfg.claim_schema_path)
+    # High multi-doc rate to reliably create a bundle.
+    skeletons = sample_batch(n=30, seed=3, dist=dist, schema=schema, multi_doc_rate=1.0)
+    groups: dict[str, list] = {}
+    for s in skeletons:
+        gid = s.get("multi_doc_group_id")
+        if gid:
+            groups.setdefault(gid, []).append(s)
+    assert groups
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+        first = members[0]
+        for other in members[1:]:
+            assert other["claim_id"] == first["claim_id"]
+            assert other["financials"] == first["financials"]
+            assert other["policy"] == first["policy"]
+        break
+    else:
+        pytest.fail("expected at least one multi-doc bundle with 2+ members")
 
 
 def test_template_document_and_memo_and_noise():

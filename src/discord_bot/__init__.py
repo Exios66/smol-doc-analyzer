@@ -9,8 +9,14 @@ __all__ = ["register_tools", "register_slash_commands", "run_bot"]
 
 
 def register_tools() -> None:
-    """Import side-effects that attach pipeline tools to the Chloride agent."""
-    from src.discord_bot import tools as _tools  # noqa: F401
+    """Attach pipeline tools to the Chloride agent (no-op if Chloride missing)."""
+    from src.discord_bot.tools import register_tools as _register
+
+    try:
+        _register()
+    except ImportError:
+        # Allow callers / tests without the discord extra installed.
+        pass
 
 
 def register_slash_commands(bot) -> None:

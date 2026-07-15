@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import random
 import string
@@ -12,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 import jsonschema
-import yaml
 
 from src.utils.config import Config
 from src.utils.io import read_json, write_json, write_jsonl
@@ -58,8 +56,10 @@ def _lognormal_amount(rng: random.Random, spec: dict[str, Any]) -> float:
 
 
 def _random_date(rng: random.Random, start: date, end: date) -> str:
+    if end < start:
+        start, end = end, start
     delta = (end - start).days
-    return (start + timedelta(days=rng.randint(0, max(delta, 1)))).isoformat()
+    return (start + timedelta(days=rng.randint(0, delta))).isoformat()
 
 
 def sample_skeleton(
@@ -75,8 +75,15 @@ def sample_skeleton(
     complexity = _weighted_choice(rng, dist["narrative_complexity_weights"])
 
     year = rng.randint(2023, 2026)
-    loss_date = _random_date(rng, date(year, 1, 1), date(year, 12, 28))
+    # Sample policy effective first, then require date_of_loss on/after effective.
     effective = _random_date(rng, date(year - 1, 1, 1), date(year, 6, 1))
+    effective_d = date.fromisoformat(effective)
+    loss_start = max(effective_d, date(year, 1, 1))
+    loss_end = date(year, 12, 28)
+    if loss_start > loss_end:
+        loss_start = effective_d
+        loss_end = effective_d + timedelta(days=180)
+    loss_date = _random_date(rng, loss_start, loss_end)
     estimated = _lognormal_amount(rng, dist["estimated_damage"])
     deductible = float(
         rng.choices(dist["deductible_choices"], weights=dist["deductible_weights"], k=1)[0]
@@ -164,13 +171,20 @@ def sample_batch(
             )
             for bt in bundle_types:
                 sk = sample_skeleton(rng, dist, document_type=bt, multi_doc_group_id=group_id)
-                # share claim_id within bundle
+                # share claim identity / policy / loss / financials within bundle
                 if out and out[-1].get("multi_doc_group_id") == group_id:
-                    sk["claim_id"] = out[-1]["claim_id"]
-                    sk["policy"] = dict(out[-1]["policy"])
-                    sk["loss_event"] = dict(out[-1]["loss_event"])
-                    sk["parties"]["insured"] = out[-1]["parties"]["insured"]
-                    sk["parties"]["adjuster_assigned"] = out[-1]["parties"]["adjuster_assigned"]
+                    prev = out[-1]
+                    sk["claim_id"] = prev["claim_id"]
+                    sk["policy"] = dict(prev["policy"])
+                    sk["loss_event"] = dict(prev["loss_event"])
+                    sk["financials"] = dict(prev["financials"])
+                    sk["narrative_complexity"] = prev["narrative_complexity"]
+                    sk["parties"] = {
+                        **sk["parties"],
+                        "insured": prev["parties"]["insured"],
+                        "claimant": prev["parties"].get("claimant"),
+                        "adjuster_assigned": prev["parties"]["adjuster_assigned"],
+                    }
                 validate_skeleton(sk, schema)
                 out.append(sk)
                 i += 1
@@ -190,11 +204,37 @@ def write_splits(skeletons: list[dict[str, Any]], splits_path: Path, seed: int =
     order = list(range(len(ids)))
     rng.shuffle(order)
     n = len(order)
-    n_test = max(1, int(0.15 * n))
-    n_val = max(1, int(0.15 * n))
-    test_idx = order[:n_test]
-    val_idx = order[n_test : n_test + n_val]
-    train_idx = order[n_test + n_val :]
+    if n == 0:
+        splits = {"seed": seed, "train": [], "val": [], "test": [], "record_ids": []}
+        write_json(splits_path, splits)
+        return splits
+    if n < 3:
+        # Keep at least one train example; put leftovers in val then test.
+        train_idx = order[: max(1, n - 2)]
+        remainder = order[len(train_idx) :]
+        val_idx = remainder[:1]
+        test_idx = remainder[1:2]
+    else:
+        n_test = max(1, int(0.15 * n))
+        n_val = max(1, int(0.15 * n))
+        # Ensure train keeps the majority (≥70% when possible).
+        max_holdout = max(0, n - max(1, int(0.7 * n)))
+        while n_test + n_val > max_holdout and (n_test > 1 or n_val > 1):
+            if n_test >= n_val and n_test > 1:
+                n_test -= 1
+            elif n_val > 1:
+                n_val -= 1
+            else:
+                break
+        test_idx = order[:n_test]
+        val_idx = order[n_test : n_test + n_val]
+        train_idx = order[n_test + n_val :]
+        if not train_idx:
+            # Last-resort: steal one from the larger holdout split.
+            if len(test_idx) >= len(val_idx) and test_idx:
+                train_idx = [test_idx.pop()]
+            elif val_idx:
+                train_idx = [val_idx.pop()]
     splits = {
         "seed": seed,
         "train": [ids[i] for i in train_idx],

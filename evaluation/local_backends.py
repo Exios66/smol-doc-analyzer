@@ -61,6 +61,20 @@ def build_local_task_endpoints(cfg: Config | None = None) -> dict[str, Callable[
     extract = ExtractStage(cfg=cfg, render_image=False)
     summarize = SummarizeStage(cfg=cfg)
 
+    # Warm weights once so the first billed example does not absorb cold-start load.
+    try:
+        classify._ensure_loaded()
+    except Exception:
+        pass
+    try:
+        extract._ensure_loaded()
+    except Exception:
+        pass
+    try:
+        summarize._ensure_loaded()
+    except Exception:
+        pass
+
     def classification(example: dict[str, Any]) -> str:
         ctx = _ctx_with_markdown(cfg, example)
         result = classify.run(ctx)

@@ -12,6 +12,8 @@ COPY src ./src
 COPY taxonomy ./taxonomy
 COPY discord ./discord
 
-RUN pip install --no-cache-dir -e ".[discord]"
+RUN pip install --no-cache-dir -e ".[discord]" \
+    && chmod +x discord/smol-doc-analyzer/entrypoint.sh
 
-CMD ["python", "-m", "src.discord_bot", "--config-dir", "discord/smol-doc-analyzer"]
+ENTRYPOINT ["discord/smol-doc-analyzer/entrypoint.sh"]
+CMD ["discord/smol-doc-analyzer"]

@@ -47,7 +47,9 @@ def test_status_message_has_no_secret_values(monkeypatch):
 
 
 def test_register_slash_commands_on_mock_tree():
-    pytest.importorskip("discord")
+    discord = pytest.importorskip("discord")
+    if not hasattr(discord, "app_commands"):
+        pytest.skip("discord.py app_commands unavailable in this environment")
 
     class FakeTree:
         def __init__(self):

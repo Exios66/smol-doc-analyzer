@@ -71,11 +71,11 @@ _MEMO_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "coverage_determination": (
         "coverage determination",
         "coverage grant",
-        "coverage",
         "whether coverage",
+        "coverage decision",
     ),
     "next_steps": ("next steps", "next step"),
-    "adjuster_notes": ("adjuster memo", "adjuster notes", "analysis", "summary"),
+    "adjuster_notes": ("adjuster memo", "adjuster notes", "adjuster analysis"),
 }
 
 
@@ -253,10 +253,12 @@ def annotate_records(
             score = score_memo_rubric(str(pred or ""))
             r["score"] = score
             r["correct"] = score >= 0.75
+            r["score_source"] = "rubric"
             # Prefer LLM-judge score for the row when already present.
             if r.get("judge_score") is not None:
                 r["score"] = float(r["judge_score"]) / 5.0
                 r["score_source"] = "judge"
+                r["correct"] = float(r["judge_score"]) >= 3.75
         else:
             r.setdefault("correct", None)
             r.setdefault("score", None)

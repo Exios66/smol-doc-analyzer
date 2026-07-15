@@ -155,7 +155,7 @@ def test_analyze_image_path_converts_before_llm(tmp_path: Path):
 
     cfg = Config.load()
     text = load_jsonl(FIXTURES)[1]["text"]
-    img, _ = render_page(text)
+    img, _, _ = render_page(text)
     img_path = tmp_path / "loss.png"
     img.save(img_path)
 

@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import argparse
-import json
+import re
 from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
-from src.utils.config import Config
 from src.utils.io import load_jsonl, write_jsonl
 
 
@@ -20,20 +19,31 @@ def _font(size: int = 14) -> ImageFont.ImageFont:
         return ImageFont.load_default()
 
 
-def render_page(text: str, width: int = 1000, margin: int = 40) -> tuple[Image.Image, list[dict[str, Any]]]:
+def render_page(
+    text: str, width: int = 1000, margin: int = 40
+) -> tuple[Image.Image, list[dict[str, Any]], bool]:
     font = _font(16)
-    # Estimate height
+    # Estimate height from line count; grow canvas so long docs are not clipped.
     lines = text.split("\n")
     line_h = 22
-    height = max(1200, margin * 2 + line_h * (len(lines) + 2))
+    height = max(1200, margin * 2 + line_h * (len(lines) + 4))
     img = Image.new("RGB", (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
     words_meta: list[dict[str, Any]] = []
     y = margin
-    for line in lines:
+    truncated = False
+    for line_idx, line in enumerate(lines):
         x = margin
         if not line.strip():
             y += line_h
+            # Mark blank lines with a sentinel so BIO labeling can stop at EOL.
+            words_meta.append(
+                {
+                    "text": "",
+                    "bbox": [x, y, x, y + line_h],
+                    "line_break": True,
+                }
+            )
             continue
         for word in line.split(" "):
             if not word:
@@ -45,6 +55,7 @@ def render_page(text: str, width: int = 1000, margin: int = 40) -> tuple[Image.I
                 {
                     "text": word,
                     "bbox": [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
+                    "line_idx": line_idx,
                 }
             )
             x = bbox[2] + 8
@@ -52,9 +63,19 @@ def render_page(text: str, width: int = 1000, margin: int = 40) -> tuple[Image.I
                 x = margin
                 y += line_h
         y += line_h
+        words_meta.append(
+            {
+                "text": "",
+                "bbox": [margin, y, margin, y + line_h],
+                "line_break": True,
+            }
+        )
         if y > height - margin:
+            truncated = True
             break
-    return img, words_meta
+    # Drop trailing empty line-break sentinels from the labeling stream is fine;
+    # keep them so label_words can detect end-of-line.
+    return img, words_meta, truncated
 
 
 FIELD_PATTERNS = [
@@ -74,17 +95,36 @@ FIELD_PATTERNS = [
     ("coverage_type", "Coverage Type:"),
 ]
 
+_SECTION_HEADER = re.compile(r"^[A-Z][A-Z /&-]{2,}$")
+_KEY_LIKE = re.compile(r"^[A-Za-z][A-Za-z0-9 /-]{1,40}:$")
+
+
+def _is_section_header(text: str) -> bool:
+    """True for ALL-CAPS section titles, not IDs/amounts that contain digits."""
+    if any(ch.isdigit() for ch in text):
+        return False
+    return bool(_SECTION_HEADER.match(text))
+
+
+def _starts_field_prefix(words: list[dict[str, Any]], i: int) -> bool:
+    for _, prefix in FIELD_PATTERNS:
+        pref_tokens = prefix.split(" ")
+        window = [words[i + k]["text"] for k in range(len(pref_tokens)) if i + k < len(words)]
+        if window == pref_tokens:
+            return True
+    return False
+
 
 def label_words(words: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Assign BIO-ish field labels by scanning for known prefixes on the page."""
-    labeled = []
-    active_field = "O"
-    remaining_value_tokens = 0
-    # Rebuild line-ish stream
+    """Assign BIO field labels; stop at EOL, next field, or section headers."""
+    labeled: list[dict[str, Any]] = []
     i = 0
     while i < len(words):
-        w = words[i]["text"]
-        # Look ahead for prefix patterns spanning multiple tokens
+        if words[i].get("line_break") or not str(words[i].get("text") or "").strip():
+            # Skip blank / line-break sentinels in the gold stream.
+            i += 1
+            continue
+
         matched = None
         for field, prefix in FIELD_PATTERNS:
             pref_tokens = prefix.split(" ")
@@ -92,44 +132,40 @@ def label_words(words: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if window == pref_tokens:
                 matched = (field, len(pref_tokens))
                 break
+
         if matched:
             field, n = matched
             for k in range(n):
                 labeled.append({**words[i + k], "label": "O"})
             i += n
-            # following tokens until next known label-ish colon pattern get the field
-            active_field = field
-            # consume value tokens until end of "line" heuristic: next capitalized key or blank jump
+            first = True
             while i < len(words):
-                # stop if next token starts a new field prefix
-                stop = False
-                for _, prefix in FIELD_PATTERNS:
-                    pref_tokens = prefix.split(" ")
-                    window = [words[i + k]["text"] for k in range(len(pref_tokens)) if i + k < len(words)]
-                    if window == pref_tokens:
-                        stop = True
-                        break
-                if stop:
+                token = words[i]
+                text = str(token.get("text") or "")
+                if token.get("line_break") or not text.strip():
                     break
-                tag = f"B-{active_field}" if remaining_value_tokens == 0 else f"I-{active_field}"
-                # use a local counter via whether previous was same field
-                if labeled and labeled[-1]["label"].endswith(active_field) and labeled[-1]["label"] != "O":
-                    tag = f"I-{active_field}"
-                else:
-                    tag = f"B-{active_field}"
-                labeled.append({**words[i], "label": tag})
+                if _starts_field_prefix(words, i):
+                    break
+                if _is_section_header(text) or _KEY_LIKE.match(text):
+                    break
+                # Stop before headers like "ACORD" that are not FIELD_PATTERNS values.
+                if text.upper() in {"ACORD", "NARRATIVE"} and not first:
+                    break
+                tag = f"B-{field}" if first else f"I-{field}"
+                labeled.append({**token, "label": tag})
+                first = False
                 i += 1
-                # crude: stop after 12 tokens of value
+                # Safety cap for unusually long values on a single line.
                 run = 0
                 for item in reversed(labeled):
-                    if item["label"].endswith(active_field):
+                    if item["label"].endswith(field) and item["label"] != "O":
                         run += 1
                     else:
                         break
-                if run >= 12:
+                if run >= 24:
                     break
-            active_field = "O"
             continue
+
         labeled.append({**words[i], "label": "O"})
         i += 1
     return labeled
@@ -141,7 +177,7 @@ def render_documents(docs_path: Path, out_dir: Path) -> Path:
     images_dir.mkdir(exist_ok=True)
     rows = []
     for doc in load_jsonl(docs_path):
-        img, words = render_page(doc["text"])
+        img, words, truncated = render_page(doc["text"])
         labeled = label_words(words)
         img_path = images_dir / f"{doc['record_id'].replace('::', '__')}.png"
         img.save(img_path)
@@ -154,6 +190,9 @@ def render_documents(docs_path: Path, out_dir: Path) -> Path:
                 "words": labeled,
                 "skeleton": doc.get("skeleton"),
                 "is_noisy": bool(doc.get("is_noisy", False)),
+                "width": img.width,
+                "height": img.height,
+                "truncated": truncated,
             }
         )
     out_path = out_dir / "rendered.jsonl"
