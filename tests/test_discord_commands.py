@@ -1,8 +1,9 @@
-"""Tests for Discord slash-command helpers (no live Discord required)."""
+"""Tests for Discord slash-command helpers and new agent modules."""
 
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -15,6 +16,8 @@ from src.discord_bot.commands import (
     chunk_message,
     register_slash_commands,
 )
+from src.discord_bot.notes_store import NotesStore, format_notes
+from src.discord_bot.vibes import VIBE_SEEDS, format_queue, get_state, set_mood
 
 
 def test_chunk_message_splits_long_text():
@@ -34,6 +37,9 @@ def test_help_message_lists_commands():
     text = _help_message()
     for name, _desc in _SLASH_COMMANDS:
         assert f"/{name}" in text
+    assert "/note" in text
+    assert "/transcribe" in text
+    assert "/play" in text
 
 
 def test_status_message_has_no_secret_values(monkeypatch):
@@ -44,6 +50,7 @@ def test_status_message_has_no_secret_values(monkeypatch):
     assert "discord-secret-should-not-appear" not in text
     assert "DISCORD_TOKEN" in text
     assert "yes" in text
+    assert "Voice DJ deps" in text
 
 
 def test_register_slash_commands_on_mock_tree():
@@ -61,15 +68,33 @@ def test_register_slash_commands_on_mock_tree():
 
             return deco
 
+        def add_command(self, group):
+            self._commands[group.name] = group
+
         def get_commands(self):
             return list(self._commands.values())
 
     bot = SimpleNamespace(tree=FakeTree(), latency=0.042, _may_chat=lambda user: (True, None))
     register_slash_commands(bot)
-    names = {c.name for c in bot.tree.get_commands()}
-    assert names >= {"analyze", "analyze_url", "status", "help", "ping"}
+    names = {getattr(c, "name", None) for c in bot.tree.get_commands()}
+    assert names >= {
+        "analyze",
+        "analyze_url",
+        "note",
+        "transcribe",
+        "play",
+        "queue",
+        "vibe",
+        "poll",
+        "remind",
+        "status",
+        "help",
+        "ping",
+    }
+    # Idempotent
+    before = len(bot.tree.get_commands())
     register_slash_commands(bot)
-    assert len(bot.tree.get_commands()) == 5
+    assert len(bot.tree.get_commands()) == before
 
 
 def test_run_analyze_from_interaction_text():
@@ -88,3 +113,38 @@ def test_run_analyze_from_interaction_text():
     )
     assert "## Document analysis" in out
     assert "Type:" in out
+
+
+def test_notes_store_roundtrip(tmp_path: Path):
+    store = NotesStore(db_path=tmp_path / "notes.db")
+    n = store.add(
+        guild_id="g1",
+        channel_id="c1",
+        author_id="u1",
+        author_name="Ada",
+        body="Follow up on claim CLM-1 tomorrow",
+        title="Follow-up",
+        tags=["claims", "todo"],
+    )
+    assert n.note_id
+    found = store.search("g1", "CLM-1")
+    assert len(found) == 1
+    assert found[0].title == "Follow-up"
+    recent = store.list_recent("g1", limit=5)
+    assert recent[0].note_id == n.note_id
+    assert "Follow-up" in format_notes(recent)
+    assert store.delete(n.note_id, guild_id="g1")
+    assert store.search("g1", "CLM-1") == []
+
+
+def test_vibes_mood_and_queue_format():
+    gid = 999001
+    msg = set_mood(gid, "focus")
+    assert "focus" in msg
+    assert set_mood(gid, "nope").startswith("Unknown")
+    state = get_state(gid)
+    assert state.mood == "focus"
+    assert "focus" in VIBE_SEEDS
+    text = format_queue(state)
+    assert "Vibes queue" in text
+    assert "focus" in text

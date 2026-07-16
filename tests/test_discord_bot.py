@@ -88,23 +88,36 @@ def test_example_config_yaml_parses():
     data = yaml.full_load(example.read_text(encoding="utf-8"))
     assert "DISCORD_PREFIX" in data
     assert "tiers" in data
-    assert "analyze_insurance_document" in data["tiers"]["default"]["allowed_tools"]
+    default_tools = data["tiers"]["default"]["allowed_tools"]
+    assert "analyze_insurance_document" in default_tools
+    assert "save_note" in default_tools
+    assert "transcribe_audio" in default_tools
+    assert "vibe_control" in default_tools
+
+
+def test_extra_tools_register_when_chloride_present():
+    pytest.importorskip("coral")
+    from coral.agent import agent
+
+    from src.discord_bot.agent_extras import register_extra_tools
+    from src.discord_bot.tools import register_tools
+
+    register_tools()
+    register_extra_tools()
+    tool_names = set(agent._function_toolset.tools.keys())  # noqa: SLF001
+    assert {
+        "analyze_insurance_document",
+        "save_note",
+        "search_notes",
+        "transcribe_audio",
+        "vibe_control",
+        "server_help",
+    } <= tool_names
 
 
 def test_resolve_config_dir_default():
     path = _resolve_config_dir(None)
     assert path.name == "smol-doc-analyzer"
-
-
-def test_analyze_tool_registers_when_chloride_present():
-    pytest.importorskip("coral")
-    from coral.agent import agent
-
-    from src.discord_bot.tools import register_tools
-
-    register_tools()
-    tool_names = set(agent._function_toolset.tools.keys())  # noqa: SLF001
-    assert "analyze_insurance_document" in tool_names
 
 
 def test_analyze_impl_on_text():

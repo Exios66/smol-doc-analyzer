@@ -50,6 +50,10 @@ discord = [
   # Chloride (Coral Discord agent): https://github.com/S4IL21/chloride
   "chloride @ git+https://github.com/S4IL21/chloride.git@ebe61ec6aa460ba16c1ad94666144675da9cabff",
 ]
+discord-voice = [
+  "PyNaCl>=1.5.0",
+  "yt-dlp>=2024.8.0",
+]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]

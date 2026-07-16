@@ -1,13 +1,20 @@
 # Discord bot (Chloride)
 
-Discord front-end for **smol-doc-analyzer**, powered by
+All-purpose Discord agent for **smol-doc-analyzer**, powered by
 [Chloride](https://github.com/S4IL21/chloride) (Coral agent + Discord integration).
+
+Specialty: insurance document analysis. Also: **notes / transcription**, **DJ / vibes**,
+and free-form **chat** when you mention the bot or use the `--` prefix.
 
 ## Setup
 
 ```bash
 # from repo root
 pip install -e ".[discord]"
+# optional voice DJ (also needs ffmpeg on PATH):
+pip install -e ".[discord,discord-voice]"
+# macOS: brew install ffmpeg
+
 python scripts/setup_env.py
 # edit .env:
 #   DISCORD_TOKEN=...          # Discord bot token (interactive Chloride agent)
@@ -16,6 +23,7 @@ python scripts/setup_env.py
 # optional:
 #   DISCORD_AI_API_KEY=...     # override LLM key
 #   DISCORD_AI_MODEL=...       # override model slug
+#   OPENAI_API_KEY=...         # preferred for /transcribe (Whisper)
 
 cp discord/smol-doc-analyzer/config.yaml.example discord/smol-doc-analyzer/config.yaml
 # replace admin/analyst snowflake IDs in config.yaml
@@ -25,8 +33,8 @@ Create a Discord application + bot at https://discord.com/developers/application
 enable **Message Content Intent** (Bot → Privileged Gateway Intents), invite the bot
 to your server, and paste the token into `.env` as `DISCORD_TOKEN`.
 
-This integration requests only Message Content (not Presence / Server Members).
-Invite URL pattern:
+This integration requests Message Content + voice state (for DJ), not Presence /
+Server Members. Invite URL pattern:
 
 `https://discord.com/oauth2/authorize?client_id=YOUR_APP_ID&permissions=274878295040&scope=bot%20applications.commands`
 
@@ -56,24 +64,57 @@ python -m src.discord_bot
 python -m src.discord_bot --config-dir discord/smol-doc-analyzer
 ```
 
-Mention the bot or prefix a message with `--` (configurable via `DISCORD_PREFIX`),
-**or use slash commands** (synced on bot startup):
+Mention the bot or prefix a message with `--` (configurable via `DISCORD_PREFIX`)
+for free-form chat, **or use slash commands** (synced on bot startup):
 
 | Command | What it does |
 |---------|----------------|
 | `/analyze` | Run the pipeline on pasted `text` and/or a PDF/PNG `attachment` |
 | `/analyze_url` | Download a document from a URL and analyze it |
-| `/status` | Secret/config readiness (never prints secret values) |
+| `/note add\|list\|search\|show\|delete` | Capture and retrieve server notes |
+| `/transcribe` | Transcribe a voice note / audio attachment (optional save to notes) |
+| `/play` `/queue` `/skip` `/stop` | DJ queue (voice when deps present; else link queue) |
+| `/join` `/leave` | Voice channel control |
+| `/vibe` | Set mood: `focus` · `chill` · `energy` · `jazz` · `claims` |
+| `/poll` | Quick reaction poll |
+| `/remind` | Save a reminder note |
+| `/status` | Secret/config + voice-deps readiness (never prints secret values) |
 | `/help` | List slash commands |
 | `/ping` | Gateway latency check |
 
-Attach a PDF/PNG or paste document text with `/analyze` — this calls the pipeline
-directly (no LLM tool routing required):
+### Document pipeline
+
+`/analyze` calls:
 
 `to_markdown → classify → extract → vision_llm → summarize`
 
-Free-form chat (mention / `--` prefix) still uses the Chloride agent, which can
-call the `analyze_insurance_document` tool.
+### Notes & transcription
+
+Notes live in `data/discord/notes.db` (gitignored). Transcription prefers
+`OPENAI_API_KEY` + Whisper; otherwise tries OpenRouter-compatible STT with
+`OPENROUTER_API_KEY`.
+
+### DJ / vibes
+
+- With `ffmpeg` + `PyNaCl` + `yt-dlp`: joins voice and plays audio from YouTube/search.
+- Without those deps: queues shareable links so the room can still keep the vibes.
+
+### Chat agent tools
+
+| Surface | Purpose |
+|---------|---------|
+| `/analyze`, `/analyze_url` | Direct slash → local pipeline |
+| `/note`, `/transcribe`, `/remind` | Notes + STT |
+| `/play` … `/vibe` | DJ / vibes |
+| `/poll`, `/status`, `/help`, `/ping` | Server utilities |
+| Agent tool `analyze_insurance_document` | Pipeline via Chloride chat |
+| Agent tools `save_note`, `search_notes`, `transcribe_audio`, `vibe_control`, `server_help` | Same capabilities via chat |
+| Chloride built-ins | `analyse_file`, search, shell/code (tier-gated) |
+| Context menu **Ask Me** | Analyze a selected message |
+
+Tier `allowed_tools` in `config.yaml` controls who may call which tools. The
+`default` tier can use docs, notes, STT, vibes, and search; shell/code/reboot stay
+admin-only via `*`.
 
 ## Run (Docker)
 
@@ -85,18 +126,8 @@ cp config.yaml.example config.yaml   # if not already
 docker compose up --build
 ```
 
-## Tools
-
-| Surface | Purpose |
-|---------|---------|
-| `/analyze`, `/analyze_url` | Direct slash commands → local pipeline |
-| `/status`, `/help`, `/ping` | Bot readiness / help / latency |
-| Agent tool `analyze_insurance_document` | Same pipeline via Chloride chat |
-| Chloride built-ins | `analyse_file`, search, shell/code (tier-gated) |
-| Context menu **Ask Me** | Analyze a selected message |
-
-Tier `allowed_tools` in `config.yaml` controls who may call which tools. The
-`default` tier is limited to document analysis + `get_user_info`.
+Voice DJ inside Docker also needs `ffmpeg` in the image and host device access;
+link-queue mode works without that.
 
 ## Secrets
 

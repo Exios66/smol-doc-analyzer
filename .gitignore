@@ -41,3 +41,7 @@ wandb/
 offline-run-*/
 
 .DS_Store
+
+# Discord agent runtime data
+data/discord/**
+!data/discord/.gitkeep

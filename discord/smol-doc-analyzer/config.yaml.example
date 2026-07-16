@@ -22,12 +22,24 @@ tiers:
       - analyze_insurance_document
       - analyse_file
       - duckduckgo_search
+      - search_discord
       - get_user_info
+      - save_note
+      - search_notes
+      - transcribe_audio
+      - vibe_control
+      - server_help
     allow_chat: true
   default:
     allowed_tools:
       - analyze_insurance_document
       - get_user_info
+      - save_note
+      - search_notes
+      - transcribe_audio
+      - vibe_control
+      - server_help
+      - duckduckgo_search
     allow_chat: true
     allow_ping_everyone: false
 
