@@ -38,30 +38,131 @@ def _heuristic_classify(text: str, labels: list[str]) -> tuple[str, float]:
     """Keyword fallback when no classifier weights are available."""
     lower = text.lower()
     scores: dict[str, float] = {lab: 0.0 for lab in labels}
-    rules = [
-        ("application_commercial", ["commercial insurance application", "acord form: 125", "coverage sections"]),
-        ("application_personal", ["personal lines application", "acord form: 90", "vehicle / property"]),
-        ("certificate_evidence", ["certificate of insurance", "evidence of insurance", "acord form: 25"]),
-        ("loss_notice", ["loss notice", "date of loss", "acord form: 1", "acord form: 2"]),
-        ("claims_correspondence", ["dear", "regarding your claim", "status update"]),
-        ("adjuster_memo", ["adjuster memo", "next steps", "to: claims file"]),
-        ("policy_change_endorsement", ["endorsement", "policy change", "acord form: 101"]),
-        ("repair_estimate", ["repair estimate", "labor", "parts", "estimate total"]),
-        ("supporting_evidence", ["police report", "inspection report", "photo description"]),
+
+    def _acord_hit(form_number: str) -> bool:
+        return bool(re.search(rf"\bacord\s+form:\s*{re.escape(form_number)}\b", lower))
+
+    rules: list[tuple[str, list[tuple[str, Any]]]] = [
+        (
+            "application_commercial",
+            [
+                ("substr", "commercial insurance application"),
+                ("acord", "125"),
+                ("substr", "coverage sections"),
+            ],
+        ),
+        (
+            "application_personal",
+            [
+                ("substr", "personal lines application"),
+                ("acord", "90"),
+                ("substr", "vehicle / property"),
+            ],
+        ),
+        (
+            "certificate_evidence",
+            [
+                ("substr", "certificate of insurance"),
+                ("substr", "evidence of insurance"),
+                ("acord", "25"),
+            ],
+        ),
+        (
+            "loss_notice",
+            [
+                ("substr", "loss notice"),
+                ("substr", "date of loss"),
+                ("acord", "1"),
+                ("acord", "2"),
+            ],
+        ),
+        (
+            "claims_correspondence",
+            [("substr", "dear"), ("substr", "regarding your claim"), ("substr", "status update")],
+        ),
+        (
+            "adjuster_memo",
+            [("substr", "adjuster memo"), ("substr", "next steps"), ("substr", "to: claims file")],
+        ),
+        (
+            "policy_change_endorsement",
+            [("substr", "endorsement"), ("substr", "policy change"), ("acord", "101")],
+        ),
+        (
+            "repair_estimate",
+            [
+                ("substr", "repair estimate"),
+                ("substr", "labor"),
+                ("substr", "parts"),
+                ("substr", "estimate total"),
+            ],
+        ),
+        (
+            "supporting_evidence",
+            [
+                ("substr", "police report"),
+                ("substr", "inspection report"),
+                ("substr", "photo description"),
+            ],
+        ),
     ]
     for label, keys in rules:
         if label not in scores:
             continue
-        hits = sum(1 for k in keys if k in lower)
+        hits = 0
+        for kind, key in keys:
+            if kind == "acord":
+                if _acord_hit(key):
+                    hits += 1
+            elif key in lower:
+                hits += 1
         scores[label] = hits / max(len(keys), 1)
     best = max(scores, key=scores.get)
     conf = float(scores[best])
     if conf <= 0:
         # Prefer loss_notice when loss fields dominate, else first taxonomy label.
-        if "date of loss" in lower or "loss type" in lower:
+        if ("date of loss" in lower or "loss type" in lower) and "loss_notice" in scores:
             return "loss_notice", 0.35
         return labels[0], 0.2
     return best, min(0.95, 0.4 + conf * 0.6)
+
+
+def _cache_safe_id(record_id: str) -> str:
+    """Stable filesystem-safe id that avoids collisions across separators."""
+    import hashlib
+
+    digest = hashlib.sha1(record_id.encode("utf-8")).hexdigest()[:16]
+    readable = (
+        record_id.replace("::", "__")
+        .replace("/", "%2F")
+        .replace("\\", "%5C")
+    )
+    readable = re.sub(r"[^\w.%+-]+", "_", readable)[:80].strip("._") or "record"
+    return f"{readable}__{digest}"
+
+
+def _failed_markdown_backend(backend: str) -> bool:
+    if not backend:
+        return True
+    if backend in {"failed", "empty", "none", "pytesseract_failed"}:
+        return True
+    if backend.endswith("_empty") or backend.endswith("failed"):
+        return True
+    if "+fallback_text" in backend and backend.split("+", 1)[0].endswith("_empty"):
+        return True
+    return False
+
+
+def _prefer_model_dir(models_dir: Path, preferred: str, smoke: str) -> Path:
+    """Prefer production weights; fall back to smoke checkpoints."""
+    primary = models_dir / preferred
+    if (primary / "config.json").exists():
+        return primary
+    smoke_path = models_dir / smoke
+    if (smoke_path / "config.json").exists():
+        return smoke_path
+    return primary
+
 
 
 @dataclass
@@ -83,7 +184,7 @@ class MarkdownConvertStage:
             # Persist converted markdown under pipeline cache for inspection / reuse
             cache_dir = self.cfg.pipeline_cache_dir / "markdown"
             cache_dir.mkdir(parents=True, exist_ok=True)
-            safe_id = ctx.document.record_id.replace("::", "__").replace("/", "_")
+            safe_id = _cache_safe_id(ctx.document.record_id)
 
             conversion = convert_to_markdown(
                 text=ctx.document.text or None,
@@ -94,24 +195,27 @@ class MarkdownConvertStage:
             md_path = cache_dir / f"{safe_id}.md"
             md_path.write_text(conversion.markdown, encoding="utf-8")
 
-            raw_chars = len(ctx.document.text or "")
-            raw_tokens = approx_token_count(ctx.document.text or "")
             # Rough image-token stand-in: a page image often costs ~1k–2k+ vision tokens
             image_token_proxy = 1600 if (ctx.document.image_path or ctx.document.pdf_path) else 0
-            baseline_tokens = max(raw_tokens, image_token_proxy)
+            baseline_tokens = max(approx_token_count(ctx.document.text or ""), image_token_proxy)
             saved = max(0, baseline_tokens - conversion.approx_tokens)
+
+            placeholder_only = not (conversion.plain_text or "").strip()
+            failed_backend = _failed_markdown_backend(conversion.backend)
 
             if conversion.source_kind in {"png", "pdf", "image"}:
                 flags.append(f"markdown_from_{conversion.source_kind}")
-            if conversion.backend in {"failed", "empty", "none", "pytesseract_failed"}:
+            if failed_backend or placeholder_only:
                 flags.append("low_confidence_markdown")
             if not conversion.plain_text.strip() and not conversion.markdown.strip():
                 flags.append("markdown_empty")
 
             confidence = 0.9
-            if conversion.source_kind == "empty":
+            if conversion.source_kind == "empty" or (
+                placeholder_only and failed_backend
+            ):
                 confidence = 0.1
-            elif conversion.backend.endswith("failed") or conversion.backend == "none":
+            elif failed_backend or placeholder_only:
                 confidence = 0.35
             elif conversion.extras and conversion.extras.get("used_fallback_text"):
                 confidence = 0.7
@@ -123,12 +227,22 @@ class MarkdownConvertStage:
             payload["token_saved_est"] = saved
             payload["fed_to_llm_as"] = "markdown"
 
+            empty_content = not (
+                (conversion.plain_text or "").strip() or (conversion.markdown or "").strip()
+            )
+            # Placeholder-only conversions from failed OCR/PDF still keep ok=True
+            # so downstream stages can flag review, but confidence stays low.
+            ok = not empty_content
+            if placeholder_only and failed_backend:
+                ok = True
+
             return StageResult(
                 stage=self.name,
                 order=self.order,
-                ok=True,
-                confidence=confidence,
-                flags=flags,
+                ok=ok,
+                confidence=confidence if ok else 0.0,
+                flags=flags if ok else flags + ["markdown_failed"],
+                error=None if ok else f"markdown conversion empty (backend={conversion.backend})",
                 payload=payload,
             )
         except Exception as exc:
@@ -160,11 +274,9 @@ class ClassifyStage:
     def _ensure_loaded(self) -> None:
         if self._backend != "unloaded":
             return
-        path = self.model_dir or (self.cfg.models_dir / "classifier_smoke")
-        if not path.exists() or not (path / "config.json").exists():
-            # Prefer non-smoke classifier if present
-            alt = self.cfg.models_dir / "classifier"
-            path = alt if (alt / "config.json").exists() else path
+        path = self.model_dir or _prefer_model_dir(
+            self.cfg.models_dir, "classifier", "classifier_smoke"
+        )
         if not path.exists() or not (path / "config.json").exists():
             self._backend = "heuristic"
             return
@@ -299,10 +411,9 @@ class ExtractStage:
     def _ensure_loaded(self) -> None:
         if self._backend != "unloaded":
             return
-        path = self.model_dir or (self.cfg.models_dir / "extractor_smoke")
-        if not (path / "config.json").exists():
-            alt = self.cfg.models_dir / "extractor"
-            path = alt if (alt / "config.json").exists() else path
+        path = self.model_dir or _prefer_model_dir(
+            self.cfg.models_dir, "extractor", "extractor_smoke"
+        )
         if not (path / "config.json").exists():
             self._backend = "heuristic"
             return
@@ -358,10 +469,10 @@ class ExtractStage:
             image_path = ctx.document.image_path
             words_meta: list[dict[str, Any]] = []
             if self.render_image and not image_path and source_text:
-                img, words_meta = render_page(source_text)
+                img, words_meta, _truncated = render_page(source_text)
                 out_dir = self.cfg.pipeline_cache_dir / "renders"
                 out_dir.mkdir(parents=True, exist_ok=True)
-                safe_id = ctx.document.record_id.replace("::", "__").replace("/", "_")
+                safe_id = _cache_safe_id(ctx.document.record_id)
                 image_path = out_dir / f"{safe_id}.png"
                 img.save(image_path)
                 ctx.document.image_path = image_path
@@ -371,15 +482,28 @@ class ExtractStage:
                 tokens = source_text.split()
 
             if self._backend == "transformers" and tokens:
-                fields = self._model_extract(tokens)
+                model_fields = self._model_extract(tokens)
+                fields = {k: list(v) for k, v in model_fields.items()}
                 backend = "transformers"
                 # Fill gaps with heuristics so sparse smoke models still yield usable fields
                 heuristic = _heuristic_extract(md_text)
+                fill_count = 0
                 for k, v in heuristic.items():
                     if k not in fields or not fields[k]:
                         fields[k] = v
+                        fill_count += 1
                         flags.append(f"extract_heuristic_fill:{k}")
-                confidence = 0.7 if fields else 0.3
+                model_keys = sum(1 for v in model_fields.values() if v)
+                total_keys = sum(1 for v in fields.values() if v)
+                if fill_count and model_keys == 0:
+                    backend = "transformers+heuristic"
+                    confidence = 0.45 if fields else 0.3
+                elif fill_count:
+                    backend = "transformers+heuristic"
+                    ratio = model_keys / max(total_keys, 1)
+                    confidence = 0.45 + 0.25 * ratio
+                else:
+                    confidence = 0.7 if fields else 0.3
             else:
                 fields = _heuristic_extract(md_text)
                 backend = "heuristic"
@@ -543,9 +667,13 @@ class VisionLLMStage:
 
         device = next(self._model.parameters()).device
         inputs = {k: v.to(device) if hasattr(v, "to") else v for k, v in inputs.items()}
+        input_len = int(inputs["input_ids"].shape[-1])
         with self._torch.no_grad():
             generated = self._model.generate(**inputs, max_new_tokens=256)
-        raw = self._processor.batch_decode(generated, skip_special_tokens=True)[0]
+        # Decode only newly generated tokens — full-sequence decode includes the prompt,
+        # whose Prior extracted fields JSON would otherwise confuse _parse_json_object.
+        new_tokens = generated[:, input_len:]
+        raw = self._processor.batch_decode(new_tokens, skip_special_tokens=True)[0]
         return {
             "raw_response": raw,
             "refined_fields": _parse_json_object(raw),
@@ -609,18 +737,27 @@ class VisionLLMStage:
                 flags.append("vision_llm_heuristic")
                 confidence = 0.6 if payload.get("refined_fields") else 0.3
 
-            # Merge refined fields back so summarize reacts to vision corrections
+            # Merge refined fields via copy-on-write so extract stage history stays intact.
             refined = payload.get("refined_fields") or {}
             if ctx.extraction is not None and refined:
-                flat = dict(ctx.extraction.get("fields_flat") or {})
+                original = ctx.extraction
+                flat = dict(original.get("fields_flat") or {})
                 flat.update({k: v for k, v in refined.items() if v})
-                ctx.extraction["fields_flat"] = flat
-                nested = dict(ctx.extraction.get("fields") or {})
-                for k, v in flat.items():
+                nested = {
+                    k: (list(v) if isinstance(v, list) else [v])
+                    for k, v in (original.get("fields") or {}).items()
+                }
+                for k, v in refined.items():
                     if v:
-                        nested[k] = [v]
-                ctx.extraction["fields"] = nested
+                        nested[k] = [v] if not isinstance(v, list) else list(v)
+                ctx.extraction = {
+                    **original,
+                    "fields_flat": flat,
+                    "fields": nested,
+                    "refined_by_vision": True,
+                }
                 payload["merged_into_extraction"] = True
+                payload["extraction_fields_flat"] = flat
 
             if confidence < LOW_CONFIDENCE:
                 flags.append("low_confidence_vision")
@@ -767,11 +904,13 @@ class SummarizeStage:
                 f"saved ≈{md_meta.get('token_saved_est', 'n/a')})",
                 "",
                 "Analysis",
-                "Issue: whether coverage appears supported by extracted claim facts. "
+                "Coverage determination: whether coverage appears supported by extracted claim facts. "
                 "Rule: coverage turns on the policy declarations, conditions, and applicable exclusions. "
                 f"Application: extracted fields from the inbound document at {location}. "
                 "Conclusion: proceed with investigation and reserve adequacy review pending human confirmation "
                 "of low-confidence fields.",
+                "",
+                "Adjuster notes: automated chain output pending human confirmation of low-confidence fields.",
                 "",
                 "Next Steps",
                 "- Confirm coverage grant/denial points in writing",
@@ -799,9 +938,12 @@ class SummarizeStage:
             "Memo:\n"
         )
         inputs = self._tokenizer(prompt, return_tensors="pt")
+        input_len = int(inputs["input_ids"].shape[-1])
         with self._torch.no_grad():
             out = self._model.generate(**inputs, max_new_tokens=400)
-        return self._tokenizer.decode(out[0], skip_special_tokens=True)
+        # Decode only newly generated tokens — full-sequence decode includes the prompt.
+        generated = out[0][input_len:]
+        return self._tokenizer.decode(generated, skip_special_tokens=True).strip()
 
     def run(self, ctx: AnalysisContext) -> StageResult:
         self._ensure_loaded()

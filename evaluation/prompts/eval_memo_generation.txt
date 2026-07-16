@@ -1,0 +1,12 @@
+Write a concise insurance adjuster memo grounded ONLY in the document and
+extracted fields provided. Do not invent claim details that are not present.
+
+Document type: {document_type}
+
+Extracted fields (JSON):
+{extracted_fields}
+
+Document:
+{document_text}
+
+Memo:

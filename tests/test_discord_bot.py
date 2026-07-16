@@ -34,7 +34,10 @@ def test_compact_analysis_and_discord_summary():
         "record_id": "discord-1",
         "claim_id": "CLM-1",
         "classification": {"document_type": "loss_notice", "confidence": 0.91},
-        "extraction": {"fields": {"claim_number": "CLM-1", "date_of_loss": "2024-01-15"}},
+        "extraction": {
+            "fields": {"claim_id": ["CLM-1"], "date_of_loss": ["2024-01-15"]},
+            "fields_flat": {"claim_id": "CLM-1", "date_of_loss": "2024-01-15"},
+        },
         "vision": {"refined_fields": {"loss_type": "collision"}},
         "summary": {"memo": "Short memo about the loss."},
         "memo": "Short memo about the loss.",
@@ -53,9 +56,12 @@ def test_compact_analysis_and_discord_summary():
     }
     compact = compact_analysis(result)
     assert compact["document_type"] == "loss_notice"
-    assert compact["fields"]["claim_number"] == "CLM-1"
+    assert compact["fields"]["claim_id"] == "CLM-1"
+    assert compact["fields"]["date_of_loss"] == "2024-01-15"
     assert compact["fields"]["loss_type"] == "collision"
     assert compact["memo"] == "Short memo about the loss."
+    # No list wrappers in Discord-facing fields.
+    assert not isinstance(compact["fields"]["claim_id"], list)
 
     text = format_discord_summary(compact)
     assert "## Document analysis" in text
@@ -63,6 +69,33 @@ def test_compact_analysis_and_discord_summary():
     assert "CLM-1" in text
     assert "Short memo" in text
     assert "low_confidence_extract" in text
+
+
+def test_download_url_rejects_local_and_file_schemes():
+    import asyncio
+
+    from src.discord_bot.tools import _download_url, _validate_download_url
+
+    with pytest.raises(ValueError, match="http"):
+        _validate_download_url("/etc/passwd")
+    with pytest.raises(ValueError, match="file://|Local"):
+        _validate_download_url("file:///etc/passwd")
+    with pytest.raises(ValueError, match="localhost"):
+        _validate_download_url("http://localhost/secret")
+
+    async def _run():
+        with pytest.raises(ValueError):
+            await _download_url("file:///etc/passwd", Path("/tmp/should-not-exist.bin"))
+
+    asyncio.run(_run())
+
+
+def test_register_tools_public_api_delegates():
+    from src.discord_bot import register_tools
+
+    # Should not raise even without Chloride (ImportError swallowed).
+    register_tools()
+
 
 
 def test_overlay_secrets_fills_placeholders(monkeypatch):

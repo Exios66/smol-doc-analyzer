@@ -99,11 +99,17 @@ def train(
                 )
                 word_ids = tok.word_ids()
                 labels = []
+                previous_wid = None
                 for wid in word_ids:
                     if wid is None:
                         labels.append(-100)
-                    else:
+                    elif wid != previous_wid:
+                        # First subword of each word keeps the label.
                         labels.append(example["labels"][wid])
+                    else:
+                        # Continuation subwords are ignored (matches eval alignment).
+                        labels.append(-100)
+                    previous_wid = wid
                 tok["labels"] = labels
                 return tok
 

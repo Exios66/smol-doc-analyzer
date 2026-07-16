@@ -141,7 +141,64 @@ Details: [discord/smol-doc-analyzer/README.md](discord/smol-doc-analyzer/README.
 
 ## Evaluation
 
-Reports land in `evaluation/reports/` (`classification_report.*`, `vit_classification_report.*`, `random_forest_classification_report.md`, `extraction_report.json`, `failure_modes.md`).
+Per-model reports land in `evaluation/reports/` (`classification_report.*`,
+`vit_classification_report.*`, `random_forest_classification_report.md`,
+`extraction_report.json`, `failure_modes.md`).
+
+### Frontier vs. local harness (Phase 7)
+
+Compare Anthropic / OpenAI (via OpenRouter) against local pipeline models on the
+same held-out set across classification, extraction, and memo generation:
+
+```bash
+# plan calls without spending API budget
+python -m evaluation.eval_harness \
+  --eval-set data/eval/eval_set.jsonl \
+  --tasks classification extraction memo_generation \
+  --backends anthropic openai local \
+  --n-samples 50 \
+  --output-dir evaluation/results/eval_run_2026-07-13 \
+  --dry-run
+
+# live run (requires OPENROUTER_API_KEY for frontier backends)
+python -m evaluation.eval_harness \
+  --eval-set data/eval/eval_set.jsonl \
+  --backends anthropic openai local \
+  --output-dir evaluation/results/eval_run_2026-07-13
+```
+
+Outputs: `eval_results.jsonl` (source of truth) + `eval_results.csv` (cost-model
+spreadsheet feed). Pricing lives in `evaluation/pricing.yaml`.
+
+Score a completed run into the spreadsheet "Eval Results" summary:
+
+```bash
+python -m evaluation.metrics \
+  --results evaluation/results/eval_run_2026-07-13/eval_results.jsonl \
+  --output evaluation/results/eval_run_2026-07-13/summary.csv
+
+# or score immediately after a live harness run
+python -m evaluation.eval_harness ... --output-dir evaluation/results/eval_run_2026-07-13 --score
+```
+
+Classification → accuracy + macro F1; extraction → field micro-F1 (fuzzy fields
+optional); memo generation → rubric coverage (LLM-judge scores merge in when
+present on the JSONL rows).
+
+### Cost model spreadsheet
+
+Formula-driven workbook comparing frontier vs. local $/doc and monthly cost at
+volume. Paste scores from `summary.csv` into the **Eval Results** sheet:
+
+```bash
+pip install -e ".[cost-model]"   # openpyxl
+python -m evaluation.build_cost_model
+# writes evaluation/cost_model/cost_model.xlsx
+```
+
+Sheets: Legend, Assumptions, Eval Results, Cost Per Doc, Scaling Projection,
+Dashboard (with volume chart). Blue/yellow cells are editable inputs; green
+cells are cross-sheet links; black cells are formulas.
 
 ## Experiment tracking (Weights & Biases)
 
@@ -149,29 +206,6 @@ Training, evaluation, and the seed generation pipeline log to [Weights & Biases]
 
 - **Train**: Hugging Face Trainer metrics (`loss`, eval accuracy / F1), run config, `train_meta.json` artifacts (text DeBERTa, **ViT image**, and LayoutLMv3 extractors)
 - **Eval**: summary metrics, per-class / field tables, confusion matrix (classifier + ViT), report + failure-mode artifacts
-- **Generation**: stage progress and output path summaries for `run_seed_pipeline`
-
-```bash
-# copy env and set your key (https://wandb.ai/authorize)
-cp .env.example .env
-# WANDB_API_KEY=...  WANDB_PROJECT=smol-doc-analyzer
-
-# offline / no key still works (local wandb/ cache)
-WANDB_MODE=offline python -m src.classification.train_classifier --prepared ... --smoke
-
-# disable for a single invocation
-python -m src.classification.train_classifier --prepared ... --smoke --no-wandb
-```
-
-Useful flags on train/eval/seed CLIs: `--wandb`, `--no-wandb`, `--wandb-project`, `--wandb-run-name`.
-Set `WANDB_MODE=disabled` or `WANDB_DISABLED=true` to turn tracking off globally.
-
-## Experiment tracking (Weights & Biases)
-
-Training, evaluation, and the seed generation pipeline log to [Weights & Biases](https://wandb.ai) by default:
-
-- **Train**: Hugging Face Trainer metrics (`loss`, eval accuracy / F1), run config, `train_meta.json` artifacts
-- **Eval**: summary metrics, per-class / field tables, confusion matrix (classifier), report + failure-mode artifacts
 - **Generation**: stage progress and output path summaries for `run_seed_pipeline`
 
 ```bash
@@ -188,10 +222,6 @@ python -m src.classification.train_classifier --prepared ... --smoke --no-wandb
 
 Useful flags on train/eval/seed CLIs: `--wandb`, `--no-wandb`, `--wandb-project`, `--wandb-run-name`.
 Set `WANDB_MODE=disabled` or `WANDB_DISABLED=true` to turn tracking off globally.
-
-## License
-
-TBD — add before making repository public.
 
 ## Acknowledgments
 

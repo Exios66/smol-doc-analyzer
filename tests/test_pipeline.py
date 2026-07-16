@@ -19,12 +19,40 @@ from src.pipeline.stages import (
     SummarizeStage,
     VisionLLMStage,
 )
-from src.pipeline.types import AnalysisDocument
+from src.pipeline.types import AnalysisDocument, AnalysisContext, StageResult
 from src.utils.config import Config
 from src.utils.io import load_jsonl
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "sample_documents.jsonl"
+
+
+def test_context_add_skips_failed_stage_payload():
+    ctx = AnalysisContext(
+        document=AnalysisDocument(record_id="x", text="Claim Number: CLM-1")
+    )
+    failed = StageResult(
+        stage="classify",
+        order=1,
+        ok=False,
+        confidence=0.0,
+        flags=["classify_failed"],
+        error="boom",
+        payload={},
+    )
+    ctx.add(failed)
+    assert ctx.classification is None
+    assert "classify_failed" in ctx.flags
+
+    ok = StageResult(
+        stage="classify",
+        order=1,
+        ok=True,
+        confidence=0.9,
+        payload={"document_type": "loss_notice", "confidence": 0.9},
+    )
+    ctx.add(ok)
+    assert ctx.classification["document_type"] == "loss_notice"
 
 
 def test_text_to_structured_markdown_emits_fields_table():
@@ -127,7 +155,7 @@ def test_analyze_image_path_converts_before_llm(tmp_path: Path):
 
     cfg = Config.load()
     text = load_jsonl(FIXTURES)[1]["text"]
-    img, _ = render_page(text)
+    img, _, _ = render_page(text)
     img_path = tmp_path / "loss.png"
     img.save(img_path)
 

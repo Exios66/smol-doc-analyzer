@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import re
+import socket
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 from urllib.parse import urlparse
@@ -50,33 +52,68 @@ def _guess_kind(path: Path, content_type: str | None = None) -> str:
     return "unknown"
 
 
+def _is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    return bool(
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_reserved
+        or ip.is_multicast
+        or ip.is_unspecified
+    )
+
+
+def _validate_download_url(url: str) -> str:
+    """Allow only public http(s) URLs; reject local paths and private hosts."""
+    parsed = urlparse(url.strip())
+    scheme = (parsed.scheme or "").lower()
+    if scheme in {"file", ""} or not scheme:
+        raise ValueError(
+            "Local and file:// paths are not allowed. Provide an http(s) URL "
+            "(for example a Discord CDN attachment URL)."
+        )
+    if scheme not in {"http", "https"}:
+        raise ValueError(f"Unsupported URL scheme: {scheme!r}. Only http(s) is allowed.")
+    host = parsed.hostname
+    if not host:
+        raise ValueError("URL must include a hostname.")
+    if host.lower() in {"localhost", "metadata.google.internal"}:
+        raise ValueError("Downloads from localhost / metadata hosts are blocked.")
+
+    try:
+        infos = socket.getaddrinfo(host, parsed.port or (443 if scheme == "https" else 80))
+    except socket.gaierror as exc:
+        raise ValueError(f"Could not resolve host {host!r}: {exc}") from exc
+
+    for info in infos:
+        sockaddr = info[4]
+        try:
+            ip = ipaddress.ip_address(sockaddr[0])
+        except ValueError:
+            continue
+        if _is_blocked_ip(ip):
+            raise ValueError(
+                f"Downloads to private/link-local/reserved addresses are blocked ({ip})."
+            )
+    return url
+
+
 async def _download_url(url: str, dest: Path) -> Path:
+    import asyncio
     import urllib.request
 
+    safe_url = _validate_download_url(url)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    if url.startswith("file://"):
-        src = Path(url.removeprefix("file://"))
-        dest.write_bytes(src.read_bytes())
-        return dest
-    if not url.startswith(("http://", "https://")):
-        src = Path(url)
-        dest.write_bytes(src.read_bytes())
-        return dest
 
     def _fetch() -> bytes:
         req = urllib.request.Request(
-            url,
+            safe_url,
             headers={"User-Agent": "smol-doc-analyzer-discord-bot/0.1"},
         )
         with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310
             return resp.read()
 
-    try:
-        import asyncio
-
-        data = await asyncio.to_thread(_fetch)
-    except Exception:
-        data = _fetch()
+    data = await asyncio.to_thread(_fetch)
     dest.write_bytes(data)
     return dest
 
@@ -211,7 +248,7 @@ def register_tools() -> None:
         Prefer this tool for ACORD/loss-notice/claim documents instead of generic
         file analysis. Provide one of:
         - `text`: raw document text pasted by the user
-        - `file_url`: Discord CDN URL, http(s) URL, or local path
+        - `file_url`: Discord CDN or other public http(s) URL (local/file:// blocked)
         - otherwise uses `attachment_index` on the triggering Discord message
 
         Returns a compact analysis (document type, fields, memo, flags) plus a

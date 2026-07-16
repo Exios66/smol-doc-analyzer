@@ -50,7 +50,8 @@ def garble_text(text: str, profile: dict[str, Any], rng: random.Random) -> str:
             continue
         if r < del_rate + ins_rate:
             out.append(rng.choice((profile.get("common_ocr_artifacts") or ["~"]) + [ch]))
-        if r < del_rate + ins_rate + sub_rate and ch.isalnum():
+            out.append(ch)
+        elif r < del_rate + ins_rate + sub_rate and ch.isalnum():
             out.append(_substitute_char(ch, profile, rng))
         else:
             out.append(ch)

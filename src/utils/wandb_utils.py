@@ -35,6 +35,8 @@ def load_wandb_settings(
     tags: Sequence[str] | None = None,
 ) -> WandbSettings:
     """Resolve WandB settings from explicit overrides and environment."""
+    from src.utils.config import _secret
+
     env_mode = (mode or os.getenv("WANDB_MODE", "online")).strip().lower()
     disabled_flag = os.getenv("WANDB_DISABLED", "").strip().lower() in {"1", "true", "yes"}
     if env_mode == "disabled" or disabled_flag:
@@ -45,7 +47,14 @@ def load_wandb_settings(
     else:
         resolved_enabled = enabled
 
-    if resolved_enabled and env_mode == "online" and not os.getenv("WANDB_API_KEY"):
+    # Treat documentation placeholders as unset (Config._secret already does this
+    # for the Config object, but wandb reads os.environ directly).
+    api_key = _secret("WANDB_API_KEY")
+    if not api_key and os.getenv("WANDB_API_KEY"):
+        # Clear placeholders so the wandb SDK does not attempt an online login.
+        os.environ.pop("WANDB_API_KEY", None)
+
+    if resolved_enabled and env_mode == "online" and not api_key:
         logger.info("WANDB_API_KEY unset; using offline mode for local logging")
         env_mode = "offline"
 

@@ -36,9 +36,10 @@ models/**
 *.bin
 *.safetensors
 
-# Weights & Biases local run cache (synced when online)
-wandb/
-offline-run-*/
+# Eval harness run artifacts (JSONL/CSV cost logs)
+evaluation/results/**
+!evaluation/results/.gitkeep
+results/eval_run_*/
 
 .DS_Store
 
