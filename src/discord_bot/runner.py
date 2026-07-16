@@ -61,8 +61,9 @@ def _overlay_secrets(raw: dict) -> dict:
                 ("google-gla:", "google-vertex:", "openai:", "anthropic:", "xai:", "groq:")
             ) and "/" not in model.split(":", 1)[-1]
             if chloride_native or not model:
-                data["AI_MODEL_NAME"] = os.getenv(
-                    "DISCORD_AI_MODEL", "anthropic/claude-sonnet-4.5"
+                data["AI_MODEL_NAME"] = (
+                    os.getenv("DISCORD_AI_MODEL", "").strip()
+                    or "anthropic/claude-sonnet-4.5"
                 )
 
     return data
@@ -95,7 +96,8 @@ def main(config_dir: str | Path | None = None) -> None:
     os.chdir(cfg_dir)
 
     try:
-        import src.discord_bot.tools  # noqa: F401 — registers analyze_insurance_document
+        import src.discord_bot.tools  # noqa: F401 — registers analyze + extras
+        import src.discord_bot.agent_extras  # noqa: F401 — notes/STT/vibes tools
         from coral.agent import agent
         from coral.bot import CoralBot
         from coral.history import init_db
@@ -138,12 +140,17 @@ def main(config_dir: str | Path | None = None) -> None:
 
     # Prefer minimal intents. Chloride upstream uses Intents.all(), which also
     # requires Presence + Server Members privileged intents. We only need
-    # Message Content (+ guild message events) for analyze_insurance_document.
+    # Message Content (+ guild message events) for chat/tools, and voice_states
+    # for the optional DJ / vibes voice client.
     intents = discord.Intents.default()
     intents.message_content = True
     intents.guilds = True
     intents.guild_messages = True
     intents.dm_messages = True
+    intents.voice_states = True
+    # Reactions for /poll
+    intents.guild_reactions = True
+    intents.dm_reactions = True
 
     token = config.DISCORD_TOKEN or os.getenv("DISCORD_TOKEN")
     if not token:
@@ -169,8 +176,9 @@ def main(config_dir: str | Path | None = None) -> None:
 
     typer.secho(
         f"Starting Chloride Discord bot from {cfg_dir} "
-        f"(slash commands: /analyze /analyze_url /status /help /ping; "
-        f"agent tool: analyze_insurance_document)…",
+        f"(slash: /analyze /note /transcribe /play /vibe /poll /remind …; "
+        f"agent tools: analyze_insurance_document, save_note, search_notes, "
+        f"transcribe_audio, vibe_control, server_help)…",
         fg="green",
     )
 

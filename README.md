@@ -99,10 +99,10 @@ python -m src.pipeline.batch_runner \
 python -m src.pipeline.orchestrator --vision --text "LOSS NOTICE\nClaim Number: CLM-1\nDate of Loss: 2024-01-15\n..."
 
 # --- Discord bot (Chloride) ---
-# Slash commands: /analyze /analyze_url /status /help /ping
-# Agent tool: analyze_insurance_document → local pipeline
+# Docs + notes + STT + DJ/vibes + chat agent
 pip install -e ".[discord]"
-python scripts/setup_env.py   # set DISCORD_TOKEN (+ OPENROUTER_API_KEY)
+# optional voice DJ: pip install -e ".[discord,discord-voice]" && brew install ffmpeg
+python scripts/setup_env.py   # set DISCORD_TOKEN (+ OPENROUTER_API_KEY; OPENAI_API_KEY for Whisper)
 cp discord/smol-doc-analyzer/config.yaml.example discord/smol-doc-analyzer/config.yaml
 python -m src.discord_bot
 # See discord/smol-doc-analyzer/README.md
@@ -129,9 +129,13 @@ Optional Discord front-end via [Chloride](https://github.com/S4IL21/chloride)
 (Coral AI agent). Install the `discord` extra, set `DISCORD_TOKEN`, and run
 `python -m src.discord_bot`.
 
-Users can:
-- run **slash commands** `/analyze`, `/analyze_url`, `/status`, `/help`, `/ping`
-- or chat with the bot (mention / `--` prefix) so the agent calls `analyze_insurance_document`
+The bot is an all-purpose server agent with an insurance-docs specialty:
+
+- **Docs**: `/analyze`, `/analyze_url`, tool `analyze_insurance_document`
+- **Notes / STT**: `/note`, `/transcribe`, `/remind`
+- **DJ / vibes**: `/play`, `/queue`, `/vibe` (voice optional via `.[discord-voice]`)
+- **Chat**: mention the bot or `--` prefix for free-form Chloride agent replies
+- **Utils**: `/poll`, `/status`, `/help`, `/ping`
 
 Details: [discord/smol-doc-analyzer/README.md](discord/smol-doc-analyzer/README.md).
 

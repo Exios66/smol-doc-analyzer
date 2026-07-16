@@ -272,6 +272,14 @@ def register_tools() -> None:
     _TOOLS_REGISTERED = True
     logger.info("Registered Chloride tool: analyze_insurance_document")
 
+    # Notes / STT / vibes / utility tools
+    try:
+        from src.discord_bot.agent_extras import register_extra_tools
+
+        register_extra_tools()
+    except Exception:  # pragma: no cover
+        logger.exception("Failed to register extra Discord agent tools")
+
 
 try:
     register_tools()

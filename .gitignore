@@ -42,3 +42,7 @@ evaluation/results/**
 results/eval_run_*/
 
 .DS_Store
+
+# Discord agent runtime data
+data/discord/**
+!data/discord/.gitkeep
