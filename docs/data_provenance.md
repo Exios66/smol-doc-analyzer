@@ -23,10 +23,19 @@ Legal text is injected only into narrative sections of insurance documents (clai
 
 Every record is appended to `data/provenance_log.jsonl` with stage, source, model (if any), and prompt/profile version.
 
+## DICIE application fixtures
+
+The paper-aligned DICIE path (`src/docie/`) uses the same synthetic-only rule.
+Committed examples in `tests/fixtures/sample_docie_documents.jsonl` are
+hand-written fictional HCFA / UB-04 / LOG / sales texts for CI — not real
+claimant documents. Application label sets live in
+`taxonomy/medical_bills.yaml` and `taxonomy/salvage_claims.yaml`. Batch DICIE
+runs append provenance rows with `stage=docie_pipeline`.
+
 ## Committed vs gitignored
 
-- **Committed:** schemas, taxonomy, characteristic profiles (`data/profiles/*.json`), tiny test fixtures
-- **Gitignored:** bulk `data/raw/*`, synthetic JSONL outputs, provenance log, trained model weights
+- **Committed:** schemas, taxonomy (ACORD + medical bills + salvage claims), characteristic profiles (`data/profiles/*.json`), tiny test fixtures (including DICIE samples)
+- **Gitignored:** bulk `data/raw/*`, synthetic JSONL outputs, provenance log, trained model weights, pipeline/DICIE caches under `data/pipeline/`
 
 ## Reproducibility
 

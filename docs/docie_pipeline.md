@@ -4,6 +4,8 @@ Implements the **Document Image Classification and Information Extraction**
 chain from Raj, Dickinson & Fung, *Document Classification and Information
 Extraction framework for Insurance Applications*.
 
+Module README (API, CLI, layout): [`src/docie/README.md`](../src/docie/README.md).
+
 ```
 Input (PDF / page images; structured · tabular · unstructured)
   → Stage 1  Document Processing
@@ -18,13 +20,18 @@ chain in `src/pipeline/`, which remains the general ACORD intake / memo path.
 
 ## Applications (paper §III)
 
-| Application | Classes | Extracted fields |
-|-------------|---------|------------------|
-| `medical_bills` | `hcfa`, `ub04`, `other` | claim_id, name, dob, patient_id, address |
-| `salvage_claims` | `log`, `sales`, `other` | claim_id, vin, year, make, model |
-| `acord` | ACORD intake taxonomy | claim / policy / loss fields |
+| Application | Classes | Extracted fields | Taxonomy |
+|-------------|---------|------------------|----------|
+| `medical_bills` | `hcfa`, `ub04`, `other` | claim_id, name, dob, patient_id, address | `taxonomy/medical_bills.yaml` |
+| `salvage_claims` | `log`, `sales`, `other` | claim_id, vin, year, make, model | `taxonomy/salvage_claims.yaml` |
+| `acord` | ACORD intake taxonomy | claim / policy / loss fields | `taxonomy/acord_form_categories.yaml` |
 
-Taxonomies live in `taxonomy/medical_bills.yaml` and `taxonomy/salvage_claims.yaml`.
+Each taxonomy may define:
+
+- `categories` — labels + aliases used by Stage 2 heuristics
+- `extraction_fields` — Stage 3 field set
+- `business_rules.prefer_non_other` — prefer non-`other` on classification ties
+- `business_rules.review_confidence_threshold` — human-review gate (default `0.55`)
 
 ## Stages
 
@@ -37,6 +44,7 @@ Taxonomies live in `taxonomy/medical_bills.yaml` and `taxonomy/salvage_claims.ya
   LayoutLM-style extractors
 - Plain text inputs are rendered to a page image so the image-first chain
   stays intact
+- Cached page images under `data/pipeline/cache/docie/<application>/pages/`
 
 ### 2. Document Classification (`src/docie/classify.py`)
 
@@ -54,8 +62,9 @@ Taxonomies live in `taxonomy/medical_bills.yaml` and `taxonomy/salvage_claims.ya
 ### 4. Output aggregation (`src/docie/aggregate.py`)
 
 - Merge classification + extraction
-- Route low-confidence / OCR-empty cases to human review
+- Route low-confidence / OCR-empty / missing-field cases to human review
 - Compact `response_payload()` for REST / claim-center downstream updates
+- Optional `downstream_sink` callback for webhooks / queue publishers
 
 ## Evaluation (paper Table I / Table II)
 
@@ -95,14 +104,37 @@ python -m src.docie \
   --out data/pipeline/docie/salvage_demo.jsonl
 ```
 
+Batch outputs:
+
+| Artifact | Description |
+|----------|-------------|
+| `*.jsonl` | Full prediction rows (`DociePrediction.to_dict()`) |
+| `*.summary.json` | Counts, label histogram, mean confidences |
+| `*.human_review.jsonl` | Compact payloads with `needs_human_review=true` |
+| `data/provenance_log.jsonl` | Provenance row (`stage=docie_pipeline`) |
+
 Optional FastAPI server (paper §VI ECS/FastAPI serving shape):
 
 ```bash
 pip install -e ".[serve]"
 python -m src.docie.serve --application salvage_claims --port 8080
-# POST /v1/predict  (multipart file)
+# GET  /health
+# POST /v1/predict       (multipart file)
 # POST /v1/predict/text  (JSON {text, application, record_id})
 ```
+
+Python entry points:
+
+```python
+from src.docie import DociePipeline, process_document
+
+process_document(application="salvage_claims", text="LETTER OF GUARANTEE\n...")
+pipe = DociePipeline(application="medical_bills")
+prediction = pipe.process(record_id="x", pdf_path="bill.pdf")
+```
+
+See [`src/docie/README.md`](../src/docie/README.md) for the full CLI flag list,
+prediction schema, and REST contract.
 
 ## Relation to the chained analysis orchestrator
 
@@ -112,6 +144,27 @@ python -m src.docie.serve --application salvage_claims --port 8080
 | Primary signal | page images + OCR | structured markdown for LLM context |
 | Applications | medical bills, salvage claims | ACORD intake + adjuster memo |
 | Output | classification + fields (+ review flag) | classification + fields + memo |
+| Front-ends | CLI + optional FastAPI | CLI + Discord (`/analyze`) |
 
 Use DICIE when matching the paper flowchart / insurance workflow apps; use
 the chained orchestrator when you need markdown-first LLM memos.
+
+## Testing & fixtures
+
+```bash
+pytest tests/test_docie_pipeline.py -q
+```
+
+Synthetic fixtures (no real insurer data):
+`tests/fixtures/sample_docie_documents.jsonl`.
+
+## Optional extras
+
+| Extra | Purpose |
+|-------|---------|
+| `.[ocr]` | PyTesseract OCR for scanned pages |
+| `.[serve]` | FastAPI + uvicorn REST server |
+| `.[dev]` | pytest + ruff for local development |
+
+Trained ViT / LayoutLM weights are optional; heuristic backends keep the
+chain runnable without them.
