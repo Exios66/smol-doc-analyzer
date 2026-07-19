@@ -1,0 +1,374 @@
+{
+  "application": "medical_bills",
+  "n": 12,
+  "eval_path": "/Users/morningstar/Desktop/Cold_Storage/smol-doc-analyzer/data/eval/docie_eval_set.jsonl",
+  "chain": [
+    "document_processing",
+    "document_classification",
+    "information_extraction",
+    "output_aggregation"
+  ],
+  "classification": {
+    "accuracy": 1.0,
+    "auc_ovr": 1.0,
+    "auc_ovo": 1.0,
+    "macro_f1": 1.0,
+    "micro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "labels": [
+      "hcfa",
+      "ub04",
+      "other"
+    ],
+    "confusion_matrix": [
+      [
+        4,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        0
+      ],
+      [
+        0,
+        0,
+        4
+      ]
+    ],
+    "per_class": {
+      "hcfa": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4.0
+      },
+      "ub04": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4.0
+      },
+      "other": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4.0
+      }
+    },
+    "n": 12
+  },
+  "extraction": {
+    "micro_precision": 1.0,
+    "micro_recall": 1.0,
+    "micro_f1": 1.0,
+    "macro_f1": 1.0,
+    "per_field": {
+      "name": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 12.0,
+        "tp": 12.0,
+        "fp": 0.0,
+        "fn": 0.0
+      },
+      "dob": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8.0,
+        "tp": 8.0,
+        "fp": 0.0,
+        "fn": 0.0
+      },
+      "claim_id": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8.0,
+        "tp": 8.0,
+        "fp": 0.0,
+        "fn": 0.0
+      },
+      "patient_id": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8.0,
+        "tp": 8.0,
+        "fp": 0.0,
+        "fn": 0.0
+      },
+      "address": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8.0,
+        "tp": 8.0,
+        "fp": 0.0,
+        "fn": 0.0
+      }
+    },
+    "fields": [
+      "name",
+      "dob",
+      "claim_id",
+      "patient_id",
+      "address"
+    ],
+    "n_examples": 12
+  },
+  "details": [
+    {
+      "record_id": "med-hcfa-001",
+      "gold_label": "hcfa",
+      "pred_label": "hcfa",
+      "correct": true,
+      "classification_confidence": 0.975,
+      "gold_fields": {
+        "claim_id": "CLM-2024-551122",
+        "name": "Jane Q Public",
+        "dob": "03/14/1988",
+        "patient_id": "PID-778812",
+        "address": "100 Oak Avenue, Madison WI 53703"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2024-551122",
+        "name": "Jane Q Public",
+        "dob": "03/14/1988",
+        "patient_id": "PID-778812",
+        "address": "100 Oak Avenue, Madison WI 53703"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-hcfa-002",
+      "gold_label": "hcfa",
+      "pred_label": "hcfa",
+      "correct": true,
+      "classification_confidence": 0.9625,
+      "gold_fields": {
+        "claim_id": "CLM-2023-118800",
+        "name": "Robert Ellis",
+        "dob": "11/02/1975",
+        "patient_id": "PID-440021",
+        "address": "22 Willow Rd, Green Bay WI 54301"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2023-118800",
+        "name": "Robert Ellis",
+        "dob": "11/02/1975",
+        "patient_id": "PID-440021",
+        "address": "22 Willow Rd, Green Bay WI 54301"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-hcfa-003",
+      "gold_label": "hcfa",
+      "pred_label": "hcfa",
+      "correct": true,
+      "classification_confidence": 0.9625,
+      "gold_fields": {
+        "claim_id": "CLM-2025-009911",
+        "name": "Maria L Santos",
+        "dob": "1991-04-09",
+        "patient_id": "MRN-332211",
+        "address": "9 Pine Court, Eau Claire WI 54701"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2025-009911",
+        "name": "Maria L Santos",
+        "dob": "1991-04-09",
+        "patient_id": "MRN-332211",
+        "address": "9 Pine Court, Eau Claire WI 54701"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-hcfa-004",
+      "gold_label": "hcfa",
+      "pred_label": "hcfa",
+      "correct": true,
+      "classification_confidence": 0.9625,
+      "gold_fields": {
+        "claim_id": "CLM-2024-777001",
+        "name": "Chris Nguyen",
+        "dob": "07/30/1982",
+        "patient_id": "PID-909090",
+        "address": "501 Capitol Dr, Madison WI 53703"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2024-777001",
+        "name": "Chris Nguyen",
+        "dob": "07/30/1982",
+        "patient_id": "PID-909090",
+        "address": "501 Capitol Dr, Madison WI 53703"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-ub04-001",
+      "gold_label": "ub04",
+      "pred_label": "ub04",
+      "correct": true,
+      "classification_confidence": 0.975,
+      "gold_fields": {
+        "claim_id": "CLM-2024-660033",
+        "name": "John A Smith",
+        "dob": "1990-07-22",
+        "patient_id": "MRN-990011",
+        "address": "55 Lake Street, Madison WI 53704"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2024-660033",
+        "name": "John A Smith",
+        "dob": "1990-07-22",
+        "patient_id": "MRN-990011",
+        "address": "55 Lake Street, Madison WI 53704"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-ub04-002",
+      "gold_label": "ub04",
+      "pred_label": "ub04",
+      "correct": true,
+      "classification_confidence": 0.975,
+      "gold_fields": {
+        "claim_id": "CLM-2022-303030",
+        "name": "Alicia Moore",
+        "dob": "02/18/1966",
+        "patient_id": "PID-121212",
+        "address": "14 River Bend, La Crosse WI 54601"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2022-303030",
+        "name": "Alicia Moore",
+        "dob": "02/18/1966",
+        "patient_id": "PID-121212",
+        "address": "14 River Bend, La Crosse WI 54601"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-ub04-003",
+      "gold_label": "ub04",
+      "pred_label": "ub04",
+      "correct": true,
+      "classification_confidence": 0.975,
+      "gold_fields": {
+        "claim_id": "CLM-2025-414141",
+        "name": "Derek P Olson",
+        "dob": "12/01/2001",
+        "patient_id": "MRN-556677",
+        "address": "88 Farm Road, Wausau WI 54401"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2025-414141",
+        "name": "Derek P Olson",
+        "dob": "12/01/2001",
+        "patient_id": "MRN-556677",
+        "address": "88 Farm Road, Wausau WI 54401"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-ub04-004",
+      "gold_label": "ub04",
+      "pred_label": "ub04",
+      "correct": true,
+      "classification_confidence": 0.9666666666666667,
+      "gold_fields": {
+        "claim_id": "CLM-2023-202020",
+        "name": "Hannah Brooks",
+        "dob": "05/05/1979",
+        "patient_id": "PID-888777",
+        "address": "3 Hilltop Lane, Kenosha WI 53140"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2023-202020",
+        "name": "Hannah Brooks",
+        "dob": "05/05/1979",
+        "patient_id": "PID-888777",
+        "address": "3 Hilltop Lane, Kenosha WI 53140"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-other-001",
+      "gold_label": "other",
+      "pred_label": "other",
+      "correct": true,
+      "classification_confidence": 0.8049999999999999,
+      "gold_fields": {
+        "name": "Alex Rivera"
+      },
+      "pred_fields": {
+        "name": "Alex Rivera"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-other-002",
+      "gold_label": "other",
+      "pred_label": "other",
+      "correct": true,
+      "classification_confidence": 0.8049999999999999,
+      "gold_fields": {
+        "name": "Priya Desai"
+      },
+      "pred_fields": {
+        "name": "Priya Desai"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-other-003",
+      "gold_label": "other",
+      "pred_label": "other",
+      "correct": true,
+      "classification_confidence": 0.8049999999999999,
+      "gold_fields": {
+        "name": "Sam Ortiz"
+      },
+      "pred_fields": {
+        "name": "Sam Ortiz"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "med-other-004",
+      "gold_label": "other",
+      "pred_label": "other",
+      "correct": true,
+      "classification_confidence": 0.8049999999999999,
+      "gold_fields": {
+        "name": "Kelly White"
+      },
+      "pred_fields": {
+        "name": "Kelly White"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    }
+  ],
+  "paper_reference": {
+    "classification_table": "Table I (Accuracy, AUC OVR/OVO)",
+    "extraction_table": "Table II (per-field Precision / Recall / F1)",
+    "f1_definition": "2 * precision * recall / (precision + recall)"
+  }
+}

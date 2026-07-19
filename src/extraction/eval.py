@@ -109,7 +109,7 @@ def _evaluate_text_checkpoint(
     rows: list[dict],
     id2label: dict[int, str],
     label2id: dict[str, int],
-) -> tuple[list[int], list[int], dict[str, int], dict[str, int], dict[str, int]]:
+) -> tuple:
     import torch
     from transformers import AutoModelForTokenClassification, AutoTokenizer
 
@@ -121,6 +121,8 @@ def _evaluate_text_checkpoint(
     exact_hits: dict[str, int] = defaultdict(int)
     partial_hits: dict[str, int] = defaultdict(int)
     totals: dict[str, int] = defaultdict(int)
+    gold_counts: dict[str, int] = defaultdict(int)
+    pred_counts: dict[str, int] = defaultdict(int)
 
     with torch.no_grad():
         for row in rows:
@@ -156,8 +158,10 @@ def _evaluate_text_checkpoint(
                 exact_hits[field] += ex
                 partial_hits[field] += part
                 totals[field] += tot
+                gold_counts[field] += len(gvals)
+                pred_counts[field] += len(pvals)
 
-    return token_true, token_pred, exact_hits, partial_hits, totals
+    return token_true, token_pred, exact_hits, partial_hits, totals, gold_counts, pred_counts
 
 
 def _evaluate_layout_checkpoint(
@@ -178,6 +182,8 @@ def _evaluate_layout_checkpoint(
     exact_hits: dict[str, int] = defaultdict(int)
     partial_hits: dict[str, int] = defaultdict(int)
     totals: dict[str, int] = defaultdict(int)
+    gold_counts: dict[str, int] = defaultdict(int)
+    pred_counts: dict[str, int] = defaultdict(int)
 
     with torch.no_grad():
         for row in rows:
@@ -233,8 +239,34 @@ def _evaluate_layout_checkpoint(
                 exact_hits[field] += ex
                 partial_hits[field] += part
                 totals[field] += tot
+                gold_counts[field] += len(gvals)
+                pred_counts[field] += len(pvals)
 
-    return token_true, token_pred, exact_hits, partial_hits, totals
+    return token_true, token_pred, exact_hits, partial_hits, totals, gold_counts, pred_counts
+
+
+def _field_prf(
+    exact_hits: dict[str, int],
+    gold_counts: dict[str, int],
+    pred_counts: dict[str, int],
+) -> dict[str, dict[str, float]]:
+    """Paper Table II style per-field precision / recall / F1 from exact entity matches."""
+    fields = sorted(set(exact_hits) | set(gold_counts) | set(pred_counts))
+    out: dict[str, dict[str, float]] = {}
+    for field in fields:
+        tp = float(exact_hits.get(field, 0))
+        g = float(gold_counts.get(field, 0))
+        p = float(pred_counts.get(field, 0))
+        precision = tp / p if p else 0.0
+        recall = tp / g if g else 0.0
+        f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+        out[field] = {
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+            "support": g,
+        }
+    return out
 
 
 def _evaluate_core(
@@ -247,13 +279,25 @@ def _evaluate_core(
     id2label = {v: k for k, v in label2id.items()}
 
     if _is_layoutlm_checkpoint(model_dir):
-        token_true, token_pred, exact_hits, partial_hits, totals = _evaluate_layout_checkpoint(
-            model_dir, rows, id2label, label2id
-        )
+        (
+            token_true,
+            token_pred,
+            exact_hits,
+            partial_hits,
+            totals,
+            gold_counts,
+            pred_counts,
+        ) = _evaluate_layout_checkpoint(model_dir, rows, id2label, label2id)
     else:
-        token_true, token_pred, exact_hits, partial_hits, totals = _evaluate_text_checkpoint(
-            model_dir, rows, id2label, label2id
-        )
+        (
+            token_true,
+            token_pred,
+            exact_hits,
+            partial_hits,
+            totals,
+            gold_counts,
+            pred_counts,
+        ) = _evaluate_text_checkpoint(model_dir, rows, id2label, label2id)
 
     hard_fields = ["date_of_loss", "estimated_damage", "deductible", "reserve_set", "location"]
     token_f1 = float(f1_score(token_true, token_pred, average="macro", zero_division=0))
@@ -261,6 +305,9 @@ def _evaluate_core(
     field_partial = {f: partial_hits[f] / totals[f] for f in totals}
     overall_exact = float(np.mean(list(field_exact.values()))) if field_exact else 0.0
     overall_partial = float(np.mean(list(field_partial.values()))) if field_partial else 0.0
+    per_field_prf = _field_prf(exact_hits, gold_counts, pred_counts)
+    f1s = [v["f1"] for v in per_field_prf.values() if v.get("support", 0) > 0]
+    field_macro_f1 = float(sum(f1s) / len(f1s)) if f1s else 0.0
 
     return {
         "split": split,
@@ -270,6 +317,8 @@ def _evaluate_core(
         "field_partial_mean": overall_partial,
         "field_exact": field_exact,
         "field_partial": field_partial,
+        "field_prf": per_field_prf,
+        "field_macro_f1": field_macro_f1,
         "hard_fields": {f: field_partial.get(f, 0.0) for f in hard_fields},
         "model_dir": str(model_dir),
         "_hard_fields_list": hard_fields,

@@ -40,17 +40,22 @@ def evaluate(
 
     y_true: list[int] = []
     y_pred: list[int] = []
+    y_proba: list[list[float]] = []
     with torch.no_grad():
         for row in rows:
             image = Image.open(row["image_path"]).convert("RGB")
             inputs = processor(images=image, return_tensors="pt")
             logits = model(**inputs).logits
+            probs = torch.softmax(logits, dim=-1)[0].tolist()
             pred = int(torch.argmax(logits, dim=-1).item())
             y_pred.append(pred)
             y_true.append(int(row["label_id"]))
+            y_proba.append([float(p) for p in probs])
 
     acc = float(accuracy_score(y_true, y_pred))
     macro_f1 = float(f1_score(y_true, y_pred, average="macro", zero_division=0))
+    micro_f1 = float(f1_score(y_true, y_pred, average="micro", zero_division=0))
+    weighted_f1 = float(f1_score(y_true, y_pred, average="weighted", zero_division=0))
     cm = confusion_matrix(y_true, y_pred, labels=list(range(len(labels_order)))).tolist()
     per_class = classification_report(
         y_true,
@@ -60,6 +65,25 @@ def evaluate(
         output_dict=True,
         zero_division=0,
     )
+
+    auc_ovr = auc_ovo = None
+    try:
+        from sklearn.metrics import roc_auc_score
+
+        if len(set(y_true)) >= 2:
+            proba = np.asarray(y_proba, dtype=float)
+            auc_ovr = float(
+                roc_auc_score(y_true, proba, multi_class="ovr", labels=list(range(len(labels_order))))
+            )
+            auc_ovo = float(
+                roc_auc_score(y_true, proba, multi_class="ovo", labels=list(range(len(labels_order))))
+            )
+    except ValueError:
+        auc_ovr = auc_ovo = None
+    if auc_ovr is not None and (np.isnan(auc_ovr) or np.isinf(auc_ovr)):
+        auc_ovr = None
+    if auc_ovo is not None and (np.isnan(auc_ovo) or np.isinf(auc_ovo)):
+        auc_ovo = None
 
     pairs = []
     for i, row_cm in enumerate(cm):
@@ -77,7 +101,11 @@ def evaluate(
         "modality": "image",
         "architecture": "vit",
         "accuracy": acc,
+        "auc_ovr": auc_ovr,
+        "auc_ovo": auc_ovo,
         "macro_f1": macro_f1,
+        "micro_f1": micro_f1,
+        "weighted_f1": weighted_f1,
         "labels": labels_order,
         "confusion_matrix": cm,
         "per_class": per_class,
@@ -96,7 +124,11 @@ def evaluate(
         f"- Split: `{split}`",
         f"- N: {len(rows)}",
         f"- Accuracy: **{acc:.4f}**",
+        f"- AUC (OVR): **{auc_ovr:.4f}**" if auc_ovr is not None else "- AUC (OVR): —",
+        f"- AUC (OVO): **{auc_ovo:.4f}**" if auc_ovo is not None else "- AUC (OVO): —",
         f"- Macro F1: **{macro_f1:.4f}**",
+        f"- Micro F1: **{micro_f1:.4f}**",
+        f"- Weighted F1: **{weighted_f1:.4f}**",
         "",
         "## Top confusion pairs",
         "",

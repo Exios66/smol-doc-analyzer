@@ -57,6 +57,19 @@ Taxonomies live in `taxonomy/medical_bills.yaml` and `taxonomy/salvage_claims.ya
 - Route low-confidence / OCR-empty cases to human review
 - Compact `response_payload()` for REST / claim-center downstream updates
 
+## Evaluation (paper Table I / Table II)
+
+Classification reports **accuracy + AUC (OVR/OVO)**; extraction reports
+per-field **precision / recall / F1** (harmonic mean \(2PR/(P+R)\)).
+
+```bash
+python -m src.docie.eval --all
+python -m src.docie.eval --application salvage_claims
+# Writes evaluation/reports/docie_{application}_{metrics.json,report.md}
+```
+
+Gold set: `data/eval/docie_eval_set.jsonl`.
+
 ## Usage
 
 ```bash

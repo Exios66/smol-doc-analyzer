@@ -1,8 +1,12 @@
 {
   "split": "test",
-  "n": 36,
-  "accuracy": 0.4444444444444444,
-  "macro_f1": 0.32653061224489793,
+  "n": 7,
+  "accuracy": 0.42857142857142855,
+  "auc_ovr": NaN,
+  "auc_ovo": 1.0,
+  "macro_f1": 0.3444444444444444,
+  "micro_f1": 0.42857142857142855,
+  "weighted_f1": 0.2952380952380952,
   "labels": [
     "application_commercial",
     "application_personal",
@@ -18,18 +22,8 @@
       0,
       0,
       0,
+      1,
       0,
-      4,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      5,
       0,
       0,
       0
@@ -48,7 +42,17 @@
       0,
       0,
       0,
-      6,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
       0,
       0,
       0,
@@ -59,7 +63,17 @@
       0,
       0,
       0,
-      4,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      2,
+      0,
       0,
       0,
       0
@@ -69,9 +83,9 @@
       0,
       0,
       0,
-      5,
       0,
       0,
+      1,
       0
     ],
     [
@@ -80,16 +94,6 @@
       0,
       0,
       0,
-      0,
-      6,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      6,
       0,
       0,
       0
@@ -100,87 +104,82 @@
       "precision": 0.0,
       "recall": 0.0,
       "f1-score": 0.0,
-      "support": 4.0
+      "support": 1.0
     },
     "application_personal": {
       "precision": 0.0,
       "recall": 0.0,
       "f1-score": 0.0,
-      "support": 5.0
+      "support": 0.0
     },
     "certificate_evidence": {
       "precision": 0.0,
       "recall": 0.0,
       "f1-score": 0.0,
-      "support": 0.0
+      "support": 1.0
     },
     "loss_notice": {
+      "precision": 0.25,
+      "recall": 1.0,
+      "f1-score": 0.4,
+      "support": 1.0
+    },
+    "claims_correspondence": {
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 6.0
-    },
-    "claims_correspondence": {
-      "precision": 0.16666666666666666,
-      "recall": 1.0,
-      "f1-score": 0.2857142857142857,
-      "support": 4.0
+      "support": 1.0
     },
     "policy_change_endorsement": {
       "precision": 0.0,
       "recall": 0.0,
       "f1-score": 0.0,
-      "support": 5.0
+      "support": 2.0
     },
     "repair_estimate": {
-      "precision": 1.0,
+      "precision": 0.5,
       "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 6.0
+      "f1-score": 0.6666666666666666,
+      "support": 1.0
     },
     "supporting_evidence": {
       "precision": 0.0,
       "recall": 0.0,
       "f1-score": 0.0,
-      "support": 6.0
+      "support": 0.0
     },
-    "accuracy": 0.4444444444444444,
+    "accuracy": 0.42857142857142855,
     "macro avg": {
-      "precision": 0.27083333333333337,
+      "precision": 0.21875,
       "recall": 0.375,
-      "f1-score": 0.2857142857142857,
-      "support": 36.0
+      "f1-score": 0.2583333333333333,
+      "support": 7.0
     },
     "weighted avg": {
-      "precision": 0.35185185185185186,
-      "recall": 0.4444444444444444,
-      "f1-score": 0.36507936507936506,
-      "support": 36.0
+      "precision": 0.25,
+      "recall": 0.42857142857142855,
+      "f1-score": 0.2952380952380952,
+      "support": 7.0
     }
   },
   "top_confusion_pairs": [
     {
-      "true": "supporting_evidence",
-      "pred": "claims_correspondence",
-      "count": 6
-    },
-    {
-      "true": "application_personal",
-      "pred": "claims_correspondence",
-      "count": 5
-    },
-    {
       "true": "policy_change_endorsement",
-      "pred": "claims_correspondence",
-      "count": 5
+      "pred": "loss_notice",
+      "count": 2
     },
     {
       "true": "application_commercial",
-      "pred": "claims_correspondence",
-      "count": 4
+      "pred": "loss_notice",
+      "count": 1
+    },
+    {
+      "true": "certificate_evidence",
+      "pred": "repair_estimate",
+      "count": 1
     }
   ],
   "taxonomy_version_note": "acord_form_categories.yaml v1",
   "taxonomy_category_count": 9,
-  "model_dir": "models/classifier_smoke"
+  "model_dir": "/Users/morningstar/Desktop/Cold_Storage/smol-doc-analyzer/data/notebook_demo/models/classifier_smoke"
 }

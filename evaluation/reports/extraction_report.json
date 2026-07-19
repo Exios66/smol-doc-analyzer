@@ -1,41 +1,120 @@
 {
   "split": "test",
-  "n": 36,
-  "token_macro_f1": 0.0868815041359068,
-  "field_exact_mean": 0.02151462994836489,
-  "field_partial_mean": 0.045324153757888695,
+  "n": 7,
+  "token_macro_f1": 0.05293470523522941,
+  "field_exact_mean": 0.0,
+  "field_partial_mean": 0.0,
   "field_exact": {
-    "state": 0.0,
-    "coverage_type": 0.0,
-    "policy_number": 0.30120481927710846,
-    "claim_id": 0.0,
-    "effective_date": 0.0,
-    "policyholder_name": 0.0,
-    "date_of_loss": 0.0,
-    "deductible": 0.0,
-    "loss_type": 0.0,
-    "location": 0.0,
-    "reserve_set": 0.0,
     "estimated_damage": 0.0,
-    "adjuster_assigned": 0.0,
-    "claimant": 0.0
+    "claim_id": 0.0,
+    "deductible": 0.0,
+    "policyholder_name": 0.0,
+    "reserve_set": 0.0,
+    "effective_date": 0.0,
+    "loss_type": 0.0,
+    "state": 0.0,
+    "policy_number": 0.0,
+    "coverage_type": 0.0,
+    "date_of_loss": 0.0,
+    "location": 0.0,
+    "adjuster_assigned": 0.0
   },
   "field_partial": {
-    "state": 0.0,
-    "coverage_type": 0.0,
-    "policy_number": 0.30120481927710846,
-    "claim_id": 0.3333333333333333,
-    "effective_date": 0.0,
-    "policyholder_name": 0.0,
-    "date_of_loss": 0.0,
-    "deductible": 0.0,
-    "loss_type": 0.0,
-    "location": 0.0,
-    "reserve_set": 0.0,
     "estimated_damage": 0.0,
-    "adjuster_assigned": 0.0,
-    "claimant": 0.0
+    "claim_id": 0.0,
+    "deductible": 0.0,
+    "policyholder_name": 0.0,
+    "reserve_set": 0.0,
+    "effective_date": 0.0,
+    "loss_type": 0.0,
+    "state": 0.0,
+    "policy_number": 0.0,
+    "coverage_type": 0.0,
+    "date_of_loss": 0.0,
+    "location": 0.0,
+    "adjuster_assigned": 0.0
   },
+  "field_prf": {
+    "adjuster_assigned": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 3.0
+    },
+    "claim_id": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 7.0
+    },
+    "coverage_type": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 2.0
+    },
+    "date_of_loss": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 3.0
+    },
+    "deductible": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 4.0
+    },
+    "effective_date": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 2.0
+    },
+    "estimated_damage": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 4.0
+    },
+    "location": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 3.0
+    },
+    "loss_type": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 3.0
+    },
+    "policy_number": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 14.0
+    },
+    "policyholder_name": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 14.0
+    },
+    "reserve_set": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 4.0
+    },
+    "state": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 2.0
+    }
+  },
+  "field_macro_f1": 0.0,
   "hard_fields": {
     "date_of_loss": 0.0,
     "estimated_damage": 0.0,
@@ -43,10 +122,10 @@
     "reserve_set": 0.0,
     "location": 0.0
   },
+  "model_dir": "/Users/morningstar/Desktop/Cold_Storage/smol-doc-analyzer/data/notebook_demo/models/extractor_smoke",
   "noisy_stress": {
-    "token_macro_f1": 0.0391818492194047,
-    "field_exact_mean": 0.007263922518159807,
-    "field_partial_mean": 0.015738498789346248
-  },
-  "model_dir": "models/extractor_smoke"
+    "token_macro_f1": 0.06343178621659634,
+    "field_exact_mean": 0.0,
+    "field_partial_mean": 0.0
+  }
 }

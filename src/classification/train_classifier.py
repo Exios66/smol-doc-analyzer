@@ -49,12 +49,16 @@ def train(
 
     train_rows = _load_split_texts(prepared_dir, "train")
     val_rows = _load_split_texts(prepared_dir, "val")
+    learning_rate = 2e-5
     if smoke:
-        train_rows = train_rows[:64]
-        val_rows = val_rows[:32] or train_rows[:16]
+        # Keep CPU-friendly DistilBERT, but give it enough steps/data to beat
+        # chance-level macro F1 on tiny demo corpora (prior smoke: ~0.3 F1).
+        train_rows = train_rows[:256]
+        val_rows = val_rows[:64] or train_rows[:32]
         model_name = "distilbert-base-uncased"
-        epochs = 1.0
-        max_steps = max_steps or 30
+        epochs = max(epochs, 3.0)
+        max_steps = max_steps or 120
+        learning_rate = 5e-5
 
     if not train_rows:
         raise RuntimeError(f"No train rows in {prepared_dir}")
@@ -72,7 +76,7 @@ def train(
         "n_train": len(train_rows),
         "n_val": len(val_rows),
         "n_labels": len(label2id),
-        "learning_rate": 2e-5,
+        "learning_rate": learning_rate,
         "output_dir": str(out),
     }
     run_name = wandb_run_name or f"clf-{'smoke' if smoke else 'train'}-{out.name}"
@@ -116,16 +120,20 @@ def train(
             preds = np.argmax(logits, axis=-1)
             return {
                 "accuracy": float(accuracy_score(labels, preds)),
-                "macro_f1": float(f1_score(labels, preds, average="macro")),
+                "macro_f1": float(
+                    f1_score(labels, preds, average="macro", zero_division=0)
+                ),
             }
 
         args = TrainingArguments(
             output_dir=str(out / "checkpoints"),
-            learning_rate=2e-5,
+            learning_rate=learning_rate,
             per_device_train_batch_size=8 if not smoke else 4,
             per_device_eval_batch_size=8 if not smoke else 4,
             num_train_epochs=epochs,
             max_steps=max_steps if max_steps is not None else -1,
+            warmup_ratio=0.1 if smoke else 0.0,
+            weight_decay=0.01,
             eval_strategy="steps" if val_ds is not None else "no",
             eval_steps=20 if smoke else 100,
             save_strategy="no",
@@ -133,6 +141,7 @@ def train(
             report_to=wb.report_to,
             run_name=run_name,
             seed=42,
+            load_best_model_at_end=False,
         )
         trainer = Trainer(
             model=model,

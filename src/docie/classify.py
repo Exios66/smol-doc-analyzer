@@ -39,6 +39,7 @@ def _keyword_scores(text: str, profile: ApplicationProfile) -> dict[str, float]:
             "health care finance",
             "physician or supplier",
             "carrier name",
+            "cms-1500 health",
         ],
         "ub04": [
             "ub-04",
@@ -48,6 +49,7 @@ def _keyword_scores(text: str, profile: ApplicationProfile) -> dict[str, float]:
             "cms-1450",
             "type of bill",
             "revenue code",
+            "institutional claim",
         ],
         # salvage
         "log": [
@@ -57,6 +59,8 @@ def _keyword_scores(text: str, profile: ApplicationProfile) -> dict[str, float]:
             "lienholder",
             "payoff",
             "guarantees that the insurer",
+            "loan payoff",
+            "satisfy the loan",
         ],
         "sales": [
             "sales receipt",
@@ -65,8 +69,27 @@ def _keyword_scores(text: str, profile: ApplicationProfile) -> dict[str, float]:
             "purchase price",
             "sold to",
             "buyer",
+            "salvage sales",
+            "salvage auction",
+            "salvage bill of sale",
         ],
-        "other": [],
+        "other": [
+            "towing invoice",
+            "storage lot",
+            "storage days",
+            "community clinic statement",
+            "amount due",
+            "walk-in urgent care",
+            "physical therapy invoice",
+            "dental office statement",
+            "police accident report",
+            "email printout",
+            "adjuster notes",
+            "non-standard medical",
+            "not a hcfa",
+            "no letter of guarantee",
+            "no payoff letter",
+        ],
     }
 
     for label in profile.labels:

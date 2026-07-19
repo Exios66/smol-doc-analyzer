@@ -1,0 +1,350 @@
+{
+  "application": "salvage_claims",
+  "n": 12,
+  "eval_path": "/Users/morningstar/Desktop/Cold_Storage/smol-doc-analyzer/data/eval/docie_eval_set.jsonl",
+  "chain": [
+    "document_processing",
+    "document_classification",
+    "information_extraction",
+    "output_aggregation"
+  ],
+  "classification": {
+    "accuracy": 1.0,
+    "auc_ovr": 1.0,
+    "auc_ovo": 1.0,
+    "macro_f1": 1.0,
+    "micro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "labels": [
+      "log",
+      "sales",
+      "other"
+    ],
+    "confusion_matrix": [
+      [
+        4,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        0
+      ],
+      [
+        0,
+        0,
+        4
+      ]
+    ],
+    "per_class": {
+      "log": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4.0
+      },
+      "sales": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4.0
+      },
+      "other": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4.0
+      }
+    },
+    "n": 12
+  },
+  "extraction": {
+    "micro_precision": 1.0,
+    "micro_recall": 1.0,
+    "micro_f1": 1.0,
+    "macro_f1": 1.0,
+    "per_field": {
+      "claim_id": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4.0,
+        "tp": 4.0,
+        "fp": 0.0,
+        "fn": 0.0
+      },
+      "vin": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8.0,
+        "tp": 8.0,
+        "fp": 0.0,
+        "fn": 0.0
+      },
+      "make": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8.0,
+        "tp": 8.0,
+        "fp": 0.0,
+        "fn": 0.0
+      },
+      "model": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8.0,
+        "tp": 8.0,
+        "fp": 0.0,
+        "fn": 0.0
+      },
+      "year": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8.0,
+        "tp": 8.0,
+        "fp": 0.0,
+        "fn": 0.0
+      }
+    },
+    "fields": [
+      "claim_id",
+      "vin",
+      "make",
+      "model",
+      "year"
+    ],
+    "n_examples": 12
+  },
+  "details": [
+    {
+      "record_id": "sal-log-001",
+      "gold_label": "log",
+      "pred_label": "log",
+      "correct": true,
+      "classification_confidence": 0.91,
+      "gold_fields": {
+        "claim_id": "CLM-2024-100200",
+        "vin": "1HGCM82633A004352",
+        "year": "2018",
+        "make": "Honda",
+        "model": "Accord"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2024-100200",
+        "vin": "1HGCM82633A004352",
+        "year": "2018",
+        "make": "Honda",
+        "model": "Accord"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-log-002",
+      "gold_label": "log",
+      "pred_label": "log",
+      "correct": true,
+      "classification_confidence": 0.91,
+      "gold_fields": {
+        "claim_id": "CLM-2023-555001",
+        "vin": "2T1BURHE0JC123456",
+        "year": "2017",
+        "make": "Toyota",
+        "model": "Corolla"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2023-555001",
+        "vin": "2T1BURHE0JC123456",
+        "year": "2017",
+        "make": "Toyota",
+        "model": "Corolla"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-log-003",
+      "gold_label": "log",
+      "pred_label": "log",
+      "correct": true,
+      "classification_confidence": 0.8200000000000001,
+      "gold_fields": {
+        "claim_id": "CLM-2025-812345",
+        "vin": "5YJSA1E26HF000111",
+        "year": "2019",
+        "make": "Tesla",
+        "model": "Model 3"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2025-812345",
+        "vin": "5YJSA1E26HF000111",
+        "year": "2019",
+        "make": "Tesla",
+        "model": "Model 3"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-log-004",
+      "gold_label": "log",
+      "pred_label": "log",
+      "correct": true,
+      "classification_confidence": 0.97,
+      "gold_fields": {
+        "claim_id": "CLM-2024-333222",
+        "vin": "1FTFW1E89MFA12345",
+        "year": "2021",
+        "make": "Ford",
+        "model": "F-150"
+      },
+      "pred_fields": {
+        "claim_id": "CLM-2024-333222",
+        "vin": "1FTFW1E89MFA12345",
+        "year": "2021",
+        "make": "Ford",
+        "model": "F-150"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-sales-001",
+      "gold_label": "sales",
+      "pred_label": "sales",
+      "correct": true,
+      "classification_confidence": 0.975,
+      "gold_fields": {
+        "vin": "1FADP3F20EL123456",
+        "year": "2015",
+        "make": "Ford",
+        "model": "Focus"
+      },
+      "pred_fields": {
+        "vin": "1FADP3F20EL123456",
+        "year": "2015",
+        "make": "Ford",
+        "model": "Focus"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-sales-002",
+      "gold_label": "sales",
+      "pred_label": "sales",
+      "correct": true,
+      "classification_confidence": 0.975,
+      "gold_fields": {
+        "vin": "1G1ZB5ST1EF112233",
+        "year": "2014",
+        "make": "Chevrolet",
+        "model": "Malibu"
+      },
+      "pred_fields": {
+        "vin": "1G1ZB5ST1EF112233",
+        "year": "2014",
+        "make": "Chevrolet",
+        "model": "Malibu"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-sales-003",
+      "gold_label": "sales",
+      "pred_label": "sales",
+      "correct": true,
+      "classification_confidence": 0.975,
+      "gold_fields": {
+        "vin": "1N4AL3AP4CC998877",
+        "year": "2012",
+        "make": "Nissan",
+        "model": "Altima"
+      },
+      "pred_fields": {
+        "vin": "1N4AL3AP4CC998877",
+        "year": "2012",
+        "make": "Nissan",
+        "model": "Altima"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-sales-004",
+      "gold_label": "sales",
+      "pred_label": "sales",
+      "correct": true,
+      "classification_confidence": 0.97,
+      "gold_fields": {
+        "vin": "5NPEB4AC5AH554433",
+        "year": "2010",
+        "make": "Hyundai",
+        "model": "Elantra"
+      },
+      "pred_fields": {
+        "vin": "5NPEB4AC5AH554433",
+        "year": "2010",
+        "make": "Hyundai",
+        "model": "Elantra"
+      },
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-other-001",
+      "gold_label": "other",
+      "pred_label": "other",
+      "correct": true,
+      "classification_confidence": 0.8049999999999999,
+      "gold_fields": {},
+      "pred_fields": {},
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-other-002",
+      "gold_label": "other",
+      "pred_label": "other",
+      "correct": true,
+      "classification_confidence": 0.8049999999999999,
+      "gold_fields": {},
+      "pred_fields": {},
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-other-003",
+      "gold_label": "other",
+      "pred_label": "other",
+      "correct": true,
+      "classification_confidence": 0.8049999999999999,
+      "gold_fields": {},
+      "pred_fields": {},
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    },
+    {
+      "record_id": "sal-other-004",
+      "gold_label": "other",
+      "pred_label": "other",
+      "correct": true,
+      "classification_confidence": 0.7529411764705882,
+      "gold_fields": {},
+      "pred_fields": {},
+      "classification_backend": "heuristic_text",
+      "extraction_backend": "heuristic"
+    }
+  ],
+  "paper_reference": {
+    "classification_table": "Table I (Accuracy, AUC OVR/OVO)",
+    "extraction_table": "Table II (per-field Precision / Recall / F1)",
+    "f1_definition": "2 * precision * recall / (precision + recall)"
+  }
+}

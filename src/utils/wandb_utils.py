@@ -26,6 +26,17 @@ class WandbSettings:
     tags: tuple[str, ...] = ()
 
 
+def _wandb_netrc_available() -> bool:
+    """True when ``wandb login`` credentials exist for api.wandb.ai."""
+    try:
+        import netrc
+
+        auth = netrc.netrc().authenticators("api.wandb.ai")
+        return bool(auth and (auth[2] or auth[0]))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def load_wandb_settings(
     *,
     enabled: bool | None = None,
@@ -35,7 +46,10 @@ def load_wandb_settings(
     tags: Sequence[str] | None = None,
 ) -> WandbSettings:
     """Resolve WandB settings from explicit overrides and environment."""
-    from src.utils.config import _secret
+    from src.utils.config import _load_dotenv, _secret
+
+    # CLI may call this before Config.load(); ensure repo .env is visible.
+    _load_dotenv()
 
     env_mode = (mode or os.getenv("WANDB_MODE", "online")).strip().lower()
     disabled_flag = os.getenv("WANDB_DISABLED", "").strip().lower() in {"1", "true", "yes"}
@@ -50,13 +64,23 @@ def load_wandb_settings(
     # Treat documentation placeholders as unset (Config._secret already does this
     # for the Config object, but wandb reads os.environ directly).
     api_key = _secret("WANDB_API_KEY")
-    if not api_key and os.getenv("WANDB_API_KEY"):
+    if api_key:
+        os.environ["WANDB_API_KEY"] = api_key
+    elif os.getenv("WANDB_API_KEY") is not None and not os.getenv("WANDB_API_KEY", "").strip():
+        # Empty .env entries should not block wandb login / netrc auth.
+        os.environ.pop("WANDB_API_KEY", None)
+    elif os.getenv("WANDB_API_KEY"):
         # Clear placeholders so the wandb SDK does not attempt an online login.
         os.environ.pop("WANDB_API_KEY", None)
 
-    if resolved_enabled and env_mode == "online" and not api_key:
-        logger.info("WANDB_API_KEY unset; using offline mode for local logging")
+    has_login = _wandb_netrc_available()
+    if resolved_enabled and env_mode == "online" and not api_key and not has_login:
+        logger.info(
+            "WANDB_API_KEY unset and no wandb login found; using offline mode"
+        )
         env_mode = "offline"
+    elif resolved_enabled and env_mode == "online" and not api_key and has_login:
+        logger.info("Using wandb login credentials (no WANDB_API_KEY in .env)")
 
     return WandbSettings(
         enabled=resolved_enabled and env_mode != "disabled",
@@ -109,8 +133,11 @@ class WandbRun:
             return
         import wandb
 
-        table = wandb.Table(columns=list(columns), data=[list(row) for row in data])
-        self._run.log({key: table})
+        try:
+            table = wandb.Table(columns=list(columns), data=[list(row) for row in data])
+            self._run.log({key: table})
+        except Exception as exc:  # noqa: BLE001 — tables are best-effort
+            logger.warning("Could not log WandB table %s: %s", key, exc)
 
     def log_confusion_matrix(
         self,
@@ -162,10 +189,15 @@ class WandbRun:
         existing = [Path(p) for p in paths if Path(p).is_file()]
         if not existing:
             return
-        artifact = wandb.Artifact(name=name, type=artifact_type, metadata=metadata or {})
-        for path in existing:
-            artifact.add_file(str(path))
-        self._run.log_artifact(artifact)
+        try:
+            artifact = wandb.Artifact(
+                name=name, type=artifact_type, metadata=metadata or {}
+            )
+            for path in existing:
+                artifact.add_file(str(path))
+            self._run.log_artifact(artifact)
+        except Exception as exc:  # noqa: BLE001 — artifacts are best-effort
+            logger.warning("Could not log WandB artifact %s: %s", name, exc)
 
     def finish(self, exit_code: int = 0) -> None:
         if not self.active:

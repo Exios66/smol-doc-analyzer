@@ -45,9 +45,13 @@ Train a **TF-IDF + Random Forest** classifier on the smol-doc-analyzer synthetic
 
 This notebook is a lightweight classical baseline alongside the DeBERTa / ViT deep classifiers.
 
-After evaluation, metrics (accuracy, F1, confusion matrix, per-class table) are logged to
-**Weights & Biases** under project `smol-doc-analyzer` with job type `train` /
-run name `rf-notebook-…`. Corpus seeding does **not** open a WandB run from this notebook.
+**Multilayer WandB suite** (section 9) runs the same pipeline as the CLI:
+
+0. corpus profile → 1. capacity sweep → 2. dual heads → 3. surface slices →
+4. confidence/ECE → 5. feature importance / confusion pairs
+
+Logged under project `smol-doc-analyzer`, run name `rf-notebook-multilayer`.
+Corpus seeding does **not** open a WandB run from this notebook.
 """
         ),
         md("## 1. Setup"),
@@ -73,6 +77,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.classification.random_forest import (
+    DEFAULT_PRESET_NAMES,
     SURFACE_HANDWRITING_OCR,
     SURFACE_TYPED,
     assign_split_column,
@@ -80,11 +85,11 @@ from src.classification.random_forest import (
     ensure_seed_corpus,
     evaluate_classifier,
     load_text_handwriting_corpus,
-    log_random_forest_to_wandb,
     save_random_forest_bundle,
     top_tfidf_feature_importances,
     write_predictions_jsonl,
 )
+from src.classification.train_random_forest import train as train_rf_multilayer
 from src.utils.config import Config
 from src.utils.wandb_utils import load_wandb_settings
 
@@ -311,113 +316,43 @@ plt.tight_layout()
 plt.show()
 """
         ),
-        md("## 9. Persist models & reports"),
+        md(
+            """
+## 9. Multilayer train + WandB (official experiment)
+
+Runs the same multilayer suite as `python -m src.classification.train_random_forest`:
+
+capacity sweep (`shallow` / `balanced` / `deep` / `char_robust`) → best model →
+surface head → typed/OCR slices → confidence/ECE → feature importance.
+
+Artifacts land in `models/random_forest_classifier/` and metrics go to WandB under
+namespaced keys (`data/`, `sweep/`, `best/`, `slice/`, `confidence/`, `interp/`).
+"""
+        ),
         code(
             '''
-import joblib
-
-out_dir = cfg.models_dir / "random_forest_classifier"
-report_dir = cfg.evaluation_reports_dir
-report_dir.mkdir(parents=True, exist_ok=True)
-
-meta = {
-    "task": "document_type_random_forest",
-    "docs_path": frame.attrs.get("docs_path"),
-    "noisy_path": frame.attrs.get("noisy_path"),
-    "n_fit": int(len(fit_df)),
-    "n_test": int(len(test_df)),
-    "surfaces": sorted(frame["surface"].unique().tolist()),
-    "n_estimators": int(doc_clf.named_steps["rf"].n_estimators),
-    "tfidf_max_features": int(doc_clf.named_steps["tfidf"].max_features or 0),
-    "test_accuracy": doc_metrics["accuracy"],
-    "test_macro_f1": doc_metrics["macro_f1"],
-    "surface_test_accuracy": surface_eval["accuracy"],
-}
-
-model_path = save_random_forest_bundle(doc_clf, out_dir, doc_metrics, meta=meta)
-pred_path = write_predictions_jsonl(
-    out_dir / "test_predictions.jsonl",
-    record_ids=pred_df["record_id"].tolist(),
-    y_true=pred_df["true_label"].tolist(),
-    y_pred=pred_df["predicted_label"].tolist(),
-    surfaces=pred_df["surface"].tolist(),
-    confidences=pred_df["confidence"].tolist(),
-)
-
-joblib.dump(surface_clf, out_dir / "surface_random_forest_pipeline.joblib")
-
-acc = doc_metrics["accuracy"]
-macro = doc_metrics["macro_f1"]
-surf_acc = surface_eval["accuracy"]
-surface_lines = ["| surface | n | accuracy | macro_f1 |", "|---|---:|---:|---:|"]
-for _, row in surface_metrics.iterrows():
-    surface_lines.append(
-        "| {surface} | {n} | {accuracy:.4f} | {macro_f1:.4f} |".format(
-            surface=row["surface"],
-            n=int(row["n"]),
-            accuracy=row["accuracy"],
-            macro_f1=row["macro_f1"],
-        )
-    )
-surface_table = "\\n".join(surface_lines)
-md_report = "\\n".join(
-    [
-        "# Random Forest classification report",
-        "",
-        "- Corpus: typed Stage A documents + handwriting/OCR noisy variants",
-        f"- Fit rows: {len(fit_df)}",
-        f"- Test rows: {len(test_df)}",
-        f"- Document-type accuracy: **{acc:.4f}**",
-        f"- Document-type macro F1: **{macro:.4f}**",
-        f"- Surface (typed vs handwriting_ocr) accuracy: **{surf_acc:.4f}**",
-        "",
-        "## Accuracy by surface",
-        "",
-        surface_table,
-        "",
-        "## Artifacts",
-        "",
-        f"- `models/random_forest_classifier/{model_path.name}`",
-        f"- `models/random_forest_classifier/{pred_path.name}`",
-        "- `models/random_forest_classifier/surface_random_forest_pipeline.joblib`",
-        "",
-    ]
-)
-(report_dir / "random_forest_classification_report.md").write_text(md_report, encoding="utf-8")
-
-print("saved model bundle ->", out_dir)
-print("saved eval report  ->", report_dir / "random_forest_classification_report.md")
-display(pd.Series(meta, name="value").to_frame())
-
-# Log classifier metrics (not corpus seeding) to Weights & Biases
 wb_settings = load_wandb_settings()
-log_random_forest_to_wandb(
-    doc_metrics=doc_metrics,
-    surface_metrics=surface_eval,
-    config={
-        "n_estimators": int(doc_clf.named_steps["rf"].n_estimators),
-        "tfidf_max_features": int(doc_clf.named_steps["tfidf"].max_features or 0),
-        "n_fit": int(len(fit_df)),
-        "n_test": int(len(test_df)),
-        "docs_path": frame.attrs.get("docs_path"),
-        "noisy_path": frame.attrs.get("noisy_path"),
-        "source": "notebook",
-    },
-    y_true=test_df["document_type"].tolist(),
-    artifact_paths=[
-        out_dir / "eval_metrics.json",
-        out_dir / "train_meta.json",
-        report_dir / "random_forest_classification_report.md",
-    ],
+out_dir = train_rf_multilayer(
+    ensure_data=False,
+    presets=list(DEFAULT_PRESET_NAMES),
     wandb_settings=wb_settings,
-    run_name="rf-notebook-random-forest-classifier",
+    wandb_run_name="rf-notebook-multilayer",
 )
+print("multilayer artifacts ->", out_dir)
 print(
     "WandB:",
     f"enabled={wb_settings.enabled}",
     f"mode={wb_settings.mode}",
     f"project={wb_settings.project}",
 )
+for name in (
+    "sweep_results.json",
+    "layer_diagnostics.json",
+    "eval_metrics.json",
+    "train_meta.json",
+):
+    path = out_dir / name
+    print(f"  {name}: {'ok' if path.exists() else 'MISSING'}")
 '''
         ),
         md(

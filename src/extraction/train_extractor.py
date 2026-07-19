@@ -41,11 +41,12 @@ def train(
     val_rows = load_jsonl(prepared_dir / "val.jsonl") if (prepared_dir / "val.jsonl").exists() else []
 
     if smoke:
-        train_rows = train_rows[:24]
-        val_rows = val_rows[:8] or train_rows[:4]
-        # LayoutLMv3 is heavy for CPU smoke; use a tiny token classifier on text only
+        # CPU-friendly DistilBERT NER smoke — prior defaults (24 rows / 20 steps)
+        # left token macro F1 near zero on demo corpora.
+        train_rows = train_rows[:128]
+        val_rows = val_rows[:32] or train_rows[:16]
         model_name = "distilbert-base-uncased"
-        max_steps = max_steps or 20
+        max_steps = max_steps or 100
 
     if not train_rows:
         raise RuntimeError("No extraction train rows")
@@ -136,13 +137,15 @@ def train(
             args = TrainingArguments(
                 output_dir=str(out / "checkpoints"),
                 learning_rate=5e-5,
-                per_device_train_batch_size=2,
-                per_device_eval_batch_size=2,
+                per_device_train_batch_size=4,
+                per_device_eval_batch_size=4,
                 max_steps=max_steps if max_steps is not None else 200,
+                warmup_ratio=0.1,
+                weight_decay=0.01,
                 eval_strategy="steps" if val_ds is not None else "no",
-                eval_steps=10,
+                eval_steps=20,
                 save_strategy="no",
-                logging_steps=5,
+                logging_steps=10,
                 report_to=wb.report_to,
                 run_name=run_name,
                 seed=42,

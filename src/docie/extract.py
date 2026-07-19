@@ -22,20 +22,18 @@ logger = logging.getLogger(__name__)
 FIELD_PATTERNS: dict[str, list[re.Pattern[str]]] = {
     "claim_id": [
         re.compile(
-            r"\b(?:claim\s*(?:number|no\.?|id|#)?)\s*[:#]?\s*([A-Z0-9][A-Z0-9\-_/]{4,})",
+            r"\bclaim\s*(?:number|no\.?|id|#)\s*[:#]\s*([A-Z0-9][A-Z0-9\-_/]{4,})",
             re.I,
         ),
         re.compile(r"\b(CLM[-\s]?\d{4}[-\s]?\d+)\b", re.I),
     ],
     "name": [
         re.compile(
-            r"\b(?:patient\s*name|insured\s*name|claimant\s*name|patient\s*name)\s*[:#]\s*"
-            r"([A-Z][A-Za-z'`\-\.]+(?:\s+[A-Z][A-Za-z'`\-\.]*){0,3})",
+            r"\b(?:patient\s*name|insured\s*name|claimant\s*name)\s*[:#]\s*([^\n]+)",
             re.I,
         ),
         re.compile(
-            r"\b(?:patient|name)\s*[:#]\s*"
-            r"([A-Z][A-Za-z'`\-\.]+(?:\s+[A-Z][A-Za-z'`\-\.]*){0,3})",
+            r"\b(?:patient|name)\s*[:#]\s*([^\n]+)",
             re.I,
         ),
     ],
@@ -48,7 +46,7 @@ FIELD_PATTERNS: dict[str, list[re.Pattern[str]]] = {
     ],
     "patient_id": [
         re.compile(
-            r"\b(?:patient\s*(?:id|identifier|account)|pid|mrn)\s*[:#]?\s*"
+            r"\b(?:patient\s*(?:identifier|account|id)|pid|mrn)\b\s*[:#]?\s*"
             r"([A-Z0-9][A-Z0-9\-_/]{3,})",
             re.I,
         ),
@@ -142,11 +140,18 @@ FIELD_PATTERNS: dict[str, list[re.Pattern[str]]] = {
 }
 
 
+# Require whitespace before the next label so values like "Model 3" survive.
 _NEXT_FIELD_CUT = re.compile(
-    r"\s*\b(?:claim\s*(?:number|no\.?|id)?|vin|make|model|year|name|dob|"
-    r"date\s*of\s*birth|patient\s*id|address|carrier|physician|type\s*of\s*bill|"
-    r"revenue\s*code|payoff|purchase\s*price|sales\s*tax|sold\s*to|buyer)\b.*$",
+    r"\s+\b(?:claim\s*(?:number|no\.?|id)|vin|make|model|year|name|dob|"
+    r"date(?:\s+of\s+birth)|patient\s*(?:id|identifier|account)|address|"
+    r"carrier|physician|type\s*of\s*bill|revenue\s*code|payoff|"
+    r"purchase\s*price|sales\s*tax|sold\s*to|buyer|amount\s*due|"
+    r"account|balance)\b.*$",
     re.I,
+)
+
+_NAME_STOP = re.compile(
+    r"^(?P<name>[A-Z][A-Za-z'`\-\.]+(?:\s+[A-Z][A-Za-z'`\-\.]*){0,3})\b",
 )
 
 
@@ -155,6 +160,22 @@ def _clean_value(value: str) -> str:
     value = _NEXT_FIELD_CUT.sub("", value)
     value = re.sub(r"\s+", " ", value).strip()
     return value
+
+
+def _clean_name(value: str) -> str:
+    value = _clean_value(value)
+    m = _NAME_STOP.match(value)
+    if m:
+        return m.group("name").strip()
+    # Fallback: first 1–4 capitalized tokens
+    parts = value.split()
+    kept: list[str] = []
+    for part in parts[:4]:
+        if re.match(r"^[A-Z][A-Za-z'`\-\.]*$", part):
+            kept.append(part)
+        else:
+            break
+    return " ".join(kept) if kept else value
 
 
 def heuristic_extract(text: str, fields: list[str]) -> dict[str, list[str]]:
@@ -168,15 +189,16 @@ def heuristic_extract(text: str, fields: list[str]) -> dict[str, list[str]]:
                 val = _clean_value(match.group(1))
                 if not val:
                     continue
-                # Avoid capturing the next label as a value
+                # Avoid capturing a bare field label as a value (allow "Model 3")
                 if re.match(
-                    r"^(claim|vin|make|model|year|name|dob|address|patient)\b",
+                    r"^(claim|vin|make|model|year|name|dob|address|patient)$",
                     val,
                     re.I,
                 ):
                     continue
-                # Name / make / model: drop trailing noise tokens
-                if field in {"name", "make", "model"}:
+                if field == "name":
+                    val = _clean_name(val)
+                elif field in {"make", "model"}:
                     val = re.split(
                         r"\s+(?:Claim|VIN|Year|Make|Model|DOB|Address|Carrier|PID|MRN)\b",
                         val,

@@ -210,17 +210,22 @@ def classification_metrics(
     auc_ovr = auc_ovo = None
     if y_scores is not None and len(y_scores) == len(true_n) and len(labels) >= 2:
         try:
+            # sklearn requires multiclass ``labels`` to be lexicographically sorted.
+            auc_labels = sorted(labels)
             proba = np.asarray(
-                [_normalize_score_row(s, labels) for s in y_scores], dtype=float
+                [_normalize_score_row(s, auc_labels) for s in y_scores], dtype=float
             )
-            # sklearn needs at least one positive example per class for OVR.
             present = {t for t in true_n}
             if len(present) >= 2:
                 auc_ovr = float(
-                    roc_auc_score(true_n, proba, multi_class="ovr", labels=list(labels))
+                    roc_auc_score(
+                        true_n, proba, multi_class="ovr", labels=auc_labels
+                    )
                 )
                 auc_ovo = float(
-                    roc_auc_score(true_n, proba, multi_class="ovo", labels=list(labels))
+                    roc_auc_score(
+                        true_n, proba, multi_class="ovo", labels=auc_labels
+                    )
                 )
         except ValueError:
             auc_ovr = auc_ovo = None

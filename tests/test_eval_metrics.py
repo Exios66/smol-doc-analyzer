@@ -8,6 +8,8 @@ import pytest
 from evaluation.metrics import (
     REQUIRED_MEMO_FIELDS,
     annotate_records,
+    classification_metrics,
+    extraction_metrics,
     score_classification,
     score_extraction,
     score_memo_rubric,
@@ -57,6 +59,54 @@ def test_score_classification_accuracy_and_macro_f1():
     accuracy, macro_f1 = score_classification(records)
     assert accuracy == pytest.approx(0.75)
     assert 0.0 < macro_f1 <= 1.0
+
+
+def test_classification_metrics_includes_auc_and_f1_averages():
+    y_true = ["log", "log", "sales", "other"]
+    y_pred = ["log", "sales", "sales", "other"]
+    y_scores = [
+        {"log": 0.8, "sales": 0.1, "other": 0.1},
+        {"log": 0.2, "sales": 0.7, "other": 0.1},
+        {"log": 0.1, "sales": 0.8, "other": 0.1},
+        {"log": 0.1, "sales": 0.1, "other": 0.8},
+    ]
+    metrics = classification_metrics(
+        y_true, y_pred, y_scores=y_scores, labels=["log", "sales", "other"]
+    )
+    assert metrics["accuracy"] == pytest.approx(0.75)
+    assert "macro_f1" in metrics and "micro_f1" in metrics and "weighted_f1" in metrics
+    assert metrics["auc_ovr"] is not None
+    assert metrics["auc_ovo"] is not None
+    # log: TP=1, FP=0, FN=1 → P=1.0, R=0.5, F1=2/3
+    assert metrics["per_class"]["log"]["precision"] == pytest.approx(1.0)
+    assert metrics["per_class"]["log"]["recall"] == pytest.approx(0.5)
+    assert metrics["per_class"]["log"]["f1"] == pytest.approx(2 / 3)
+
+
+def test_extraction_metrics_per_field_f1_harmonic_mean():
+    records = [
+        _ext(
+            {"claim_id": "CLM-1", "vin": "1HGCM82633A004352"},
+            {"claim_id": "CLM-1", "vin": "1HGCM82633A004352", "year": "2018"},
+        ),
+        _ext(
+            {"claim_id": "WRONG", "vin": "1HGCM82633A004352"},
+            {"claim_id": "CLM-2", "vin": "1HGCM82633A004352"},
+        ),
+    ]
+    metrics = extraction_metrics(
+        records, fuzzy_fields=set(), fields=["claim_id", "vin", "year"]
+    )
+    assert "micro_f1" in metrics and "macro_f1" in metrics
+    assert "claim_id" in metrics["per_field"]
+    # VIN exact on both → F1 1.0
+    assert metrics["per_field"]["vin"]["f1"] == pytest.approx(1.0)
+    # year missing on both preds, gold once → recall 0
+    assert metrics["per_field"]["year"]["recall"] == pytest.approx(0.0)
+    # Harmonic mean identity
+    p = metrics["per_field"]["vin"]["precision"]
+    r = metrics["per_field"]["vin"]["recall"]
+    assert metrics["per_field"]["vin"]["f1"] == pytest.approx(2 * p * r / (p + r))
 
 
 def test_score_extraction_exact_and_fuzzy():

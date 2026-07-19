@@ -17,6 +17,6 @@ Observed / expected hard fields on synthetic forms:
 
 ## Noisy stress summary
 
-- token_macro_f1: 0.039
-- field_exact_mean: 0.007
-- field_partial_mean: 0.016
+- token_macro_f1: 0.063
+- field_exact_mean: 0.000
+- field_partial_mean: 0.000

@@ -3,5 +3,16 @@
   "smoke": true,
   "n_train": 34,
   "n_val": 7,
-  "max_steps": 30
+  "max_steps": 30,
+  "metrics": {
+    "train_runtime": 19.9727,
+    "train_samples_per_second": 6.008,
+    "train_steps_per_second": 1.502,
+    "total_flos": 5883527351136.0,
+    "train_loss": 1.980633544921875,
+    "epoch": 3.3333333333333335,
+    "eval_loss": 1.8758752346038818,
+    "eval_accuracy": 0.42857142857142855,
+    "eval_macro_f1": 0.3
+  }
 }

@@ -1,5 +1,15 @@
 {
   "model_name": "distilbert-base-uncased",
   "smoke": true,
-  "n_train": 24
+  "n_train": 24,
+  "metrics": {
+    "train_runtime": 19.7084,
+    "train_samples_per_second": 2.03,
+    "train_steps_per_second": 1.015,
+    "total_flos": 1931137715496.0,
+    "train_loss": 1.1331048369407655,
+    "epoch": 1.6666666666666665,
+    "eval_loss": 0.6307505369186401,
+    "eval_token_macro_f1": 0.056552768166089964
+  }
 }

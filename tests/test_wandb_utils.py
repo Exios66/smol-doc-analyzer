@@ -34,10 +34,25 @@ def test_load_wandb_settings_falls_back_offline_without_key(monkeypatch):
     monkeypatch.delenv("WANDB_DISABLED", raising=False)
     monkeypatch.delenv("WANDB_API_KEY", raising=False)
     monkeypatch.setenv("WANDB_PROJECT", "test-project")
+    monkeypatch.setattr(
+        "src.utils.wandb_utils._wandb_netrc_available", lambda: False
+    )
     settings = load_wandb_settings()
     assert settings.enabled is True
     assert settings.mode == "offline"
     assert settings.project == "test-project"
+
+
+def test_load_wandb_settings_stays_online_with_netrc(monkeypatch):
+    monkeypatch.setenv("WANDB_MODE", "online")
+    monkeypatch.delenv("WANDB_DISABLED", raising=False)
+    monkeypatch.delenv("WANDB_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "src.utils.wandb_utils._wandb_netrc_available", lambda: True
+    )
+    settings = load_wandb_settings()
+    assert settings.enabled is True
+    assert settings.mode == "online"
 
 
 def test_explicit_enabled_false_overrides_env(monkeypatch):
