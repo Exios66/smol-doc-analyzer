@@ -16,6 +16,9 @@ All three run offline, on modest hardware, with no per-token API costs.
 
 ## Status
 
+**Package version:** `0.5.0` — covers Phases 0–3 and 5, DICIE, Discord bot,
+eval/cost harness, and classical/ViT classifiers (Phase 4 summarizer LoRA still pending).
+
 Phases 0–3 and Phase 5 (chained inference orchestrator) implemented, plus a
 paper-aligned DICIE path:
 
