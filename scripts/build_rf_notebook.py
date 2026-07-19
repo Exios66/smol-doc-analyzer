@@ -59,6 +59,7 @@ Corpus seeding does **not** open a WandB run from this notebook.
             """
 from __future__ import annotations
 
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -77,27 +78,34 @@ if not (REPO_ROOT / "src").exists():
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-# Drop cached src.* modules. A long-lived kernel can keep an older
-# random_forest (without DEFAULT_PRESET_NAMES) in sys.modules; importlib.reload
-# alone is not enough if train_random_forest imports names from that stale copy.
+# Drop cached src.* modules + stale bytecode. Long-lived kernels can keep an
+# older random_forest (pre-DEFAULT_PRESET_NAMES) alive even after disk edits.
+_rf_pycache = REPO_ROOT / "src" / "classification" / "__pycache__"
+if _rf_pycache.is_dir():
+    for _pyc in _rf_pycache.glob("random_forest*.pyc"):
+        _pyc.unlink(missing_ok=True)
 for _mod_name in list(sys.modules):
     if _mod_name == "src" or _mod_name.startswith("src."):
         del sys.modules[_mod_name]
 
-from src.classification.random_forest import (
-    DEFAULT_PRESET_NAMES,
-    SURFACE_HANDWRITING_OCR,
-    SURFACE_TYPED,
-    as_str_list,
-    assign_split_column,
-    build_document_type_pipeline,
-    ensure_seed_corpus,
-    evaluate_classifier,
-    load_text_handwriting_corpus,
-    save_random_forest_bundle,
-    top_tfidf_feature_importances,
-    write_predictions_jsonl,
+import src.classification.random_forest as _rf
+
+_rf = importlib.reload(_rf)
+DEFAULT_PRESET_NAMES = getattr(
+    _rf, "DEFAULT_PRESET_NAMES", tuple(_rf.CAPACITY_PRESETS.keys())
 )
+SURFACE_HANDWRITING_OCR = _rf.SURFACE_HANDWRITING_OCR
+SURFACE_TYPED = _rf.SURFACE_TYPED
+as_str_list = _rf.as_str_list
+assign_split_column = _rf.assign_split_column
+build_document_type_pipeline = _rf.build_document_type_pipeline
+ensure_seed_corpus = _rf.ensure_seed_corpus
+evaluate_classifier = _rf.evaluate_classifier
+load_text_handwriting_corpus = _rf.load_text_handwriting_corpus
+save_random_forest_bundle = _rf.save_random_forest_bundle
+top_tfidf_feature_importances = _rf.top_tfidf_feature_importances
+write_predictions_jsonl = _rf.write_predictions_jsonl
+
 from src.classification.train_random_forest import train as train_rf_multilayer
 from src.utils.config import Config
 from src.utils.llm_client import DEFAULT_FREE_FALLBACK_MODELS
@@ -120,6 +128,7 @@ pd.set_option("display.max_colwidth", 120)
 sns.set_theme(style="whitegrid", context="notebook")
 cfg = Config.load()
 print("repo:", REPO_ROOT)
+print("rf module:", _rf.__file__)
 print("presets:", DEFAULT_PRESET_NAMES)
 print("documents dir:", cfg.document_output_dir)
 print("noisy dir:", cfg.noisy_output_dir)
