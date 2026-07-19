@@ -133,6 +133,8 @@ pip install -e ".[discord]"
 python scripts/setup_env.py   # set DISCORD_TOKEN (+ OPENROUTER_API_KEY; OPENAI_API_KEY for Whisper)
 cp discord/smol-doc-analyzer/config.yaml.example discord/smol-doc-analyzer/config.yaml
 python -m src.discord_bot
+# autostart at login (macOS):
+./scripts/install_discord_bot_loginitem.sh
 # See discord/smol-doc-analyzer/README.md
 
 # full-scale generation (when ready)

@@ -98,7 +98,7 @@ def train(
     noisy_path: Path | None = None,
     out_dir: Path | None = None,
     n_estimators: int = 300,
-    seed_n: int = 400,
+    seed_n: int = 2000,
     ensure_data: bool = True,
     wandb_settings=None,
     wandb_run_name: str | None = None,
@@ -350,7 +350,12 @@ def main() -> None:
         default=300,
         help="Legacy; multilayer sweep uses --presets instead",
     )
-    parser.add_argument("--seed-n", type=int, default=240)
+    parser.add_argument(
+        "--seed-n",
+        type=int,
+        default=2000,
+        help="Typed-document count for seed corpus (noisy variants are 1:1)",
+    )
     parser.add_argument("--no-ensure-data", action="store_true")
     parser.add_argument(
         "--presets",

@@ -7,6 +7,7 @@ Supports clean typed text and OCR / handwriting-style noisy variants produced by
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -25,6 +26,20 @@ from src.utils.io import load_jsonl, read_json, write_json
 
 SURFACE_TYPED = "typed"
 SURFACE_HANDWRITING_OCR = "handwriting_ocr"
+
+_CORPUS_N_RE = re.compile(r"_n(\d+)(?:_|\.|$)")
+
+
+def corpus_n_from_path(path: Path) -> int:
+    """Parse ``n`` from filenames like ``documents_from_skeletons_n2000_seed42.jsonl``."""
+    match = _CORPUS_N_RE.search(path.stem)
+    return int(match.group(1)) if match else 0
+
+
+def _largest_corpus_path(paths: Sequence[Path]) -> Path | None:
+    if not paths:
+        return None
+    return max(paths, key=lambda p: (corpus_n_from_path(p), p.stat().st_mtime))
 
 
 def _rows_from_docs(docs: list[dict[str, Any]], surface: str) -> list[dict[str, Any]]:
@@ -55,24 +70,24 @@ def load_text_handwriting_corpus(
     """Load clean typed documents plus OCR/handwriting-noisy variants."""
     cfg = cfg or Config.load()
     if docs_path is None:
-        candidates = sorted(cfg.document_output_dir.glob("documents_from_skeletons_*.jsonl"))
-        if not candidates:
+        candidates = list(cfg.document_output_dir.glob("documents_from_skeletons_*.jsonl"))
+        docs_path = _largest_corpus_path(candidates)
+        if docs_path is None:
             raise FileNotFoundError(
                 f"No document JSONL under {cfg.document_output_dir}. "
-                "Run: python -m src.generation.run_seed_pipeline --n 240 --seed 42"
+                "Run: python -m src.generation.run_seed_pipeline --n 2000 --seed 42"
             )
-        docs_path = candidates[-1]
     if noisy_path is None:
         stem = docs_path.stem
         noisy_path = cfg.noisy_output_dir / f"noisy_from_{stem}.jsonl"
         if not noisy_path.exists():
-            noisy_candidates = sorted(cfg.noisy_output_dir.glob("noisy_from_*.jsonl"))
-            if not noisy_candidates:
+            noisy_candidates = list(cfg.noisy_output_dir.glob("noisy_from_*.jsonl"))
+            noisy_path = _largest_corpus_path(noisy_candidates)
+            if noisy_path is None:
                 raise FileNotFoundError(
                     f"No noisy JSONL under {cfg.noisy_output_dir}. "
                     "Run the seed pipeline (includes noise injection)."
                 )
-            noisy_path = noisy_candidates[-1]
 
     clean = _rows_from_docs(load_jsonl(docs_path), SURFACE_TYPED)
     noisy = _rows_from_docs(load_jsonl(noisy_path), SURFACE_HANDWRITING_OCR)
@@ -570,26 +585,35 @@ def top_confusion_pairs(
 
 
 def ensure_seed_corpus(
-    n: int = 240,
+    n: int = 2000,
     seed: int = 42,
     *,
     log_wandb: bool = False,
 ) -> dict[str, str]:
-    """Generate the synthetic corpus if document JSONL files are missing.
+    """Generate the synthetic corpus if missing or smaller than ``n``.
 
+    Reuses an existing JSONL only when its parsed sample size is ``>= n``.
     Nested generation does **not** open a WandB run by default so notebook / RF
     training runs are not mis-attributed as ``seed_pipeline`` experiments.
     Pass ``log_wandb=True`` (or call ``run_seed_pipeline`` directly) to track
     corpus generation separately.
     """
     cfg = Config.load()
-    existing = sorted(cfg.document_output_dir.glob("documents_from_skeletons_*.jsonl"))
-    if existing:
-        noisy = sorted(cfg.noisy_output_dir.glob("noisy_from_*.jsonl"))
+    existing = list(cfg.document_output_dir.glob("documents_from_skeletons_*.jsonl"))
+    best = _largest_corpus_path(existing)
+    if best is not None and corpus_n_from_path(best) >= n:
+        noisy_candidates = list(cfg.noisy_output_dir.glob("noisy_from_*.jsonl"))
+        noisy = cfg.noisy_output_dir / f"noisy_from_{best.stem}.jsonl"
+        if not noisy.exists():
+            noisy_best = _largest_corpus_path(noisy_candidates)
+            noisy_path = str(noisy_best) if noisy_best else ""
+        else:
+            noisy_path = str(noisy)
         return {
-            "documents": str(existing[-1]),
-            "noisy": str(noisy[-1]) if noisy else "",
+            "documents": str(best),
+            "noisy": noisy_path,
             "generated": "false",
+            "n": str(corpus_n_from_path(best)),
         }
     from src.generation.run_seed_pipeline import run_seed
     from src.utils.wandb_utils import load_wandb_settings
@@ -597,6 +621,7 @@ def ensure_seed_corpus(
     settings = load_wandb_settings(enabled=log_wandb)
     paths = run_seed(n=n, seed=seed, skip_ingest=True, wandb_settings=settings)
     paths["generated"] = "true"
+    paths["n"] = str(n)
     return paths
 
 

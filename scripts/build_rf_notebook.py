@@ -76,6 +76,12 @@ if not (REPO_ROOT / "src").exists():
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+# Drop cached src.* modules so kernels pick up code edits (reload is not enough
+# when an older random_forest without DEFAULT_PRESET_NAMES is already loaded).
+for _mod_name in list(sys.modules):
+    if _mod_name == "src" or _mod_name.startswith("src."):
+        del sys.modules[_mod_name]
+
 from src.classification.random_forest import (
     DEFAULT_PRESET_NAMES,
     SURFACE_HANDWRITING_OCR,
@@ -333,7 +339,8 @@ namespaced keys (`data/`, `sweep/`, `best/`, `slice/`, `confidence/`, `interp/`)
             '''
 wb_settings = load_wandb_settings()
 out_dir = train_rf_multilayer(
-    ensure_data=False,
+    ensure_data=True,
+    seed_n=SEED_N,
     presets=list(DEFAULT_PRESET_NAMES),
     wandb_settings=wb_settings,
     wandb_run_name="rf-notebook-multilayer",

@@ -64,6 +64,42 @@ python -m src.discord_bot
 python -m src.discord_bot --config-dir discord/smol-doc-analyzer
 ```
 
+## Start at login (macOS)
+
+Keeps the bot waiting for Discord commands after you sign in.
+
+### Option A — Login Item (works when the repo is on Desktop)
+
+macOS blocks background `launchd` jobs from `Desktop`/`Documents`/`Downloads`
+unless Full Disk Access is granted. A Login Item uses Terminal’s access instead:
+
+```bash
+./scripts/install_discord_bot_loginitem.sh
+```
+
+Remove: `./scripts/uninstall_discord_bot_loginitem.sh`  
+(or System Settings → General → Login Items)
+
+### Option B — LaunchAgent (preferred once FDA is granted)
+
+Restarts automatically if the process exits (`KeepAlive`):
+
+```bash
+# System Settings → Privacy & Security → Full Disk Access → enable /bin/bash
+./scripts/install_discord_bot_launchagent.sh
+
+launchctl print "gui/$(id -u)/com.smol-doc-analyzer.discord-bot"
+tail -f data/discord/logs/discord-bot.stdout.log
+
+./scripts/uninstall_discord_bot_launchagent.sh
+```
+
+Manual one-shot (same wrapper both use):
+
+```bash
+./scripts/run_discord_bot.sh
+```
+
 Mention the bot or prefix a message with `--` (configurable via `DISCORD_PREFIX`)
 for free-form chat, **or use slash commands** (synced on bot startup):
 
