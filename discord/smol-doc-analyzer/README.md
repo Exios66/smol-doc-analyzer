@@ -84,9 +84,15 @@ for free-form chat, **or use slash commands** (synced on bot startup):
 
 ### Document pipeline
 
-`/analyze` calls:
+`/analyze` and the Chloride tool `analyze_insurance_document` call the **memo
+chain** in `src/pipeline/`:
 
 `to_markdown → classify → extract → vision_llm → summarize`
+
+The paper Fig. 1 DICIE path (`src/docie/` — medical bills / salvage claims) is
+a separate CLI / optional FastAPI entry point; it is not wired to Discord slash
+commands. See [src/docie/README.md](../../src/docie/README.md) and
+[docs/docie_pipeline.md](../../docs/docie_pipeline.md).
 
 ### Notes & transcription
 

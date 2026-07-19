@@ -15,7 +15,10 @@ Extraction framework for Insurance Applications*:
 4. **Output** — aggregate prediction, human-review flags, downstream response
 
 Application profiles: `medical_bills`, `salvage_claims` (plus `acord`).
-See [docs/docie_pipeline.md](docie_pipeline.md).
+
+- Module README: [`src/docie/README.md`](../src/docie/README.md)
+- Design notes: [`docs/docie_pipeline.md`](docie_pipeline.md)
+- Taxonomies: `taxonomy/medical_bills.yaml`, `taxonomy/salvage_claims.yaml`
 
 ### B. Chained analysis (memo path) — `src/pipeline/`
 
@@ -59,6 +62,7 @@ src/
   classification/   # text DeBERTa + ViT image + TF-IDF Random Forest train/eval
   extraction/       # form render, LayoutLMv3 train/eval
   docie/            # paper Fig. 1 DICIE: process → classify → extract → respond
+                    #   (see src/docie/README.md)
   pipeline/         # orchestrator + markdown convert + batch_runner (memo chain)
   discord_bot/      # Chloride Discord front-end + analyze_insurance_document tool
   utils/            # config, provenance, LLM client, WandB tracking
@@ -89,7 +93,8 @@ Install `pip install -e ".[discord]"`, set `DISCORD_TOKEN` (+ OpenRouter/AI key)
 then `python -m src.discord_bot`.
 
 **Slash commands** (synced on startup): `/analyze`, `/analyze_url`, `/status`, `/help`,
-`/ping` — run the local pipeline directly from Discord's command picker.
+`/ping` — run the **memo chain** (`src/pipeline/`) from Discord's command picker.
+DICIE (`src/docie/`) is exposed via CLI / optional FastAPI, not Discord slash commands.
 
 **Chat / tools:** mention the bot or use the `--` prefix; the agent can call
 `analyze_insurance_document`. Right-click → **Ask Me** analyzes a selected message.

@@ -83,6 +83,7 @@ python -m src.extraction.train_extractor --prepared data/synthetic/documents/ren
 python -m src.extraction.eval --model-dir models/extractor_smoke --prepared data/synthetic/documents/rendered/extraction_prepared
 
 # --- paper Fig. 1 DICIE pipeline (process → classify → extract → respond) ---
+# Docs: src/docie/README.md  ·  docs/docie_pipeline.md
 # Medical bills / salvage claims applications from Raj et al.
 python -m src.docie \
   --application salvage_claims \
@@ -147,6 +148,21 @@ page images inside the same chain.
 ## Repository structure
 
 See [docs/architecture.md](docs/architecture.md).
+
+## DICIE module (`src/docie/`)
+
+Paper Fig. 1 path for **medical bills** and **salvage claims**: process →
+classify → extract → aggregated response. Image-first (page OCR), with
+optional FastAPI serving.
+
+- Module README (CLI, Python API, REST, schema): [src/docie/README.md](src/docie/README.md)
+- Design notes: [docs/docie_pipeline.md](docs/docie_pipeline.md)
+- Taxonomies: `taxonomy/medical_bills.yaml`, `taxonomy/salvage_claims.yaml`
+- Tests: `pytest tests/test_docie_pipeline.py`
+
+This is separate from the markdown → memo chain in `src/pipeline/` (used by
+the Discord bot). Prefer DICIE for paper-aligned workflow apps; prefer
+`src.pipeline.orchestrator` when you need adjuster-style memos.
 
 ## Discord bot (Chloride)
 

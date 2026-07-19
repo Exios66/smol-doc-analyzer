@@ -112,6 +112,32 @@ Exit criterion: pipeline processes a batch of held-out documents end to end with
 
 ---
 
+## Phase 5b: DICIE paper path (Fig. 1) — status: implemented
+
+**Goal:** Ship the Raj et al. image-first Document Image Classification and
+Information Extraction chain alongside the memo orchestrator, scoped to the
+paper's insurance applications.
+
+Tasks:
+- `src/docie/processing.py`: PDF/image → 300 DPI grayscale pages + OCR boxes
+- `src/docie/classify.py`: per-page classify + confidence-weighted aggregate
+- `src/docie/extract.py`: LayoutLM / heuristic fields conditioned on class
+- `src/docie/aggregate.py` + `pipeline.py`: response payload + CLI batch runner
+- Application taxonomies: `taxonomy/medical_bills.yaml`, `taxonomy/salvage_claims.yaml`
+- Optional FastAPI serve path (`src/docie/serve.py`, `.[serve]` extra)
+- Module + design docs: `src/docie/README.md`, `docs/docie_pipeline.md`
+
+Deliverable: runnable DICIE CLI / Python API / optional REST for medical bills
+and salvage claims, with human-review routing.
+
+Exit criterion: fixture suite (`tests/test_docie_pipeline.py`) passes end to end
+with heuristic backends (no trained weights required).
+
+**Status:** Implemented in `src/docie/`. Complements Phase 5 memo chain; Discord
+`/analyze` continues to call `src/pipeline/`.
+
+---
+
 ## Phase 6: Deployment Packaging (est. 1-2 weeks)
 
 **Goal:** Package for offline/in-house deployment.
@@ -119,8 +145,9 @@ Exit criterion: pipeline processes a batch of held-out documents end to end with
 Tasks:
 - Quantize summarization model (GGUF conversion for llama.cpp, or vLLM serving config)
 - Write `deployment/hardware_sizing.md`: throughput/latency/cost estimates at different hardware tiers (single GPU, CPU-only, etc.)
-- Build Docker container for full pipeline
+- Build Docker container for full pipeline (memo chain + optional DICIE REST via `src.docie.serve`)
 - Document setup/run instructions for someone with no ML background to deploy this internally
+- Package DICIE FastAPI serving shape (paper §VI) for ECS / container deploy when needed
 
 Deliverable: deployable package + hardware sizing documentation.
 
@@ -134,8 +161,9 @@ Exit criterion: pipeline runs successfully in a clean Docker environment from a 
 
 Tasks:
 - Build `evaluation/eval_harness.py` (alias: `evaluation/benchmarks.py`): compare pipeline accuracy and cost-per-document against a frontier-model API baseline on the same held-out set
-- Write `docs/architecture.md` final version (design rationale)
-- Write `docs/data_provenance.md` (full synthetic data sourcing disclosure)
+- Write `docs/architecture.md` final version (design rationale; dual chains: DICIE + memo)
+- Keep `src/docie/README.md` + `docs/docie_pipeline.md` aligned with the Fig. 1 path
+- Write `docs/data_provenance.md` (full synthetic data sourcing disclosure, including DICIE fixtures)
 - Write `docs/handoff/amfam_pipeline_recipe.md` — the consulting deliverable, pointing only at reproducible pipeline/training code, not synthetic data specifics
 - Write portfolio-facing project writeup (results, architecture diagram, cost comparison)
 
@@ -152,6 +180,9 @@ Exit criterion: both deliverables (AmFam recipe doc, GitHub portfolio writeup) a
 - **Eval-set discipline**: hold out a fixed synthetic eval set from the start of Phase 1 and never train on it — reuse the same set across Phases 2-5 for comparable metrics.
 - **Cost tracking**: log synthetic generation API costs from day one — this becomes part of your own cost-comparison narrative in Phase 7.
 
-## Estimated total timeline
+## Effort notes
 
-12-17 weeks for a single developer working consistently, assuming no major taxonomy rework and no extended blockers in the extraction phase (the most likely place for schedule slippage — budget contingency there first if the timeline compresses).
+Calendar-week estimates above are planning heuristics for human schedules, not
+agent runtime. Difficulty concentrates in Phase 3 (layout-aware extraction) and
+Phase 4 (memo LoRA); Phase 5b (DICIE) is largely complete with heuristic
+fallback backends.
