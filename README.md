@@ -16,12 +16,14 @@ All three run offline, on modest hardware, with no per-token API costs.
 
 ## Status
 
-Phases 0–3 and Phase 5 (chained inference orchestrator) implemented:
+Phases 0–3 and Phase 5 (chained inference orchestrator) implemented, plus a
+paper-aligned DICIE path:
 
 - Characteristic profiles from public document/layout/legal-style priors
 - Synthetic skeleton → document → memo → OCR-noise pipeline (template fallback; optional OpenRouter LLM)
 - Document-type classifier train/eval (text DeBERTa + optional ViT image path)
 - Field extraction train/eval with noisy stress reporting
+- **DICIE (Fig. 1)**: document processing → classification → information extraction → aggregated response (`src/docie/`) for medical bills and salvage claims
 - **Single-action analysis chain**: to_markdown → classify → extract → vision_llm → summarize (`src/pipeline/`)
 - PNG/PDF → structured markdown before LLM stages (token + context optimization)
 
@@ -80,7 +82,30 @@ python -m src.extraction.prepare_dataset --in data/synthetic/documents/rendered/
 python -m src.extraction.train_extractor --prepared data/synthetic/documents/rendered/extraction_prepared --smoke
 python -m src.extraction.eval --model-dir models/extractor_smoke --prepared data/synthetic/documents/rendered/extraction_prepared
 
-# --- one action: full document analysis chain ---
+# --- paper Fig. 1 DICIE pipeline (process → classify → extract → respond) ---
+# Medical bills / salvage claims applications from Raj et al.
+python -m src.docie \
+  --application salvage_claims \
+  --text "LETTER OF GUARANTEE
+Claim Number: CLM-2024-100200
+VIN: 1HGCM82633A004352
+Year: 2018
+Make: Honda
+Model: Accord" \
+  --response-only
+
+python -m src.docie --application medical_bills --pdf path/to/bill.pdf
+python -m src.docie --application salvage_claims --image path/to/log.png
+python -m src.docie \
+  --application salvage_claims \
+  --in tests/fixtures/sample_docie_documents.jsonl \
+  --out data/pipeline/docie/salvage_demo.jsonl
+
+# Optional REST server (paper §VI FastAPI shape)
+# pip install -e ".[serve]"
+# python -m src.docie.serve --application salvage_claims --port 8080
+
+# --- one action: full document analysis chain (memo path) ---
 # PNG/PDF are converted to structured markdown before LLM stages (token-efficient).
 python -m src.pipeline.orchestrator \
   --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl \

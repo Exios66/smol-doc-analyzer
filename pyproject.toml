@@ -47,6 +47,11 @@ notebooks = [
 ocr = [
   "pytesseract>=0.3.10",
 ]
+serve = [
+  "fastapi>=0.111.0",
+  "uvicorn[standard]>=0.30.0",
+  "python-multipart>=0.0.9",
+]
 discord = [
   # Chloride (Coral Discord agent): https://github.com/S4IL21/chloride
   "chloride @ git+https://github.com/S4IL21/chloride.git@ebe61ec6aa460ba16c1ad94666144675da9cabff",

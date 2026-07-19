@@ -2,6 +2,23 @@
 
 ## Pipeline
 
+Two complementary inference chains are available:
+
+### A. DICIE (paper Fig. 1) — `src/docie/`
+
+Image-first chain matching Raj et al. *Document Classification and Information
+Extraction framework for Insurance Applications*:
+
+1. **Document Processing** — PDF / images → page images (300 DPI grayscale) + OCR
+2. **Document Classification** — per-page classify → confidence-weighted aggregate
+3. **Information Extraction** — LayoutLM / heuristic fields conditioned on class
+4. **Output** — aggregate prediction, human-review flags, downstream response
+
+Application profiles: `medical_bills`, `salvage_claims` (plus `acord`).
+See [docs/docie_pipeline.md](docie_pipeline.md).
+
+### B. Chained analysis (memo path) — `src/pipeline/`
+
 Insurance document intake is split into specialized local components that run
 as **one chained analysis action**. Stages are initiated in a fixed order and
 execute chronologically; each stage reacts to prior stage outputs:
@@ -41,7 +58,8 @@ src/
   generation/       # corpus ingest, profiling, skeleton/Stage A/B, noise
   classification/   # text DeBERTa + ViT image + TF-IDF Random Forest train/eval
   extraction/       # form render, LayoutLMv3 train/eval
-  pipeline/         # orchestrator + markdown convert + batch_runner
+  docie/            # paper Fig. 1 DICIE: process → classify → extract → respond
+  pipeline/         # orchestrator + markdown convert + batch_runner (memo chain)
   discord_bot/      # Chloride Discord front-end + analyze_insurance_document tool
   utils/            # config, provenance, LLM client, WandB tracking
 discord/
@@ -52,7 +70,7 @@ data/
   raw/              # downloaded public samples (gitignored)
   synthetic/        # generated skeletons/documents/memos (gitignored)
   pipeline/         # inference outputs + markdown/render cache (gitignored)
-taxonomy/           # ACORD-inspired document type labels
+taxonomy/           # ACORD + medical_bills + salvage_claims application labels
 evaluation/         # frontier vs. local eval harness + reports/
   eval_harness.py   # Phase 7 cost/accuracy comparison runner
   metrics.py        # per-(task, backend) scoring → summary.csv
@@ -84,9 +102,13 @@ See [discord/smol-doc-analyzer/README.md](../discord/smol-doc-analyzer/README.md
 Public corpora → profiles → skeletons → documents (+ noisy) → classifier (text and/or ViT on renders) / extractor
                                          └→ memos (Phase 4 training targets)
 
-Inbound PNG/PDF/text → to_markdown → classify → extract → vision_llm → summarize
-                              ↓
-                     structured markdown (LLM context)
+Paper Fig. 1 (DICIE):
+  Inbound PDF/images → process (pages+OCR) → classify (aggregate) → extract → response / downstream
+
+Memo chain:
+  Inbound PNG/PDF/text → to_markdown → classify → extract → vision_llm → summarize
+                                ↓
+                       structured markdown (LLM context)
 ```
 
 ## Chronological reaction contract

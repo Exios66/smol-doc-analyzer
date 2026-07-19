@@ -1,0 +1,33 @@
+# Salvage Claims application taxonomy
+# From: "Document Classification and Information Extraction framework
+# for Insurance Applications" (Raj, Dickinson, Fung)
+#
+# Classes: LOG (Letter of Guarantee), SALES, OTHER
+# Extraction targets: claim_id, vin, year, make, model
+
+application: salvage_claims
+description: >
+  Classify bank-issued letters of guarantee and related salvage attachments,
+  then extract vehicle identifiers for total-loss automobile claims.
+
+categories:
+  - label: log
+    aliases: ["LOG", "Letter of Guarantee", "Letter Of Guarantee", "Guarantee"]
+    description: Bank-issued letter of guarantee for loan/lease payoff on a total-loss vehicle.
+  - label: sales
+    aliases: ["SALES", "Sales Receipt", "Sales Tax", "Bill of Sale"]
+    description: Salvage sales receipt or sales-tax documentation.
+  - label: other
+    aliases: ["OTHER", "Salvage Other"]
+    description: Other salvage-claim attachments that are neither LOG nor sales receipt.
+
+extraction_fields:
+  - claim_id
+  - vin
+  - year
+  - make
+  - model
+
+business_rules:
+  prefer_non_other: true
+  review_confidence_threshold: 0.55

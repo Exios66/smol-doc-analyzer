@@ -1,0 +1,35 @@
+# Medical Bills application taxonomy
+# From: "Document Classification and Information Extraction framework
+# for Insurance Applications" (Raj, Dickinson, Fung)
+#
+# Classes: HCFA, UB04, OTHER (non-standard medical bills)
+# Extraction targets: claim_id, name, dob, patient_id, address
+
+application: medical_bills
+description: >
+  Medical bill classification and claimant information extraction for
+  automobile insurance casualty claims review and re-pricing.
+
+categories:
+  - label: hcfa
+    aliases: ["HCFA", "CMS-1500", "CMS 1500", "Health Care Finance Administration"]
+    description: Health Care Finance Administration / CMS-1500 medical bill form.
+  - label: ub04
+    aliases: ["UB", "UB-04", "UB04", "Uniform Billing", "CMS-1450"]
+    description: Uniform Billing (UB-04 / CMS-1450) institutional medical bill.
+  - label: other
+    aliases: ["Non-standard", "OTHER", "Medical Other"]
+    description: Non-standard / arbitrary-layout medical bills.
+
+extraction_fields:
+  - claim_id
+  - name
+  - dob
+  - patient_id
+  - address
+
+business_rules:
+  # Aggregate page predictions by majority vote; prefer non-other when tied.
+  prefer_non_other: true
+  # Human review when classification confidence is below threshold.
+  review_confidence_threshold: 0.55
