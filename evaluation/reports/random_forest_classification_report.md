@@ -5,7 +5,7 @@
 - Test rows: 72
 - Document-type accuracy: **1.0000**
 - Document-type macro F1: **1.0000**
-- Surface (typed vs handwriting_ocr) accuracy: **0.6528**
+- Surface (typed vs handwriting_ocr) accuracy: **0.7222**
 
 ## Accuracy by surface
 
