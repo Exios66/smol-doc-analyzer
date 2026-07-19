@@ -1,0 +1,26 @@
+{
+  "files.watcherExclude": {
+    "**/wandb/**": true,
+    "**/.wandb/**": true,
+    "**/models/**": true,
+    "**/data/synthetic/**": true,
+    "**/data/notebook_demo/**": true
+  },
+  "files.exclude": {
+    "**/wandb": true,
+    "notebooks/wandb": true
+  },
+  "search.exclude": {
+    "**/wandb": true,
+    "**/models": true,
+    "**/data/synthetic": true,
+    "**/data/notebook_demo": true
+  },
+  "python.analysis.exclude": [
+    "**/wandb",
+    "**/models",
+    "**/data/synthetic",
+    "**/data/notebook_demo",
+    "**/.venv"
+  ]
+}

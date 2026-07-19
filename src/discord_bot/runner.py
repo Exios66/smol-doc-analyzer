@@ -60,10 +60,16 @@ def _overlay_secrets(raw: dict) -> dict:
             chloride_native = model.startswith(
                 ("google-gla:", "google-vertex:", "openai:", "anthropic:", "xai:", "groq:")
             ) and "/" not in model.split(":", 1)[-1]
-            if chloride_native or not model:
+            prefer_free = os.getenv("OPENROUTER_PREFER_FREE", "").strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
+            if chloride_native or not model or prefer_free:
                 data["AI_MODEL_NAME"] = (
                     os.getenv("DISCORD_AI_MODEL", "").strip()
-                    or "anthropic/claude-sonnet-4.5"
+                    or ("openrouter/free" if prefer_free else "anthropic/claude-sonnet-4.5")
                 )
 
     return data

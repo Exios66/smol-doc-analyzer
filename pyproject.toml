@@ -71,3 +71,19 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+# Keep basedpyright out of WandB run trees (symlink loops) and bulky
+# generated artifacts — they slow notebook analysis and can crash codeActions.
+# Do not also define [tool.pyright]; basedpyright rejects both sections.
+[tool.basedpyright]
+include = ["src", "evaluation", "tests", "scripts"]
+exclude = [
+  "**/wandb",
+  "**/__pycache__",
+  "**/.venv",
+  "**/venv",
+  "data",
+  "models",
+  "notebooks/.ipynb_checkpoints",
+]
+reportMissingImports = "warning"

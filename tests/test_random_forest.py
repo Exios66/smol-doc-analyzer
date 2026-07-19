@@ -9,9 +9,12 @@ import pandas as pd
 from src.classification.random_forest import (
     SURFACE_HANDWRITING_OCR,
     SURFACE_TYPED,
+    _largest_corpus_path,
     assign_split_column,
     build_document_type_pipeline,
     confidence_diagnostics,
+    corpus_n_from_path,
+    ensure_seed_corpus,
     evaluate_by_surface,
     evaluate_classifier,
     fit_pipeline_with_tree_curve,
@@ -391,6 +394,86 @@ def test_log_random_forest_emits_many_steps(monkeypatch):
     assert fake_run.summary.get("wandb/logged_steps", 0) >= 50
 
 
+def test_corpus_n_prefers_largest_file(tmp_path: Path):
+    small = tmp_path / "documents_from_skeletons_n240_seed42.jsonl"
+    large = tmp_path / "documents_from_skeletons_n2000_seed42.jsonl"
+    small.write_text("{}\n", encoding="utf-8")
+    large.write_text("{}\n", encoding="utf-8")
+    assert corpus_n_from_path(small) == 240
+    assert corpus_n_from_path(large) == 2000
+    assert _largest_corpus_path([small, large]) == large
+
+
+def test_ensure_seed_corpus_reuses_large_enough(tmp_path: Path, monkeypatch):
+    docs_dir = tmp_path / "documents"
+    noisy_dir = tmp_path / "noisy"
+    docs_dir.mkdir()
+    noisy_dir.mkdir()
+    docs = docs_dir / "documents_from_skeletons_n2000_seed42.jsonl"
+    noisy = noisy_dir / "noisy_from_documents_from_skeletons_n2000_seed42.jsonl"
+    docs.write_text("{}\n", encoding="utf-8")
+    noisy.write_text("{}\n", encoding="utf-8")
+
+    class _Cfg:
+        document_output_dir = docs_dir
+        noisy_output_dir = noisy_dir
+
+    monkeypatch.setattr(
+        "src.classification.random_forest.Config.load",
+        staticmethod(lambda: _Cfg()),
+    )
+    called: list[int] = []
+
+    def _fake_run_seed(**kwargs):
+        called.append(int(kwargs["n"]))
+        return {"documents": "x", "noisy": "y"}
+
+    monkeypatch.setattr(
+        "src.generation.run_seed_pipeline.run_seed",
+        _fake_run_seed,
+    )
+    paths = ensure_seed_corpus(n=2000, seed=42, log_wandb=False)
+    assert paths["generated"] == "false"
+    assert paths["n"] == "2000"
+    assert Path(paths["documents"]) == docs
+    assert called == []
+
+
+def test_ensure_seed_corpus_regenerates_when_too_small(tmp_path: Path, monkeypatch):
+    docs_dir = tmp_path / "documents"
+    noisy_dir = tmp_path / "noisy"
+    docs_dir.mkdir()
+    noisy_dir.mkdir()
+    (docs_dir / "documents_from_skeletons_n240_seed42.jsonl").write_text(
+        "{}\n", encoding="utf-8"
+    )
+
+    class _Cfg:
+        document_output_dir = docs_dir
+        noisy_output_dir = noisy_dir
+
+    monkeypatch.setattr(
+        "src.classification.random_forest.Config.load",
+        staticmethod(lambda: _Cfg()),
+    )
+
+    def _fake_run_seed(**kwargs):
+        assert kwargs["n"] == 2000
+        return {"documents": str(docs_dir / "new.jsonl"), "noisy": str(noisy_dir / "new.jsonl")}
+
+    monkeypatch.setattr(
+        "src.generation.run_seed_pipeline.run_seed",
+        _fake_run_seed,
+    )
+    monkeypatch.setattr(
+        "src.utils.wandb_utils.load_wandb_settings",
+        lambda enabled=False: object(),
+    )
+    paths = ensure_seed_corpus(n=2000, seed=42, log_wandb=False)
+    assert paths["generated"] == "true"
+    assert paths["n"] == "2000"
+
+
 def test_notebook_exists():
     nb = Path("notebooks/random_forest_text_handwriting_classification.ipynb")
     assert nb.exists()
@@ -400,3 +483,5 @@ def test_notebook_exists():
     assert "train_rf_multilayer" in text
     assert "rf-notebook-multilayer" in text
     assert "DEFAULT_PRESET_NAMES" in text
+    assert "SEED_N = 2000" in text
+    assert "seed_n=SEED_N" in text

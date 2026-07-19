@@ -59,6 +59,7 @@ Corpus seeding does **not** open a WandB run from this notebook.
             """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -76,8 +77,9 @@ if not (REPO_ROOT / "src").exists():
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-# Drop cached src.* modules so kernels pick up code edits (reload is not enough
-# when an older random_forest without DEFAULT_PRESET_NAMES is already loaded).
+# Drop cached src.* modules. A long-lived kernel can keep an older
+# random_forest (without DEFAULT_PRESET_NAMES) in sys.modules; importlib.reload
+# alone is not enough if train_random_forest imports names from that stale copy.
 for _mod_name in list(sys.modules):
     if _mod_name == "src" or _mod_name.startswith("src."):
         del sys.modules[_mod_name]
@@ -86,6 +88,7 @@ from src.classification.random_forest import (
     DEFAULT_PRESET_NAMES,
     SURFACE_HANDWRITING_OCR,
     SURFACE_TYPED,
+    as_str_list,
     assign_split_column,
     build_document_type_pipeline,
     ensure_seed_corpus,
@@ -97,31 +100,54 @@ from src.classification.random_forest import (
 )
 from src.classification.train_random_forest import train as train_rf_multilayer
 from src.utils.config import Config
+from src.utils.llm_client import DEFAULT_FREE_FALLBACK_MODELS
 from src.utils.wandb_utils import load_wandb_settings
+
+# OpenRouter routing for corpus seeding / Stage A–B:
+# - On HTTP 402 / "requires more credits", GenerationClient sticky-routes to free models.
+# - PREFER_FREE_OPENROUTER=True skips paid GENERATION_MODEL entirely (best when credits are gone).
+PREFER_FREE_OPENROUTER = True  # set False to try GENERATION_MODEL first, then free on 402
+os.environ.setdefault(
+    "OPENROUTER_FREE_FALLBACK_MODELS",
+    ",".join(DEFAULT_FREE_FALLBACK_MODELS),
+)
+if PREFER_FREE_OPENROUTER:
+    os.environ["OPENROUTER_PREFER_FREE"] = "1"
+else:
+    os.environ.setdefault("OPENROUTER_PREFER_FREE", "0")
 
 pd.set_option("display.max_colwidth", 120)
 sns.set_theme(style="whitegrid", context="notebook")
 cfg = Config.load()
 print("repo:", REPO_ROOT)
+print("presets:", DEFAULT_PRESET_NAMES)
 print("documents dir:", cfg.document_output_dir)
 print("noisy dir:", cfg.noisy_output_dir)
+print(f"OpenRouter key set: {bool(cfg.openrouter_api_key)}")
+print(f"generation model: {cfg.generation_model}")
+print(f"prefer free: {cfg.openrouter_prefer_free}")
+print(f"free fallbacks: {list(cfg.openrouter_free_fallback_models)}")
 """
         ),
         md(
             """
 ## 2. Ensure corpus (text + handwriting/OCR noise)
 
-If synthetic documents are missing, regenerate a seeded corpus (template mode; no API key required).
+Uses `SEED_N=2000` typed documents (~4000 rows with OCR variants). Regenerates when the largest existing corpus is smaller than `SEED_N`.
+
+If `OPENROUTER_API_KEY` is set, Stage A/B may call OpenRouter. With the setup cell above, this notebook prefers **free** OpenRouter models (`openrouter/free` and `:free` fallbacks) so generation still works when paid credits are unavailable; otherwise it falls back to templates.
 """
         ),
         code(
             """
-SEED_N = 240
+# Target typed-document count (noisy OCR variants are generated 1:1 → ~2× rows).
+SEED_N = 2000
 SEED = 42
 
-# log_wandb=False: don't open a seed_pipeline WandB run from this notebook
+# Regenerates when the largest existing corpus is smaller than SEED_N.
 corpus_paths = ensure_seed_corpus(n=SEED_N, seed=SEED, log_wandb=False)
 display(pd.Series(corpus_paths, name="path").to_frame())
+print(f"requested SEED_N={SEED_N:,} | corpus n={corpus_paths.get('n', '?')} | generated={corpus_paths.get('generated')}")
 """
         ),
         md("## 3. Load typed + handwriting/OCR documents"),
@@ -191,8 +217,8 @@ print(f"TF-IDF vocabulary size: {len(doc_clf.named_steps['tfidf'].vocabulary_):,
             """
 doc_metrics = evaluate_classifier(
     doc_clf,
-    test_df["text"],
-    test_df["document_type"],
+    as_str_list(test_df["text"]),
+    as_str_list(test_df["document_type"]),
     labels=list(doc_clf.classes_),
 )
 
@@ -211,7 +237,9 @@ fig, ax = plt.subplots(figsize=(9, 7))
 ConfusionMatrixDisplay(
     confusion_matrix=np.asarray(doc_metrics["confusion_matrix"]),
     display_labels=doc_metrics["labels"],
-).plot(ax=ax, xticks_rotation=45, colorbar=True, cmap="Blues")
+).plot(ax=ax, colorbar=True, cmap="Blues")
+# sklearn stubs type xticks_rotation as str only; set degrees on the axes instead.
+ax.tick_params(axis="x", labelrotation=45)
 ax.set_title("Document-type Random Forest — test confusion matrix")
 plt.tight_layout()
 plt.show()
@@ -223,7 +251,10 @@ plt.show()
 surface_rows = []
 for surface, group in test_df.groupby("surface"):
     m = evaluate_classifier(
-        doc_clf, group["text"], group["document_type"], labels=list(doc_clf.classes_)
+        doc_clf,
+        as_str_list(group["text"]),
+        as_str_list(group["document_type"]),
+        labels=list(doc_clf.classes_),
     )
     surface_rows.append(
         {
@@ -257,16 +288,23 @@ Generate class predictions + confidence for every test document.
 y_pred = doc_metrics["predictions"]
 y_conf = doc_metrics["max_proba"]
 
-pred_df = test_df[["record_id", "claim_id", "surface", "document_type"]].copy()
-pred_df = pred_df.rename(columns={"document_type": "true_label"})
-pred_df["predicted_label"] = y_pred
-pred_df["confidence"] = y_conf
+# Build columns explicitly to avoid brittle pandas-stubs rename overloads.
+pred_df = pd.DataFrame(
+    {
+        "record_id": test_df["record_id"].to_numpy(),
+        "claim_id": test_df["claim_id"].to_numpy(),
+        "surface": test_df["surface"].to_numpy(),
+        "true_label": test_df["document_type"].to_numpy(),
+        "predicted_label": y_pred,
+        "confidence": y_conf,
+    }
+)
 pred_df["correct"] = pred_df["true_label"] == pred_df["predicted_label"]
 
-print("prediction accuracy:", round(float(pred_df["correct"].mean()), 4))
+print("prediction accuracy:", round(float(pred_df["correct"].to_numpy(dtype=float).mean()), 4))
 display(pred_df.head(10))
 
-mistakes = pred_df[~pred_df["correct"]].sort_values("confidence", ascending=False)
+mistakes = pred_df.loc[~pred_df["correct"]].sort_values(by="confidence", ascending=False)
 print(f"\\nmisclassified: {len(mistakes)} / {len(pred_df)}")
 display(mistakes.head(10))
 """
@@ -300,12 +338,12 @@ surface_clf = build_document_type_pipeline(
     ngram_range=(1, 2),
     random_state=42,
 )
-surface_clf.fit(fit_df["text"], fit_df["surface"])
+surface_clf.fit(as_str_list(fit_df["text"]), as_str_list(fit_df["surface"]))
 
 surface_eval = evaluate_classifier(
     surface_clf,
-    test_df["text"],
-    test_df["surface"],
+    as_str_list(test_df["text"]),
+    as_str_list(test_df["surface"]),
     labels=[SURFACE_TYPED, SURFACE_HANDWRITING_OCR],
 )
 print(f"Surface accuracy : {surface_eval['accuracy']:.4f}")

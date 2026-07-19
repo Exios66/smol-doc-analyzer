@@ -99,6 +99,10 @@ class Config:
     max_retries: int
     openrouter_app_url: str
     openrouter_app_name: str
+    # When paid OpenRouter credits are exhausted (HTTP 402), route to these free models.
+    openrouter_free_fallback_models: tuple[str, ...]
+    # Start on free models immediately (skip paid GENERATION_MODEL).
+    openrouter_prefer_free: bool
 
     skeleton_output_dir: Path
     document_output_dir: Path
@@ -152,6 +156,21 @@ class Config:
             os.environ.setdefault("HF_TOKEN", hf_token)
             os.environ.setdefault("HUGGING_FACE_HUB_TOKEN", hf_token)
 
+        free_raw = os.getenv("OPENROUTER_FREE_FALLBACK_MODELS", "").strip()
+        if free_raw:
+            free_fallbacks = tuple(m.strip() for m in free_raw.split(",") if m.strip())
+        else:
+            # Keep in sync with src.utils.llm_client.DEFAULT_FREE_FALLBACK_MODELS
+            free_fallbacks = (
+                "openrouter/free",
+                "meta-llama/llama-3.2-3b-instruct:free",
+                "openai/gpt-oss-20b:free",
+            )
+        prefer_free = any(
+            os.getenv(k, "").strip().lower() in {"1", "true", "yes", "on"}
+            for k in ("OPENROUTER_PREFER_FREE", "GENERATION_PREFER_FREE")
+        )
+
         return cls(
             openrouter_api_key=openrouter_key,
             generation_model=os.getenv("GENERATION_MODEL", "anthropic/claude-sonnet-4.5"),
@@ -159,6 +178,8 @@ class Config:
             max_retries=int(os.getenv("GENERATION_MAX_RETRIES", "5")),
             openrouter_app_url=os.getenv("OPENROUTER_APP_URL", ""),
             openrouter_app_name=os.getenv("OPENROUTER_APP_NAME", ""),
+            openrouter_free_fallback_models=free_fallbacks,
+            openrouter_prefer_free=prefer_free,
             skeleton_output_dir=_path("SKELETON_OUTPUT_DIR", "data/synthetic/skeletons"),
             document_output_dir=_path("DOCUMENT_OUTPUT_DIR", "data/synthetic/documents"),
             memo_output_dir=_path("MEMO_OUTPUT_DIR", "data/synthetic/memos"),

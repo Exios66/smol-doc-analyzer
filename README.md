@@ -23,7 +23,7 @@ Phases 0–3 and Phase 5 (chained inference orchestrator) implemented, plus a
 paper-aligned DICIE path:
 
 - Characteristic profiles from public document/layout/legal-style priors
-- Synthetic skeleton → document → memo → OCR-noise pipeline (template fallback; optional OpenRouter LLM)
+- Synthetic skeleton → document → memo → OCR-noise pipeline (optional OpenRouter LLM; auto-routes to free models on credit exhaustion, else template fallback)
 - Document-type classifier train/eval (text DeBERTa + optional ViT image path)
 - Field extraction train/eval with noisy stress reporting
 - **DICIE (Fig. 1)**: document processing → classification → information extraction → aggregated response (`src/docie/`) for medical bills and salvage claims

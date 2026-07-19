@@ -397,26 +397,48 @@ def fit_pipeline_with_tree_curve(
     return history
 
 
+def as_str_list(values: Any) -> list[str]:
+    """Normalize pandas column selections / array-likes to ``list[str]``.
+
+    Use at call sites when basedpyright types ``df[col]`` as
+    ``Series | DataFrame | ndarray | Any`` (too wide for narrow annotations).
+    """
+    if isinstance(values, pd.DataFrame):
+        if values.shape[1] != 1:
+            raise TypeError(
+                f"Expected a single column for labels/texts, got shape {values.shape}"
+            )
+        values = values.iloc[:, 0]
+    if isinstance(values, pd.Series):
+        return [str(v) for v in values.fillna("").tolist()]
+    return [str(v) for v in list(values)]
+
+
 def evaluate_classifier(
     model: Pipeline,
-    texts: list[str] | pd.Series,
-    y_true: list[str] | pd.Series,
+    texts: Any,
+    y_true: Any,
     labels: list[str] | None = None,
 ) -> dict[str, Any]:
-    y_pred = model.predict(texts)
+    # Normalize at the boundary so callers may pass Series / list / ndarray.
+    text_values = as_str_list(texts)
+    true_values = as_str_list(y_true)
+    y_pred = model.predict(text_values)
     y_proba = None
     if hasattr(model, "predict_proba"):
-        y_proba = model.predict_proba(texts)
-    label_list = labels or sorted(set(list(y_true)) | set(list(y_pred)))
+        y_proba = model.predict_proba(text_values)
+    label_list = labels or sorted(set(true_values) | set(list(y_pred)))
     report = classification_report(
-        y_true, y_pred, labels=label_list, output_dict=True, zero_division=0
+        true_values, y_pred, labels=label_list, output_dict=True, zero_division=0
     )
-    cm = confusion_matrix(y_true, y_pred, labels=label_list)
+    cm = confusion_matrix(true_values, y_pred, labels=label_list)
     metrics = {
-        "accuracy": float(accuracy_score(y_true, y_pred)),
-        "macro_f1": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
-        "weighted_f1": float(f1_score(y_true, y_pred, average="weighted", zero_division=0)),
-        "n": int(len(y_true)),
+        "accuracy": float(accuracy_score(true_values, y_pred)),
+        "macro_f1": float(f1_score(true_values, y_pred, average="macro", zero_division=0)),
+        "weighted_f1": float(
+            f1_score(true_values, y_pred, average="weighted", zero_division=0)
+        ),
+        "n": int(len(true_values)),
         "labels": label_list,
         "classification_report": report,
         "confusion_matrix": cm.tolist(),
