@@ -29,8 +29,13 @@ FIELD_PATTERNS: dict[str, list[re.Pattern[str]]] = {
     ],
     "name": [
         re.compile(
-            r"\b(?:patient\s*name|insured\s*name|claimant\s*name|name)\s*[:#]?\s*"
-            r"([A-Z][A-Za-z'`\-\.]+(?:\s+[A-Z][A-Za-z'`\-\.]+){0,3})",
+            r"\b(?:patient\s*name|insured\s*name|claimant\s*name|patient\s*name)\s*[:#]\s*"
+            r"([A-Z][A-Za-z'`\-\.]+(?:\s+[A-Z][A-Za-z'`\-\.]*){0,3})",
+            re.I,
+        ),
+        re.compile(
+            r"\b(?:patient|name)\s*[:#]\s*"
+            r"([A-Z][A-Za-z'`\-\.]+(?:\s+[A-Z][A-Za-z'`\-\.]*){0,3})",
             re.I,
         ),
     ],
@@ -68,16 +73,30 @@ FIELD_PATTERNS: dict[str, list[re.Pattern[str]]] = {
             r"\b(?:year|model\s*year|yr)\s*[:#]?\s*((?:19|20)\d{2})\b",
             re.I,
         ),
+        # "Vehicle: 2015 Ford Focus"
+        re.compile(
+            r"\bvehicle\s*[:#]\s*((?:19|20)\d{2})\s+[A-Za-z]",
+            re.I,
+        ),
     ],
     "make": [
         re.compile(
             r"\b(?:make|manufacturer)\s*[:#]?\s*([A-Za-z][A-Za-z0-9\- ]{1,20})",
             re.I,
         ),
+        re.compile(
+            r"\bvehicle\s*[:#]\s*(?:19|20)\d{2}\s+([A-Za-z][A-Za-z0-9\-]*)",
+            re.I,
+        ),
     ],
     "model": [
         re.compile(
             r"\b(?:model)\s*[:#]?\s*([A-Za-z0-9][A-Za-z0-9\- ]{1,30})",
+            re.I,
+        ),
+        re.compile(
+            r"\bvehicle\s*[:#]\s*(?:19|20)\d{2}\s+[A-Za-z][A-Za-z0-9\-]*\s+"
+            r"([A-Za-z0-9][A-Za-z0-9\- ]{1,30})",
             re.I,
         ),
     ],
@@ -123,9 +142,18 @@ FIELD_PATTERNS: dict[str, list[re.Pattern[str]]] = {
 }
 
 
+_NEXT_FIELD_CUT = re.compile(
+    r"\s*\b(?:claim\s*(?:number|no\.?|id)?|vin|make|model|year|name|dob|"
+    r"date\s*of\s*birth|patient\s*id|address|carrier|physician|type\s*of\s*bill|"
+    r"revenue\s*code|payoff|purchase\s*price|sales\s*tax|sold\s*to|buyer)\b.*$",
+    re.I,
+)
+
+
 def _clean_value(value: str) -> str:
     value = value.strip().strip(".,;: ")
-    value = re.sub(r"\s+", " ", value)
+    value = _NEXT_FIELD_CUT.sub("", value)
+    value = re.sub(r"\s+", " ", value).strip()
     return value
 
 
@@ -141,9 +169,21 @@ def heuristic_extract(text: str, fields: list[str]) -> dict[str, list[str]]:
                 if not val:
                     continue
                 # Avoid capturing the next label as a value
-                if re.match(r"^(claim|vin|make|model|year|name|dob|address)\b", val, re.I):
+                if re.match(
+                    r"^(claim|vin|make|model|year|name|dob|address|patient)\b",
+                    val,
+                    re.I,
+                ):
                     continue
-                if val not in found:
+                # Name / make / model: drop trailing noise tokens
+                if field in {"name", "make", "model"}:
+                    val = re.split(
+                        r"\s+(?:Claim|VIN|Year|Make|Model|DOB|Address|Carrier|PID|MRN)\b",
+                        val,
+                        maxsplit=1,
+                        flags=re.I,
+                    )[0].strip()
+                if val and val not in found:
                     found.append(val)
         if found:
             out[field] = found

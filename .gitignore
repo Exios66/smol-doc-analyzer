@@ -6,6 +6,39 @@ venv/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.tox/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Notebook checkpoints and local execute dumps
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+*.executed.ipynb
+
+# Logs (runtime / debug; not source of truth)
+*.log
+logs/
+**/logs/
+
+# Experiment trackers (W&B, Trackio, local run dirs)
+wandb/
+**/wandb/
+.wandb/
+trackio/
+**/trackio/
+runs/
+mlruns/
 
 # Chloride Discord bot workspace secrets / runtime state
 discord/**/config.yaml
@@ -36,12 +69,14 @@ models/**
 *.bin
 *.safetensors
 
+# Notebook walkthrough regenerable outputs (page caches, batch dumps, PDFs)
+data/notebook_demo/docie/
+data/notebook_demo/**/cache/
+
 # Eval harness run artifacts (JSONL/CSV cost logs)
 evaluation/results/**
 !evaluation/results/.gitkeep
 results/eval_run_*/
-
-.DS_Store
 
 # Discord agent runtime data
 data/discord/**

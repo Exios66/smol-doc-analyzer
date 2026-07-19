@@ -44,6 +44,10 @@ Train a **TF-IDF + Random Forest** classifier on the smol-doc-analyzer synthetic
 2. Secondary: predict surface style (`typed` vs `handwriting_ocr`)
 
 This notebook is a lightweight classical baseline alongside the DeBERTa / ViT deep classifiers.
+
+After evaluation, metrics (accuracy, F1, confusion matrix, per-class table) are logged to
+**Weights & Biases** under project `smol-doc-analyzer` with job type `train` /
+run name `rf-notebook-…`. Corpus seeding does **not** open a WandB run from this notebook.
 """
         ),
         md("## 1. Setup"),
@@ -76,11 +80,13 @@ from src.classification.random_forest import (
     ensure_seed_corpus,
     evaluate_classifier,
     load_text_handwriting_corpus,
+    log_random_forest_to_wandb,
     save_random_forest_bundle,
     top_tfidf_feature_importances,
     write_predictions_jsonl,
 )
 from src.utils.config import Config
+from src.utils.wandb_utils import load_wandb_settings
 
 pd.set_option("display.max_colwidth", 120)
 sns.set_theme(style="whitegrid", context="notebook")
@@ -102,7 +108,8 @@ If synthetic documents are missing, regenerate a seeded corpus (template mode; n
 SEED_N = 240
 SEED = 42
 
-corpus_paths = ensure_seed_corpus(n=SEED_N, seed=SEED)
+# log_wandb=False: don't open a seed_pipeline WandB run from this notebook
+corpus_paths = ensure_seed_corpus(n=SEED_N, seed=SEED, log_wandb=False)
 display(pd.Series(corpus_paths, name="path").to_frame())
 """
         ),
@@ -381,6 +388,36 @@ md_report = "\\n".join(
 print("saved model bundle ->", out_dir)
 print("saved eval report  ->", report_dir / "random_forest_classification_report.md")
 display(pd.Series(meta, name="value").to_frame())
+
+# Log classifier metrics (not corpus seeding) to Weights & Biases
+wb_settings = load_wandb_settings()
+log_random_forest_to_wandb(
+    doc_metrics=doc_metrics,
+    surface_metrics=surface_eval,
+    config={
+        "n_estimators": int(doc_clf.named_steps["rf"].n_estimators),
+        "tfidf_max_features": int(doc_clf.named_steps["tfidf"].max_features or 0),
+        "n_fit": int(len(fit_df)),
+        "n_test": int(len(test_df)),
+        "docs_path": frame.attrs.get("docs_path"),
+        "noisy_path": frame.attrs.get("noisy_path"),
+        "source": "notebook",
+    },
+    y_true=test_df["document_type"].tolist(),
+    artifact_paths=[
+        out_dir / "eval_metrics.json",
+        out_dir / "train_meta.json",
+        report_dir / "random_forest_classification_report.md",
+    ],
+    wandb_settings=wb_settings,
+    run_name="rf-notebook-random-forest-classifier",
+)
+print(
+    "WandB:",
+    f"enabled={wb_settings.enabled}",
+    f"mode={wb_settings.mode}",
+    f"project={wb_settings.project}",
+)
 '''
         ),
         md(

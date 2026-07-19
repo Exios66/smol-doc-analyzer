@@ -13,12 +13,14 @@ from src.classification.random_forest import (
     build_document_type_pipeline,
     evaluate_classifier,
     load_text_handwriting_corpus,
+    log_random_forest_to_wandb,
     save_random_forest_bundle,
     top_tfidf_feature_importances,
     write_predictions_jsonl,
 )
 from src.utils.config import Config
 from src.utils.io import write_jsonl
+from src.utils.wandb_utils import load_wandb_settings
 
 
 def _write_mini_corpus(tmp: Path) -> tuple[Path, Path]:
@@ -105,9 +107,28 @@ def test_load_and_train_random_forest(tmp_path: Path):
     assert (out / "preds.jsonl").exists()
 
 
+def test_log_random_forest_to_wandb_noop_when_disabled(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("WANDB_MODE", "disabled")
+    docs_path, noisy_path = _write_mini_corpus(tmp_path)
+    frame = load_text_handwriting_corpus(docs_path=docs_path, noisy_path=noisy_path)
+    model = build_document_type_pipeline(n_estimators=20, max_features=500, random_state=0)
+    model.named_steps["tfidf"].set_params(min_df=1)
+    model.fit(frame["text"], frame["document_type"])
+    metrics = evaluate_classifier(model, frame["text"], frame["document_type"])
+    log_random_forest_to_wandb(
+        doc_metrics=metrics,
+        surface_metrics=None,
+        config={"smoke": True},
+        y_true=frame["document_type"].tolist(),
+        wandb_settings=load_wandb_settings(enabled=False),
+        run_name="rf-test-disabled",
+    )
+
+
 def test_notebook_exists():
     nb = Path("notebooks/random_forest_text_handwriting_classification.ipynb")
     assert nb.exists()
     text = nb.read_text(encoding="utf-8")
     assert "RandomForest" in text or "random_forest" in text
     assert "handwriting" in text.lower()
+    assert "log_random_forest_to_wandb" in text

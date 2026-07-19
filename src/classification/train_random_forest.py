@@ -17,11 +17,13 @@ from src.classification.random_forest import (
     ensure_seed_corpus,
     evaluate_classifier,
     load_text_handwriting_corpus,
+    log_random_forest_to_wandb,
     save_random_forest_bundle,
     write_predictions_jsonl,
 )
 from src.utils.config import Config
 from src.utils.provenance import ProvenanceRecord, log_provenance
+from src.utils.wandb_utils import add_wandb_cli_flags, settings_from_args
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +36,13 @@ def train(
     n_estimators: int = 300,
     seed_n: int = 240,
     ensure_data: bool = True,
+    wandb_settings=None,
+    wandb_run_name: str | None = None,
 ) -> Path:
     cfg = cfg or Config.load()
     if ensure_data:
-        ensure_seed_corpus(n=seed_n, seed=42)
+        # Keep seed generation out of this experiment's WandB run.
+        ensure_seed_corpus(n=seed_n, seed=42, log_wandb=False)
 
     frame = load_text_handwriting_corpus(docs_path=docs_path, noisy_path=noisy_path, cfg=cfg)
     frame = assign_split_column(frame)
@@ -52,7 +57,9 @@ def train(
         model, test_df["text"], test_df["document_type"], labels=list(model.classes_)
     )
 
-    surface_model = build_document_type_pipeline(n_estimators=max(100, n_estimators // 2), random_state=42)
+    surface_model = build_document_type_pipeline(
+        n_estimators=max(100, n_estimators // 2), random_state=42
+    )
     surface_model.fit(fit_df["text"], fit_df["surface"])
     surface_metrics = evaluate_classifier(
         surface_model,
@@ -103,6 +110,27 @@ def train(
         encoding="utf-8",
     )
 
+    log_random_forest_to_wandb(
+        doc_metrics=metrics,
+        surface_metrics=surface_metrics,
+        config={
+            "n_estimators": n_estimators,
+            "n_fit": int(len(fit_df)),
+            "n_test": int(len(test_df)),
+            "docs_path": frame.attrs.get("docs_path"),
+            "noisy_path": frame.attrs.get("noisy_path"),
+            "out_dir": str(out),
+        },
+        y_true=test_df["document_type"].tolist(),
+        artifact_paths=[
+            out / "eval_metrics.json",
+            out / "train_meta.json",
+            report,
+        ],
+        wandb_settings=wandb_settings,
+        run_name=wandb_run_name or f"rf-train-{out.name}",
+    )
+
     log_provenance(
         cfg.provenance_log_path,
         ProvenanceRecord(
@@ -133,6 +161,7 @@ def main() -> None:
     parser.add_argument("--n-estimators", type=int, default=300)
     parser.add_argument("--seed-n", type=int, default=240)
     parser.add_argument("--no-ensure-data", action="store_true")
+    add_wandb_cli_flags(parser)
     args = parser.parse_args()
     print(
         train(
@@ -142,6 +171,8 @@ def main() -> None:
             n_estimators=args.n_estimators,
             seed_n=args.seed_n,
             ensure_data=not args.no_ensure_data,
+            wandb_settings=settings_from_args(args),
+            wandb_run_name=args.wandb_run_name,
         )
     )
 

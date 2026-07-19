@@ -5,17 +5,14 @@ Scores raw eval_results.jsonl records per task and produces a per-(task,
 backend) summary table -- the direct input to the cost model spreadsheet's
 "Eval Results" sheet.
 
-Classification: exact-match accuracy + macro F1 across taxonomy labels.
-Extraction: field-level precision/recall/F1 against the synthetic ground
-    truth skeleton (exact match by default; swap in a fuzzy/normalized
-    comparator for free-text fields like addresses).
-Memo generation: no single ground-truth string exists, so score via:
-    (a) rubric coverage -- did the memo include the required fields
-        (claim number, coverage determination, next steps, etc.)
-    (b) LLM-judge score -- a frontier model rates 1-5 on accuracy/
-        completeness/tone against the source documents (use the
-        *same* judge model across all three backends' outputs to keep
-        scoring fair, and log judge cost separately from generation cost).
+Paper-aligned (Raj, Dickinson & Fung — DICIE):
+  Classification: accuracy + AUC (OVR / OVO) + confusion matrix (Table I).
+  Extraction: per-field precision / recall / F1 = 2PR/(P+R) (Table II).
+
+Also retained for the cost harness / ACORD path:
+  Classification: macro / micro / weighted F1.
+  Extraction: field-level micro-F1 aggregates.
+  Memo generation: rubric coverage + optional LLM-judge.
 """
 
 from __future__ import annotations
@@ -25,9 +22,11 @@ import csv
 import json
 import re
 from collections import defaultdict
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
+
+import numpy as np
 
 
 @dataclass
@@ -37,13 +36,19 @@ class TaskBackendSummary:
     model_id: str
     n_examples: int
     accuracy: float | None  # classification
-    macro_f1: float | None  # classification / extraction
+    macro_f1: float | None  # classification macro F1 / extraction micro-F1 (legacy key)
     judge_score_avg: float | None  # memo_generation (1-5 scale)
     rubric_coverage: float | None  # memo_generation (0-1, required fields present)
     avg_latency_seconds: float
     total_cost_usd: float
     avg_cost_per_doc_usd: float
     error_rate: float
+    # Paper / extended metrics (optional; omitted from older CSV consumers via default)
+    micro_f1: float | None = None
+    weighted_f1: float | None = None
+    auc_ovr: float | None = None
+    auc_ovo: float | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 DEFAULT_FUZZY_FIELDS = frozenset(
@@ -54,6 +59,8 @@ DEFAULT_FUZZY_FIELDS = frozenset(
         "insured",
         "adjuster_assigned",
         "description",
+        "name",
+        "address",
     }
 )
 
@@ -115,86 +122,220 @@ def _values_equal(p_val: Any, t_val: Any, *, fuzzy: bool) -> bool:
     return str(p_val).strip() == str(t_val).strip()
 
 
-def score_classification(records: list[dict]) -> tuple[float, float]:
-    normalized = [
-        {
-            **r,
-            "prediction": normalize_label(r.get("prediction")),
-            "ground_truth": normalize_label(r.get("ground_truth")),
-        }
-        for r in records
-    ]
-    correct = sum(1 for r in normalized if r["prediction"] == r["ground_truth"])
-    accuracy = correct / len(normalized) if normalized else 0.0
+def _f1(precision: float, recall: float) -> float:
+    """Harmonic mean of precision and recall (paper Table II F1)."""
+    if precision + recall <= 0:
+        return 0.0
+    return 2.0 * precision * recall / (precision + recall)
 
-    labels = sorted({r["ground_truth"] for r in normalized if r["ground_truth"]})
-    f1s = []
+
+def _normalize_score_row(
+    scores: dict[str, float] | None,
+    labels: Sequence[str],
+) -> list[float]:
+    """Convert a label→score map into a simplex over ``labels``."""
+    raw = [float((scores or {}).get(lab, 0.0)) for lab in labels]
+    total = sum(max(0.0, v) for v in raw)
+    if total <= 0:
+        # Uniform when no scores (avoids AUC crash on empty rows).
+        n = len(labels) or 1
+        return [1.0 / n] * len(labels)
+    return [max(0.0, v) / total for v in raw]
+
+
+def classification_metrics(
+    y_true: Sequence[str],
+    y_pred: Sequence[str],
+    *,
+    y_scores: Sequence[dict[str, float]] | None = None,
+    labels: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """
+    Paper Table I metrics (+ secondary F1 diagnostics).
+
+    Returns accuracy, auc_ovr, auc_ovo, confusion_matrix, and macro/micro/weighted F1.
+    AUC requires per-example score dicts (``y_scores``); otherwise AUC fields are None.
+    """
+    from sklearn.metrics import (
+        accuracy_score,
+        confusion_matrix,
+        f1_score,
+        roc_auc_score,
+    )
+
+    true_n = [normalize_label(v) for v in y_true]
+    pred_n = [normalize_label(v) for v in y_pred]
+    if labels is None:
+        labels = sorted({*true_n, *pred_n} - {""})
+    else:
+        labels = [normalize_label(x) for x in labels]
+
+    if not true_n:
+        return {
+            "accuracy": 0.0,
+            "auc_ovr": None,
+            "auc_ovo": None,
+            "macro_f1": 0.0,
+            "micro_f1": 0.0,
+            "weighted_f1": 0.0,
+            "labels": list(labels),
+            "confusion_matrix": [],
+            "per_class": {},
+            "n": 0,
+        }
+
+    acc = float(accuracy_score(true_n, pred_n))
+    cm = confusion_matrix(true_n, pred_n, labels=list(labels)).tolist()
+    macro = float(f1_score(true_n, pred_n, labels=list(labels), average="macro", zero_division=0))
+    micro = float(f1_score(true_n, pred_n, labels=list(labels), average="micro", zero_division=0))
+    weighted = float(
+        f1_score(true_n, pred_n, labels=list(labels), average="weighted", zero_division=0)
+    )
+
+    per_class: dict[str, dict[str, float]] = {}
     for label in labels:
-        tp = sum(
-            1
-            for r in normalized
-            if r["prediction"] == label and r["ground_truth"] == label
-        )
-        fp = sum(
-            1
-            for r in normalized
-            if r["prediction"] == label and r["ground_truth"] != label
-        )
-        fn = sum(
-            1
-            for r in normalized
-            if r["prediction"] != label and r["ground_truth"] == label
-        )
+        tp = sum(1 for t, p in zip(true_n, pred_n) if t == label and p == label)
+        fp = sum(1 for t, p in zip(true_n, pred_n) if t != label and p == label)
+        fn = sum(1 for t, p in zip(true_n, pred_n) if t == label and p != label)
+        support = sum(1 for t in true_n if t == label)
         precision = tp / (tp + fp) if (tp + fp) else 0.0
         recall = tp / (tp + fn) if (tp + fn) else 0.0
-        f1 = (
-            2 * precision * recall / (precision + recall)
-            if (precision + recall)
-            else 0.0
-        )
-        f1s.append(f1)
-    macro_f1 = sum(f1s) / len(f1s) if f1s else 0.0
-    return accuracy, macro_f1
+        per_class[label] = {
+            "precision": precision,
+            "recall": recall,
+            "f1": _f1(precision, recall),
+            "support": float(support),
+        }
+
+    auc_ovr = auc_ovo = None
+    if y_scores is not None and len(y_scores) == len(true_n) and len(labels) >= 2:
+        try:
+            proba = np.asarray(
+                [_normalize_score_row(s, labels) for s in y_scores], dtype=float
+            )
+            # sklearn needs at least one positive example per class for OVR.
+            present = {t for t in true_n}
+            if len(present) >= 2:
+                auc_ovr = float(
+                    roc_auc_score(true_n, proba, multi_class="ovr", labels=list(labels))
+                )
+                auc_ovo = float(
+                    roc_auc_score(true_n, proba, multi_class="ovo", labels=list(labels))
+                )
+        except ValueError:
+            auc_ovr = auc_ovo = None
+
+    return {
+        "accuracy": acc,
+        "auc_ovr": auc_ovr,
+        "auc_ovo": auc_ovo,
+        "macro_f1": macro,
+        "micro_f1": micro,
+        "weighted_f1": weighted,
+        "labels": list(labels),
+        "confusion_matrix": cm,
+        "per_class": per_class,
+        "n": len(true_n),
+    }
 
 
-def score_extraction(
-    records: list[dict], fuzzy_fields: set[str] | None = None
-) -> float:
-    """Field-level micro-F1 across all examples.
+def extraction_metrics(
+    records: list[dict],
+    fuzzy_fields: set[str] | None = None,
+    *,
+    fields: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """
+    Paper Table II metrics: per-field precision / recall / F1 (harmonic mean).
 
-    ``fuzzy_fields`` get normalized (lowercase, whitespace-collapsed) comparison
-    instead of exact match.
-
+    Also returns micro- and macro-averaged aggregates over fields.
     A wrong predicted value against a present ground-truth value counts as both
     a false positive and a false negative (standard multi-label micro-F1).
     """
     if fuzzy_fields is None:
         fuzzy_fields = set(DEFAULT_FUZZY_FIELDS)
-    tp = fp = fn = 0
+
+    counts: dict[str, dict[str, int]] = defaultdict(lambda: {"tp": 0, "fp": 0, "fn": 0})
+    seen_fields: list[str] = []
+
     for r in records:
-        pred = r["prediction"] if isinstance(r["prediction"], dict) else {}
-        truth = r["ground_truth"] if isinstance(r["ground_truth"], dict) else {}
-        # Ignore harness parse-error markers.
+        pred = r["prediction"] if isinstance(r.get("prediction"), dict) else {}
+        truth = r["ground_truth"] if isinstance(r.get("ground_truth"), dict) else {}
         pred = {k: v for k, v in pred.items() if not str(k).startswith("_")}
-        all_fields = set(pred) | set(truth)
-        for field in all_fields:
-            p_val, t_val = _as_comparable(pred.get(field)), _as_comparable(truth.get(field))
-            fuzzy = field in fuzzy_fields
+        if fields is not None:
+            all_fields = list(fields)
+        else:
+            all_fields = sorted(set(pred) | set(truth))
+            for fname in all_fields:
+                if fname not in seen_fields:
+                    seen_fields.append(fname)
+        for fname in all_fields:
+            p_val = _as_comparable(pred.get(fname))
+            t_val = _as_comparable(truth.get(fname))
+            fuzzy = fname in fuzzy_fields
             if p_val is not None and t_val is not None:
                 if _values_equal(p_val, t_val, fuzzy=fuzzy):
-                    tp += 1
+                    counts[fname]["tp"] += 1
                 else:
-                    fp += 1
-                    fn += 1
+                    counts[fname]["fp"] += 1
+                    counts[fname]["fn"] += 1
             elif p_val is not None and t_val is None:
-                fp += 1
+                counts[fname]["fp"] += 1
             elif p_val is None and t_val is not None:
-                fn += 1
-    precision = tp / (tp + fp) if (tp + fp) else 0.0
-    recall = tp / (tp + fn) if (tp + fn) else 0.0
-    return (
-        2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
-    )
+                counts[fname]["fn"] += 1
+
+    field_order = list(fields) if fields is not None else seen_fields
+
+    per_field: dict[str, dict[str, float]] = {}
+    tp = fp = fn = 0
+    f1s: list[float] = []
+    for fname in field_order:
+        c = counts[fname]
+        tp += c["tp"]
+        fp += c["fp"]
+        fn += c["fn"]
+        precision = c["tp"] / (c["tp"] + c["fp"]) if (c["tp"] + c["fp"]) else 0.0
+        recall = c["tp"] / (c["tp"] + c["fn"]) if (c["tp"] + c["fn"]) else 0.0
+        f1 = _f1(precision, recall)
+        support = float(c["tp"] + c["fn"])
+        per_field[fname] = {
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+            "support": support,
+            "tp": float(c["tp"]),
+            "fp": float(c["fp"]),
+            "fn": float(c["fn"]),
+        }
+        if support > 0:
+            f1s.append(f1)
+
+    micro_p = tp / (tp + fp) if (tp + fp) else 0.0
+    micro_r = tp / (tp + fn) if (tp + fn) else 0.0
+    return {
+        "micro_precision": micro_p,
+        "micro_recall": micro_r,
+        "micro_f1": _f1(micro_p, micro_r),
+        "macro_f1": (sum(f1s) / len(f1s)) if f1s else 0.0,
+        "per_field": per_field,
+        "fields": list(field_order),
+        "n_examples": len(records),
+    }
+
+
+def score_classification(records: list[dict]) -> tuple[float, float]:
+    """Backward-compatible: (accuracy, macro_f1). """
+    y_true = [r.get("ground_truth") for r in records]
+    y_pred = [r.get("prediction") for r in records]
+    metrics = classification_metrics(y_true, y_pred)
+    return metrics["accuracy"], metrics["macro_f1"]
+
+
+def score_extraction(
+    records: list[dict], fuzzy_fields: set[str] | None = None
+) -> float:
+    """Backward-compatible: field-level micro-F1 across all examples. """
+    return float(extraction_metrics(records, fuzzy_fields=fuzzy_fields)["micro_f1"])
 
 
 def score_extraction_example(
@@ -294,10 +435,29 @@ def summarize(
         n = len(group)
 
         accuracy = macro_f1 = judge_score = rubric_cov = None
+        micro_f1 = weighted_f1 = auc_ovr = auc_ovo = None
         if task == "classification" and clean:
-            accuracy, macro_f1 = score_classification(clean)
+            score_rows = [
+                r.get("prediction_scores")
+                for r in clean
+                if isinstance(r.get("prediction_scores"), dict)
+            ]
+            cls_m = classification_metrics(
+                [r.get("ground_truth") for r in clean],
+                [r.get("prediction") for r in clean],
+                y_scores=score_rows if len(score_rows) == len(clean) else None,
+            )
+            accuracy = cls_m["accuracy"]
+            macro_f1 = cls_m["macro_f1"]
+            micro_f1 = cls_m["micro_f1"]
+            weighted_f1 = cls_m["weighted_f1"]
+            auc_ovr = cls_m["auc_ovr"]
+            auc_ovo = cls_m["auc_ovo"]
         elif task == "extraction" and clean:
-            macro_f1 = score_extraction(clean, fuzzy_fields=fuzzy_fields)
+            ext_m = extraction_metrics(clean, fuzzy_fields=fuzzy_fields)
+            # Legacy summary key ``macro_f1`` stores extraction micro-F1 for the cost sheet.
+            macro_f1 = ext_m["micro_f1"]
+            micro_f1 = ext_m["micro_f1"]
         elif task == "memo_generation" and clean:
             rubric_cov = sum(score_memo_rubric(str(r["prediction"] or "")) for r in clean) / len(
                 clean
@@ -325,9 +485,33 @@ def summarize(
                 total_cost_usd=total_cost,
                 avg_cost_per_doc_usd=total_cost / n if n else 0.0,
                 error_rate=len(errored) / n if n else 0.0,
+                micro_f1=micro_f1,
+                weighted_f1=weighted_f1,
+                auc_ovr=auc_ovr,
+                auc_ovo=auc_ovo,
             )
         )
     return summaries
+
+
+_CSV_FIELDS = [
+    "task",
+    "backend",
+    "model_id",
+    "n_examples",
+    "accuracy",
+    "macro_f1",
+    "micro_f1",
+    "weighted_f1",
+    "auc_ovr",
+    "auc_ovo",
+    "judge_score_avg",
+    "rubric_coverage",
+    "avg_latency_seconds",
+    "total_cost_usd",
+    "avg_cost_per_doc_usd",
+    "error_rate",
+]
 
 
 def write_summary_csv(summaries: list[TaskBackendSummary], out_path: Path) -> None:
@@ -337,7 +521,7 @@ def write_summary_csv(summaries: list[TaskBackendSummary], out_path: Path) -> No
         print(f"Wrote empty summary -> {out_path}")
         return
     with open(out_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(asdict(summaries[0]).keys()))
+        writer = csv.DictWriter(f, fieldnames=_CSV_FIELDS, extrasaction="ignore")
         writer.writeheader()
         for s in summaries:
             writer.writerow(asdict(s))

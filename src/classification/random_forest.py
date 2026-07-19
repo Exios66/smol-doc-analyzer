@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import joblib
 import numpy as np
@@ -205,8 +205,19 @@ def top_tfidf_feature_importances(model: Pipeline, top_k: int = 30) -> pd.DataFr
     )
 
 
-def ensure_seed_corpus(n: int = 240, seed: int = 42) -> dict[str, str]:
-    """Generate the synthetic corpus if document JSONL files are missing."""
+def ensure_seed_corpus(
+    n: int = 240,
+    seed: int = 42,
+    *,
+    log_wandb: bool = False,
+) -> dict[str, str]:
+    """Generate the synthetic corpus if document JSONL files are missing.
+
+    Nested generation does **not** open a WandB run by default so notebook / RF
+    training runs are not mis-attributed as ``seed_pipeline`` experiments.
+    Pass ``log_wandb=True`` (or call ``run_seed_pipeline`` directly) to track
+    corpus generation separately.
+    """
     cfg = Config.load()
     existing = sorted(cfg.document_output_dir.glob("documents_from_skeletons_*.jsonl"))
     if existing:
@@ -217,10 +228,131 @@ def ensure_seed_corpus(n: int = 240, seed: int = 42) -> dict[str, str]:
             "generated": "false",
         }
     from src.generation.run_seed_pipeline import run_seed
+    from src.utils.wandb_utils import load_wandb_settings
 
-    paths = run_seed(n=n, seed=seed, skip_ingest=True)
+    settings = load_wandb_settings(enabled=log_wandb)
+    paths = run_seed(n=n, seed=seed, skip_ingest=True, wandb_settings=settings)
     paths["generated"] = "true"
     return paths
+
+
+def _label_ids(labels: Sequence[str], values: Sequence[str]) -> list[int] | None:
+    label_to_id = {lab: i for i, lab in enumerate(labels)}
+    ids: list[int] = []
+    for value in values:
+        idx = label_to_id.get(value)
+        if idx is None:
+            return None
+        ids.append(idx)
+    return ids
+
+
+def log_random_forest_to_wandb(
+    *,
+    doc_metrics: dict[str, Any],
+    surface_metrics: dict[str, Any] | None = None,
+    config: dict[str, Any] | None = None,
+    y_true: Sequence[str] | None = None,
+    artifact_paths: Sequence[Path] | None = None,
+    wandb_settings: Any | None = None,
+    run_name: str | None = None,
+) -> None:
+    """Log RF document-type (+ optional surface) metrics to Weights & Biases."""
+    from src.utils.wandb_utils import start_run
+
+    labels = list(doc_metrics.get("labels") or [])
+    preds = list(doc_metrics.get("predictions") or [])
+    name = run_name or "rf-train-random-forest-classifier"
+    run_config = {
+        "task": "document_type_random_forest",
+        "model": "sklearn.RandomForestClassifier",
+        **(config or {}),
+    }
+    with start_run(
+        name=name,
+        job_type="train",
+        config=run_config,
+        tags=["classification", "random_forest"],
+        settings=wandb_settings,
+    ) as wb:
+        summary: dict[str, Any] = {
+            "test/accuracy": doc_metrics["accuracy"],
+            "test/macro_f1": doc_metrics["macro_f1"],
+            "test/weighted_f1": doc_metrics.get("weighted_f1"),
+            "test/n": doc_metrics.get("n"),
+        }
+        if surface_metrics:
+            summary["surface/accuracy"] = surface_metrics["accuracy"]
+            summary["surface/macro_f1"] = surface_metrics["macro_f1"]
+            summary["surface/n"] = surface_metrics.get("n")
+        wb.summary(summary)
+        wb.log({k: v for k, v in summary.items() if isinstance(v, (int, float))})
+
+        if y_true is not None and preds and labels:
+            y_true_ids = _label_ids(labels, list(y_true))
+            y_pred_ids = _label_ids(labels, preds)
+            if y_true_ids is not None and y_pred_ids is not None:
+                wb.log_confusion_matrix(
+                    key="test/confusion_matrix",
+                    y_true=y_true_ids,
+                    y_pred=y_pred_ids,
+                    class_names=labels,
+                )
+
+        report = doc_metrics.get("classification_report") or {}
+        per_class_rows: list[list[Any]] = []
+        for label in labels:
+            stats = report.get(label) or {}
+            if isinstance(stats, dict):
+                per_class_rows.append(
+                    [
+                        label,
+                        float(stats.get("precision", 0.0)),
+                        float(stats.get("recall", 0.0)),
+                        float(stats.get("f1-score", 0.0)),
+                        int(stats.get("support", 0)),
+                    ]
+                )
+        if per_class_rows:
+            wb.log_table(
+                "test/per_class",
+                ["label", "precision", "recall", "f1", "support"],
+                per_class_rows,
+            )
+
+        if surface_metrics:
+            surface_labels = list(surface_metrics.get("labels") or [])
+            surface_report = surface_metrics.get("classification_report") or {}
+            surface_rows: list[list[Any]] = []
+            for label in surface_labels:
+                stats = surface_report.get(label) or {}
+                if isinstance(stats, dict):
+                    surface_rows.append(
+                        [
+                            label,
+                            float(stats.get("precision", 0.0)),
+                            float(stats.get("recall", 0.0)),
+                            float(stats.get("f1-score", 0.0)),
+                            int(stats.get("support", 0)),
+                        ]
+                    )
+            if surface_rows:
+                wb.log_table(
+                    "surface/per_class",
+                    ["label", "precision", "recall", "f1", "support"],
+                    surface_rows,
+                )
+
+        if artifact_paths:
+            wb.log_artifact_files(
+                name=f"random-forest-eval-{name}",
+                paths=artifact_paths,
+                artifact_type="evaluation",
+                metadata={
+                    "accuracy": doc_metrics["accuracy"],
+                    "macro_f1": doc_metrics["macro_f1"],
+                },
+            )
 
 
 def save_random_forest_bundle(
