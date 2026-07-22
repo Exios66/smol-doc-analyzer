@@ -32,14 +32,10 @@ FIELD_PATTERNS: dict[str, list[re.Pattern[str]]] = {
             r"\b(?:patient\s*name|insured\s*name|claimant\s*name)\s*[:#]\s*([^\n]+)",
             re.I,
         ),
-        # Prefer "Patient:" style labels; bare "Name:" must not match "Carrier Name:".
+        # Line-leading "Name:" / "Patient:" only — avoids "Carrier Name:" FPs.
         re.compile(
-            r"\bpatient\s*[:#]\s*([^\n]+)",
-            re.I,
-        ),
-        re.compile(
-            r"(?<!\bcarrier\s)(?<!\binsured\s)(?<!\bclaimant\s)\bname\s*[:#]\s*([^\n]+)",
-            re.I,
+            r"(?:^|[\n;])\s*(?:patient|name)\s*[:#]\s*([^\n]+)",
+            re.I | re.M,
         ),
     ],
     "dob": [

@@ -3,13 +3,26 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
-from src.utils.io import cache_safe_id, load_jsonl, write_jsonl
+from src.utils.io import load_jsonl, write_jsonl
+
+
+def _cache_safe_id(record_id: str) -> str:
+    """Stable filesystem-safe id that avoids ``::`` / ``__`` collisions."""
+    digest = hashlib.sha1(record_id.encode("utf-8")).hexdigest()[:16]
+    readable = (
+        record_id.replace("::", "__")
+        .replace("/", "%2F")
+        .replace("\\", "%5C")
+    )
+    readable = re.sub(r"[^\w.%+-]+", "_", readable)[:80].strip("._") or "record"
+    return f"{readable}__{digest}"
 
 
 def _font(size: int = 14) -> ImageFont.ImageFont:
@@ -179,7 +192,7 @@ def render_documents(docs_path: Path, out_dir: Path) -> Path:
     for doc in load_jsonl(docs_path):
         img, words, truncated = render_page(doc["text"])
         labeled = label_words(words)
-        img_path = images_dir / f"{cache_safe_id(str(doc['record_id']))}.png"
+        img_path = images_dir / f"{_cache_safe_id(str(doc['record_id']))}.png"
         img.save(img_path)
         rows.append(
             {

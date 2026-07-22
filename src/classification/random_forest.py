@@ -97,56 +97,55 @@ def load_text_handwriting_corpus(
     return frame
 
 
-def _split_map_for_record_ids(
+def _split_unique_record_ids(
     record_ids: list[str],
-    labels_by_id: dict[str, str] | None = None,
+    labels: list[str] | None = None,
+    *,
+    random_state: int = 42,
 ) -> dict[str, str]:
-    """Assign train/val/test once per unique ``record_id`` (no surface leakage)."""
-    unique_ids = list(dict.fromkeys(record_ids))
+    """Assign train/val/test once per ``record_id`` (keeps typed/noisy co-located)."""
+    unique_ids: list[str] = list(dict.fromkeys(record_ids))
     if not unique_ids:
         return {}
+    id_labels: list[str] | None = None
+    if labels is not None and len(labels) == len(record_ids):
+        first_label: dict[str, str] = {}
+        for rid, label in zip(record_ids, labels):
+            first_label.setdefault(rid, label)
+        id_labels = [first_label[rid] for rid in unique_ids]
+
     if len(unique_ids) == 1:
         return {unique_ids[0]: "train"}
 
-    id_frame = pd.DataFrame({"record_id": unique_ids})
-    if labels_by_id:
-        id_frame["document_type"] = id_frame["record_id"].map(labels_by_id)
-        counts = id_frame["document_type"].value_counts(dropna=True)
-        can_stratify = bool(
-            len(id_frame) >= 10
-            and not id_frame["document_type"].isna().any()
-            and len(counts) > 0
-            and counts.min() >= 2
-        )
-        stratify = id_frame["document_type"] if can_stratify else None
-    else:
-        stratify = None
+    stratify = None
+    if id_labels is not None:
+        counts = pd.Series(id_labels).value_counts()
+        if len(unique_ids) >= 10 and int(counts.min()) >= 2:
+            stratify = id_labels
 
     train_ids, temp_ids = train_test_split(
-        id_frame["record_id"],
+        unique_ids,
         test_size=0.3,
-        random_state=42,
+        random_state=random_state,
         stratify=stratify,
     )
-    temp_list = list(temp_ids)
-    if len(temp_list) == 1:
-        val_ids, test_ids = temp_list, []
-    else:
-        temp_labels = (
-            [labels_by_id.get(rid) for rid in temp_list] if labels_by_id else None
-        )
-        can_stratify_temp = False
-        if temp_labels is not None and None not in temp_labels:
-            temp_counts = pd.Series(temp_labels).value_counts()
-            can_stratify_temp = bool(len(temp_list) >= 4 and temp_counts.min() >= 2)
-        val_ids, test_ids = train_test_split(
-            temp_list,
-            test_size=0.5,
-            random_state=42,
-            stratify=temp_labels if can_stratify_temp else None,
-        )
+    if len(temp_ids) == 1:
+        return {**{rid: "train" for rid in train_ids}, temp_ids[0]: "test"}
 
-    mapping: dict[str, str] = {rid: "train" for rid in train_ids}
+    temp_stratify = None
+    if id_labels is not None:
+        label_map = dict(zip(unique_ids, id_labels))
+        temp_labels = [label_map[rid] for rid in temp_ids]
+        temp_counts = pd.Series(temp_labels).value_counts()
+        if len(temp_ids) >= 4 and int(temp_counts.min()) >= 2:
+            temp_stratify = temp_labels
+    val_ids, test_ids = train_test_split(
+        temp_ids,
+        test_size=0.5,
+        random_state=random_state,
+        stratify=temp_stratify,
+    )
+    mapping = {rid: "train" for rid in train_ids}
     mapping.update({rid: "val" for rid in val_ids})
     mapping.update({rid: "test" for rid in test_ids})
     return mapping
@@ -155,21 +154,14 @@ def _split_map_for_record_ids(
 def assign_split_column(frame: pd.DataFrame, splits_path: Path | None = None) -> pd.DataFrame:
     """Attach train/val/test using project splits when available; else stratified holdout.
 
-    Splits are assigned per unique ``record_id`` so typed and handwriting/OCR
-    surfaces of the same document always share a split (no train/test leakage).
+    Typed and handwriting/OCR surfaces that share a ``record_id`` always receive
+    the same split so near-duplicates cannot leak across train/test.
     """
     cfg = Config.load()
     path = splits_path or cfg.splits_path
     out = frame.copy()
-    # Object dtype avoids TypeError when assigning string labels over all-NaN float columns.
-    out["split"] = pd.Series([pd.NA] * len(out), dtype="object", index=out.index)
-
-    labels_by_id: dict[str, str] = {}
-    if "document_type" in out.columns:
-        for rid, label in zip(out["record_id"].astype(str), out["document_type"].astype(str)):
-            labels_by_id.setdefault(rid, label)
-
     id_to_split: dict[str, str] = {}
+
     if path.exists():
         splits = read_json(path)
         for split_name in ("train", "val", "test"):
@@ -177,23 +169,31 @@ def assign_split_column(frame: pd.DataFrame, splits_path: Path | None = None) ->
                 id_to_split[str(rid)] = split_name
 
     mapped = out["record_id"].astype(str).map(id_to_split)
+    # Object dtype avoids TypeError when assigning string labels into all-NaN float cols.
     out["split"] = mapped.astype("object")
     missing_mask = out["split"].isna()
-
-    # Fallback when splits.json is missing, matches nothing, or only covers some IDs.
     if missing_mask.any():
         missing_ids = out.loc[missing_mask, "record_id"].astype(str).tolist()
-        fallback = _split_map_for_record_ids(missing_ids, labels_by_id=labels_by_id)
-        out.loc[missing_mask, "split"] = (
-            out.loc[missing_mask, "record_id"].astype(str).map(fallback)
+        missing_labels = (
+            out.loc[missing_mask, "document_type"].astype(str).tolist()
+            if "document_type" in out.columns
+            else None
         )
-
-    # Final safety: any still-missing IDs go to train (should be rare).
-    still_missing = out["split"].isna()
-    if still_missing.any():
-        out.loc[still_missing, "split"] = "train"
-
-    out["split"] = out["split"].astype(str)
+        fallback = _split_unique_record_ids(missing_ids, missing_labels, random_state=42)
+        # If splits.json matched nothing useful, fall back for the whole frame.
+        if not id_to_split or missing_mask.all():
+            all_ids = out["record_id"].astype(str).tolist()
+            all_labels = (
+                out["document_type"].astype(str).tolist()
+                if "document_type" in out.columns
+                else None
+            )
+            fallback = _split_unique_record_ids(all_ids, all_labels, random_state=42)
+            out["split"] = out["record_id"].astype(str).map(fallback).astype("object")
+        else:
+            out.loc[missing_mask, "split"] = (
+                out.loc[missing_mask, "record_id"].astype(str).map(fallback)
+            )
     return out
 
 

@@ -7,12 +7,14 @@ stages and returns the aggregated classification + extraction prediction.
 Optional dependency: ``pip install fastapi uvicorn python-multipart``
 """
 
+from __future__ import annotations
+
 import argparse
 import logging
 import re
 import tempfile
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any
 
 from src.docie.applications import list_applications
 from src.docie.pipeline import DociePipeline
@@ -23,31 +25,32 @@ logger = logging.getLogger(__name__)
 _SAFE_RECORD_ID = re.compile(r"[^A-Za-z0-9._-]+")
 
 
-def _sanitize_upload_record_id(record_id: str) -> str:
-    """Collapse ``record_id`` to a basename-safe token (no path separators)."""
-    raw = (record_id or "upload").strip() or "upload"
-    # Reject absolute / parent-traversal attempts before basename cleanup.
-    base = Path(raw).name
-    cleaned = _SAFE_RECORD_ID.sub("_", base).strip("._") or "upload"
-    return cleaned[:120]
+def _sanitize_record_id(record_id: str) -> str:
+    """Collapse ``record_id`` to a filesystem-safe token (no path separators)."""
+    cleaned = _SAFE_RECORD_ID.sub("_", (record_id or "").strip()).strip("._")
+    return (cleaned or "upload")[:120]
 
 
-def _safe_upload_path(tmp_dir: Path, record_id: str, suffix: str) -> Tuple[str, Path]:
-    """Return ``(safe_record_id, path)`` guaranteed to stay under ``tmp_dir``."""
-    safe_id = _sanitize_upload_record_id(record_id)
-    # Normalize suffix to a simple extension token.
-    safe_suffix = suffix if re.fullmatch(r"\.[A-Za-z0-9]{1,16}", suffix or "") else ".bin"
-    root = tmp_dir.resolve()
-    path = (root / f"{safe_id}{safe_suffix}").resolve()
-    if not path.is_relative_to(root):
-        raise ValueError(f"Upload path escaped temp directory: {path}")
-    return safe_id, path
+def _safe_upload_path(tmp_dir: Path, record_id: str, suffix: str) -> Path:
+    """Build an upload path that cannot escape ``tmp_dir`` via ``record_id``."""
+    safe_id = _sanitize_record_id(record_id)
+    if not suffix.startswith("."):
+        suffix = f".{suffix}" if suffix else ".bin"
+    # Keep suffix alphanumeric only (e.g. ".pdf").
+    suffix = "." + re.sub(r"[^A-Za-z0-9]", "", suffix[1:])[:16]
+    if suffix == ".":
+        suffix = ".bin"
+    path = (tmp_dir / f"{safe_id}{suffix}").resolve()
+    tmp_resolved = tmp_dir.resolve()
+    if path != tmp_resolved and tmp_resolved not in path.parents:
+        raise ValueError(f"Upload path escapes temp directory: {path}")
+    return path
 
 
 def create_app(
     application: str = "salvage_claims",
     *,
-    cfg: Optional[Config] = None,
+    cfg: Config | None = None,
 ) -> Any:
     try:
         from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -99,18 +102,27 @@ def create_app(
         raw = await file.read()
         if not raw:
             raise HTTPException(status_code=400, detail="Empty upload")
+        safe_record_id = _sanitize_record_id(record_id)
 
         with tempfile.TemporaryDirectory(prefix="docie_upload_") as tmp:
             try:
-                safe_id, path = _safe_upload_path(Path(tmp), record_id, suffix)
+                path = _safe_upload_path(Path(tmp), safe_record_id, suffix)
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             path.write_bytes(raw)
             pipe = _pipe(application_name)
-            if suffix == ".pdf":
-                prediction = pipe.process(record_id=safe_id, pdf_path=path)
-            elif suffix in {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}:
-                prediction = pipe.process(record_id=safe_id, image_path=path)
+            if path.suffix.lower() == ".pdf":
+                prediction = pipe.process(record_id=safe_record_id, pdf_path=path)
+            elif path.suffix.lower() in {
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".webp",
+                ".tif",
+                ".tiff",
+                ".bmp",
+            }:
+                prediction = pipe.process(record_id=safe_record_id, image_path=path)
             else:
                 raise HTTPException(
                     status_code=400,

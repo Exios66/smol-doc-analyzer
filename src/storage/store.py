@@ -158,16 +158,15 @@ class DocumentStore:
                     doc.updated_at,
                 ),
             )
-            if doc.fields is not None:
-                # Replace semantics per role present in the payload so omitted
-                # keys do not linger as stale gold labels after re-import.
-                roles_present = {f.field_role for f in doc.fields}
-                for role in roles_present:
+            if doc.fields:
+                # Replace semantics per role: omitted keys must not linger as
+                # stale gold labels after a corrective re-import. An empty
+                # fields list leaves existing labels untouched (document-only
+                # upserts).
+                roles = {f.field_role for f in doc.fields}
+                for role in roles:
                     conn.execute(
-                        """
-                        DELETE FROM document_fields
-                        WHERE document_id = ? AND field_role = ?
-                        """,
+                        "DELETE FROM document_fields WHERE document_id = ? AND field_role = ?",
                         (doc.document_id, role),
                     )
                 for f in doc.fields:

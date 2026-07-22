@@ -231,10 +231,9 @@ def run_eval(
                     # Prefer harness wall time so failures and successes share one clock.
                     wall = time.perf_counter() - start
                     latency = max(float(latency), wall)
-                    model_id = str(used_model or getattr(backend, "model_slug", "local"))
+                    model_id = used_model or getattr(backend, "model_slug", "local")
                     if isinstance(backend, FrontierBackend):
                         if is_free_model(model_id):
-                            # Free OpenRouter routes must not inherit paid slug pricing.
                             cost = 0.0
                         else:
                             cost = compute_cost(
