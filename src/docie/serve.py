@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,30 @@ from src.docie.pipeline import DociePipeline
 from src.utils.config import Config
 
 logger = logging.getLogger(__name__)
+
+_SAFE_RECORD_ID = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _sanitize_record_id(record_id: str) -> str:
+    """Collapse ``record_id`` to a filesystem-safe token (no path separators)."""
+    cleaned = _SAFE_RECORD_ID.sub("_", (record_id or "").strip()).strip("._")
+    return (cleaned or "upload")[:120]
+
+
+def _safe_upload_path(tmp_dir: Path, record_id: str, suffix: str) -> Path:
+    """Build an upload path that cannot escape ``tmp_dir`` via ``record_id``."""
+    safe_id = _sanitize_record_id(record_id)
+    if not suffix.startswith("."):
+        suffix = f".{suffix}" if suffix else ".bin"
+    # Keep suffix alphanumeric only (e.g. ".pdf").
+    suffix = "." + re.sub(r"[^A-Za-z0-9]", "", suffix[1:])[:16]
+    if suffix == ".":
+        suffix = ".bin"
+    path = (tmp_dir / f"{safe_id}{suffix}").resolve()
+    tmp_resolved = tmp_dir.resolve()
+    if path != tmp_resolved and tmp_resolved not in path.parents:
+        raise ValueError(f"Upload path escapes temp directory: {path}")
+    return path
 
 
 def create_app(
@@ -77,15 +102,27 @@ def create_app(
         raw = await file.read()
         if not raw:
             raise HTTPException(status_code=400, detail="Empty upload")
+        safe_record_id = _sanitize_record_id(record_id)
 
         with tempfile.TemporaryDirectory(prefix="docie_upload_") as tmp:
-            path = Path(tmp) / f"{record_id}{suffix}"
+            try:
+                path = _safe_upload_path(Path(tmp), safe_record_id, suffix)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
             path.write_bytes(raw)
             pipe = _pipe(application_name)
-            if suffix == ".pdf":
-                prediction = pipe.process(record_id=record_id, pdf_path=path)
-            elif suffix in {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}:
-                prediction = pipe.process(record_id=record_id, image_path=path)
+            if path.suffix.lower() == ".pdf":
+                prediction = pipe.process(record_id=safe_record_id, pdf_path=path)
+            elif path.suffix.lower() in {
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".webp",
+                ".tif",
+                ".tiff",
+                ".bmp",
+            }:
+                prediction = pipe.process(record_id=safe_record_id, image_path=path)
             else:
                 raise HTTPException(
                     status_code=400,

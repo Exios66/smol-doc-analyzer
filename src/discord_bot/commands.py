@@ -183,6 +183,7 @@ async def _run_analyze_from_interaction(
     source_text = (text or "").strip() or None
     resolved_url = (file_url or "").strip() or None
 
+    local_path = None
     if attachment is not None:
         name = _safe_filename(getattr(attachment, "filename", None) or "attachment.bin")
         dest = _inbox_dir() / f"slash_{interaction.id}_{name}"
@@ -191,11 +192,14 @@ async def _run_analyze_from_interaction(
         if kind == "text":
             source_text = dest.read_text(encoding="utf-8", errors="replace")
         else:
-            resolved_url = str(dest)
+            # Inbox files are already on disk — do not route through file_url
+            # (http(s)-only after SSRF hardening).
+            local_path = dest
 
     out = await analyze_insurance_document_impl(
         text=source_text,
         file_url=resolved_url,
+        local_path=local_path,
         enable_vision=vision,
         record_id=f"discord-slash-{interaction.id}",
         message=None,
