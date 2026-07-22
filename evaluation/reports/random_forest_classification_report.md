@@ -1,14 +1,14 @@
 # Random Forest multilayer classification report
 
-- Fit rows: 12
-- Test rows: 4
+- Fit rows: 13
+- Test rows: 3
 - Best preset (by val macro F1): **shallow**
 - Document-type test accuracy: **1.0000**
 - Document-type test macro F1: **1.0000**
-- Surface accuracy: **0.7500**
+- Surface accuracy: **0.6667**
 - Slice typed accuracy: **1.0000**
 - Slice OCR accuracy: **1.0000**
-- Confidence ECE: **0.4703**
+- Confidence ECE: **0.4090**
 - Model: `models/random_forest_classifier/random_forest_pipeline.joblib`
 
 ## Capacity sweep (Layer 1)
