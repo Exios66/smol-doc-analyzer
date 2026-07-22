@@ -81,3 +81,10 @@ results/eval_run_*/
 # Discord agent runtime data
 data/discord/**
 !data/discord/.gitkeep
+
+# Sample medical/salvage document corpus DB + regenerable exports
+data/sample_corpus/**/*.db
+data/sample_corpus/exports/**
+!data/sample_corpus/.gitkeep
+!data/sample_corpus/seeds/
+!data/sample_corpus/seeds/**

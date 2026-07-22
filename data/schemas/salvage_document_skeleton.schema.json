@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SalvageDocumentSkeleton",
+  "description": "Structured intermediate representation for synthetic salvage-claim documents (letters of guarantee, salvage sales receipts, and related attachments). Entirely fictional — see docs/data_provenance.md.",
+  "type": "object",
+  "required": [
+    "claim_id",
+    "document_type",
+    "carrier",
+    "vehicle",
+    "parties",
+    "financials"
+  ],
+  "properties": {
+    "claim_id": {
+      "type": "string",
+      "description": "Synthetic claim identifier, e.g. CLM-2024-100200"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": ["log", "sales", "other"],
+      "description": "Must match a label in taxonomy/salvage_claims.yaml"
+    },
+    "carrier": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Fictional carrier branding used for AmFam-style salvage intake simulation"
+        },
+        "claim_office": {"type": ["string", "null"]},
+        "adjuster_name": {"type": ["string", "null"]},
+        "policy_number": {"type": ["string", "null"]}
+      }
+    },
+    "vehicle": {
+      "type": "object",
+      "required": ["vin", "year", "make", "model"],
+      "properties": {
+        "vin": {"type": "string"},
+        "year": {"type": "string"},
+        "make": {"type": "string"},
+        "model": {"type": "string"},
+        "body_style": {"type": ["string", "null"]},
+        "color": {"type": ["string", "null"]},
+        "odometer": {"type": ["integer", "null"]},
+        "license_plate": {"type": ["string", "null"]},
+        "state": {"type": ["string", "null"]}
+      }
+    },
+    "parties": {
+      "type": "object",
+      "required": ["insured"],
+      "properties": {
+        "insured": {"type": "string"},
+        "lienholder": {"type": ["string", "null"]},
+        "lienholder_address": {"type": ["string", "null"]},
+        "buyer": {"type": ["string", "null"]},
+        "buyer_address": {"type": ["string", "null"]},
+        "auction_yard": {"type": ["string", "null"]},
+        "tow_company": {"type": ["string", "null"]}
+      }
+    },
+    "loss_event": {
+      "type": "object",
+      "properties": {
+        "date_of_loss": {"type": ["string", "null"]},
+        "loss_type": {"type": ["string", "null"]},
+        "location": {"type": ["string", "null"]},
+        "total_loss_declared": {"type": ["boolean", "null"]},
+        "acv": {"type": ["number", "null"], "description": "Actual cash value"},
+        "salvage_value": {"type": ["number", "null"]}
+      }
+    },
+    "financials": {
+      "type": "object",
+      "properties": {
+        "payoff_amount": {
+          "type": ["number", "null"],
+          "description": "Lien payoff amount for Letter of Guarantee"
+        },
+        "purchase_price": {
+          "type": ["number", "null"],
+          "description": "Salvage sale purchase price"
+        },
+        "sales_tax": {"type": ["number", "null"]},
+        "storage_fees": {"type": ["number", "null"]},
+        "towing_fees": {"type": ["number", "null"]},
+        "currency": {"type": "string", "default": "USD"}
+      }
+    },
+    "dates": {
+      "type": "object",
+      "properties": {
+        "letter_date": {"type": ["string", "null"]},
+        "bill_of_sale_date": {"type": ["string", "null"]},
+        "tow_date": {"type": ["string", "null"]},
+        "storage_days": {"type": ["integer", "null"]}
+      }
+    },
+    "narrative_notes": {
+      "type": ["string", "null"],
+      "description": "Optional free-text notes for non-standard salvage attachments"
+    }
+  }
+}

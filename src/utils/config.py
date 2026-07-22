@@ -109,6 +109,8 @@ class Config:
     memo_output_dir: Path
     noisy_output_dir: Path
     provenance_log_path: Path
+    sample_corpus_dir: Path
+    sample_corpus_db_path: Path
 
     taxonomy_path: Path
     claim_schema_path: Path
@@ -185,6 +187,10 @@ class Config:
             memo_output_dir=_path("MEMO_OUTPUT_DIR", "data/synthetic/memos"),
             noisy_output_dir=_path("NOISY_OUTPUT_DIR", "data/synthetic/noisy"),
             provenance_log_path=_path("PROVENANCE_LOG_PATH", "data/provenance_log.jsonl"),
+            sample_corpus_dir=_path("SAMPLE_CORPUS_DIR", "data/sample_corpus"),
+            sample_corpus_db_path=_path(
+                "SAMPLE_CORPUS_DB_PATH", "data/sample_corpus/documents.db"
+            ),
             taxonomy_path=REPO_ROOT / "taxonomy" / "acord_form_categories.yaml",
             claim_schema_path=REPO_ROOT / "data" / "schemas" / "claim_skeleton.schema.json",
             profiles_dir=_path("PROFILES_DIR", "data/profiles"),

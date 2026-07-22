@@ -17,6 +17,9 @@ def test_config_load_defaults(tmp_path, monkeypatch):
     assert cfg.claim_schema_path.exists()
     assert cfg.skeleton_output_dir == tmp_path / "skeletons"
     assert cfg.profiles_dir.name == "profiles"
+    assert cfg.sample_corpus_db_path.name == "documents.db"
+    assert (REPO_ROOT / "data" / "schemas" / "medical_bill_skeleton.schema.json").exists()
+    assert (REPO_ROOT / "data" / "schemas" / "salvage_document_skeleton.schema.json").exists()
 
 
 def test_placeholder_secrets_treated_as_unset(monkeypatch):

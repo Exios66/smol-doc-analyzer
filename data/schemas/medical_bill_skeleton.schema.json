@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MedicalBillSkeleton",
+  "description": "Structured intermediate representation for synthetic medical-bill documents used in casualty claims review. Entirely fictional — see docs/data_provenance.md.",
+  "type": "object",
+  "required": [
+    "claim_id",
+    "document_type",
+    "carrier",
+    "patient",
+    "provider",
+    "services",
+    "financials"
+  ],
+  "properties": {
+    "claim_id": {
+      "type": "string",
+      "description": "Synthetic claim identifier, e.g. CLM-2024-551122"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": ["hcfa", "ub04", "other"],
+      "description": "Must match a label in taxonomy/medical_bills.yaml"
+    },
+    "carrier": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Fictional carrier branding used for AmFam-style intake simulation"
+        },
+        "claim_office": {"type": ["string", "null"]},
+        "policy_number": {"type": ["string", "null"]}
+      }
+    },
+    "patient": {
+      "type": "object",
+      "required": ["name", "dob", "patient_id", "address"],
+      "properties": {
+        "name": {"type": "string"},
+        "dob": {"type": "string"},
+        "patient_id": {"type": "string"},
+        "address": {"type": "string"},
+        "phone": {"type": ["string", "null"]},
+        "sex": {"type": ["string", "null"]}
+      }
+    },
+    "provider": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string"},
+        "npi": {"type": ["string", "null"]},
+        "tax_id": {"type": ["string", "null"]},
+        "address": {"type": ["string", "null"]},
+        "facility_type": {
+          "type": ["string", "null"],
+          "description": "e.g. physician_office, hospital, urgent_care, clinic"
+        }
+      }
+    },
+    "services": {
+      "type": "object",
+      "required": ["service_date_from", "service_date_to"],
+      "properties": {
+        "service_date_from": {"type": "string"},
+        "service_date_to": {"type": "string"},
+        "place_of_service": {"type": ["string", "null"]},
+        "type_of_bill": {
+          "type": ["string", "null"],
+          "description": "UB-04 type of bill code when applicable"
+        },
+        "diagnosis_codes": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "procedure_codes": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "revenue_codes": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "line_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": {"type": "string"},
+              "code": {"type": ["string", "null"]},
+              "units": {"type": ["number", "null"]},
+              "charge": {"type": ["number", "null"]}
+            }
+          }
+        }
+      }
+    },
+    "financials": {
+      "type": "object",
+      "required": ["total_charges"],
+      "properties": {
+        "total_charges": {"type": "number", "minimum": 0},
+        "amount_paid": {"type": ["number", "null"]},
+        "balance_due": {"type": ["number", "null"]},
+        "currency": {"type": "string", "default": "USD"}
+      }
+    },
+    "narrative_notes": {
+      "type": ["string", "null"],
+      "description": "Optional free-text notes for non-standard layouts"
+    }
+  }
+}

@@ -35,6 +35,9 @@ ProvenanceStage = Literal[
     "classification_train_random_forest",
     "extraction_train",
     "eval_comparison",
+    "sample_corpus_seed",
+    "sample_corpus_import",
+    "sample_corpus_export",
 ]
 
 
