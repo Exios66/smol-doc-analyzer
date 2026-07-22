@@ -68,7 +68,8 @@ Portal: [Notebooks](notebooks/index.qmd).
 
 ```bash
 # install Quarto CLI from https://quarto.org/docs/get-started/
-quarto preview docs
+cd docs && quarto preview
+# or: ./scripts/preview_docs_site.sh
 ```
 
 Full steps: [How-to: launch the Quarto docs site](how-to/launch-quarto-site.qmd).

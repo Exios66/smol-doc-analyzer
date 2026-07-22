@@ -40,7 +40,7 @@ Phase 4 (fine-tuned summarizer LoRA) still pending — the chain currently uses 
 template memo grounded in upstream extraction/vision outputs, with a hook for a
 local generative model when configured.
 
-**Docs:** [Quarto site](docs/how-to/launch-quarto-site.qmd) (`quarto preview docs`) ·
+**Docs:** [Quarto site](docs/how-to/launch-quarto-site.qmd) (`cd docs && quarto preview`) ·
 [docs/usage.md](docs/usage.md) · [docs/architecture.md](docs/architecture.md) ·
 [CHANGELOG.md](CHANGELOG.md)
 
@@ -167,9 +167,9 @@ under [`docs/`](docs/) (`docs/_quarto.yml`).
 
 ```bash
 # install Quarto CLI: https://quarto.org/docs/get-started/
-quarto preview docs                 # live local portal
-./scripts/preview_docs_site.sh      # same, with a PATH check
-quarto render docs                  # static build → docs/_site/
+cd docs && quarto preview           # live local portal (run inside docs/)
+./scripts/preview_docs_site.sh      # same from repo root, with a PATH check
+cd docs && quarto render            # static build → docs/_site/
 ```
 
 How-to: [docs/how-to/launch-quarto-site.qmd](docs/how-to/launch-quarto-site.qmd).

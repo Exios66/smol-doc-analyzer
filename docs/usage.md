@@ -23,13 +23,13 @@ Browse guides and notebooks as a local Quarto website (requires the
 [Quarto CLI](https://quarto.org/docs/get-started/)):
 
 ```bash
-# live preview with reload
-quarto preview docs
-# or
+# live preview with reload (run inside docs/ — see how-to)
+cd docs && quarto preview
+# or from repo root:
 ./scripts/preview_docs_site.sh
 
 # static build → docs/_site/
-quarto render docs
+cd docs && quarto render
 ```
 
 Full setup notes: [How-to: launch the Quarto docs site](how-to/launch-quarto-site.qmd).

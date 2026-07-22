@@ -31,13 +31,17 @@ re-run notebooks at render time. Stored outputs (when present) still display.
 
 ## Preview (live local portal)
 
-From the repository root:
+Run Quarto **from the `docs/` directory** (not the repo root). The repository
+root `.env.example` lists optional secrets with empty defaults; if Quarto’s
+working directory is the repo root, dotenv-safe treats those keys as required
+and preview/render fails.
 
 ```bash
-quarto preview docs
+cd docs
+quarto preview
 ```
 
-Or use the helper script:
+Or use the helper script from the repository root (it `cd`s into `docs/`):
 
 ```bash
 ./scripts/preview_docs_site.sh
@@ -53,10 +57,11 @@ Stop the preview with `Ctrl+C` in the terminal.
 Build HTML into `docs/_site/`:
 
 ```bash
-quarto render docs
+cd docs
+quarto render
 ```
 
-Serve the built site with any static file server, for example:
+Serve the built site with any static file server, for example (from repo root):
 
 ```bash
 python -m http.server 8080 --directory docs/_site
@@ -67,7 +72,8 @@ Then open `http://localhost:8080` in a browser.
 You can also re-preview the rendered output:
 
 ```bash
-quarto preview docs/_site
+cd docs
+quarto preview _site
 ```
 
 ## What the site includes
@@ -98,7 +104,8 @@ text file, recreate it or re-clone with symlink support.
 | Symptom | Fix |
 |---------|-----|
 | `quarto: command not found` | Install Quarto CLI and ensure it is on `PATH` |
-| Preview port already in use | `quarto preview docs --port 4444` (or another free port) |
+| `MissingEnvVarsError` / `.env.example` | `cd docs` before `quarto preview` / `quarto render` (or use `./scripts/preview_docs_site.sh`) |
+| Preview port already in use | `cd docs && quarto preview --port 4444` (or another free port) |
 | Notebook page missing / empty | Confirm symlink: `ls -l docs/notebooks/` should show `→ ../../notebooks/...` |
 | Render fails on internal docs | By design only nav-listed pages render; `docs/plan/` and audit notes are excluded |
 | Want to re-execute notebooks | Temporarily set `execute.eval: true` in `_quarto.yml` (needs models/data; not the default docs path) |

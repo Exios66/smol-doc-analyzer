@@ -34,8 +34,8 @@ All training and demo data is synthetic or public; see
 ## Preview this site
 
 ```bash
-# from the repository root (requires Quarto CLI)
-quarto preview docs
-# or
+# requires Quarto CLI — run inside docs/ (see how-to for why)
+cd docs && quarto preview
+# or from repo root:
 ./scripts/preview_docs_site.sh
 ```
