@@ -51,9 +51,14 @@ def reset_credit_fallback_state() -> None:
     _CREDITS_UNAVAILABLE = False
 
 
-def _is_free_model(model: str) -> bool:
+def is_free_model(model: str) -> bool:
+    """True for OpenRouter free router / ``*:free`` model slugs."""
     slug = (model or "").strip().lower()
     return slug == "openrouter/free" or slug.endswith(":free")
+
+
+# Back-compat alias used inside this module.
+_is_free_model = is_free_model
 
 
 def parse_free_fallback_models(raw: str | None = None) -> tuple[str, ...]:

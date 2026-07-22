@@ -239,3 +239,270 @@ def test_annotate_updates_correct_when_judge_score_present():
     assert rows[0]["score"] == pytest.approx(0.4)
     assert rows[0]["correct"] is False
     assert rows[0]["score_source"] == "judge"
+
+
+# ---------------------------------------------------------------------------
+# Round-2 audit regressions (issues #28–#35)
+# ---------------------------------------------------------------------------
+
+
+def test_analyze_impl_accepts_local_path_without_url_download(tmp_path: Path, monkeypatch):
+    """#28: slash attachments must use local_path, not file_url."""
+    import asyncio
+
+    from src.discord_bot.tools import analyze_insurance_document_impl
+
+    # Use a .txt inbox path so the pipeline does not need a real PDF parser.
+    txt = tmp_path / "claim.txt"
+    txt.write_text(
+        "AUTOMOBILE LOSS NOTICE\nClaim Number: CLM-LOCAL-1\nDate of Loss: 2024-01-15\n",
+        encoding="utf-8",
+    )
+
+    async def _boom(*_a, **_k):
+        raise AssertionError("file_url download must not run for local_path")
+
+    monkeypatch.setattr("src.discord_bot.tools._download_url", _boom)
+    out = asyncio.run(
+        analyze_insurance_document_impl(
+            local_path=txt,
+            enable_vision=False,
+            record_id="test-local-path",
+        )
+    )
+    assert out.get("ok") is True
+    assert out["analysis"]["record_id"] == "test-local-path"
+
+
+def test_download_url_rejects_redirect_to_private_ip(monkeypatch):
+    """#29: redirect hops must be re-validated (SSRF)."""
+    import asyncio
+    import io
+    import urllib.error
+
+    from src.discord_bot.tools import _download_url
+
+    class _FakeResp(io.BytesIO):
+        def __init__(self, code, headers, body=b""):
+            super().__init__(body)
+            self.code = code
+            self.headers = headers
+            self.status = code
+
+        def getcode(self):
+            return self.code
+
+    calls = {"n": 0}
+
+    def fake_open(req, timeout=60):  # noqa: ARG001
+        calls["n"] += 1
+        url = req.full_url
+        if "public.example" in url:
+            raise urllib.error.HTTPError(
+                url,
+                302,
+                "Found",
+                hdrs={"Location": "http://127.0.0.1/secret"},
+                fp=io.BytesIO(b""),
+            )
+        raise AssertionError(f"unexpected open: {url}")
+
+    class _FakeOpener:
+        def open(self, req, timeout=60):
+            return fake_open(req, timeout=timeout)
+
+    monkeypatch.setattr(
+        "urllib.request.build_opener",
+        lambda *_a, **_k: _FakeOpener(),
+    )
+    # Host validation for public.example — stub DNS to a public IP.
+    def fake_getaddrinfo(host, *a, **k):  # noqa: ARG001
+        if host == "public.example":
+            return [(0, 0, 0, "", ("93.184.216.34", 0))]
+        if host in {"127.0.0.1", "localhost"}:
+            return [(0, 0, 0, "", ("127.0.0.1", 0))]
+        raise OSError(f"blocked resolve for {host}")
+
+    monkeypatch.setattr("socket.getaddrinfo", fake_getaddrinfo)
+
+    async def _run():
+        with pytest.raises(ValueError, match="private|blocked|loopback|127"):
+            await _download_url("http://public.example/doc.pdf", Path("/tmp/ssrf-test.bin"))
+
+    asyncio.run(_run())
+    assert calls["n"] == 1
+
+
+def test_docie_upload_path_rejects_traversal(tmp_path: Path):
+    """#30: record_id must not escape the upload temp directory."""
+    from src.docie.serve import _safe_upload_path, _sanitize_record_id
+
+    assert ".." not in _sanitize_record_id("../../../tmp/escape")
+    assert "/" not in _sanitize_record_id("a/b/c")
+    path = _safe_upload_path(tmp_path, "../../../tmp/escape", ".pdf")
+    assert path.parent == tmp_path.resolve()
+    assert path.name.endswith(".pdf")
+    assert ".." not in path.name
+
+
+def test_upsert_replaces_omitted_ground_truth_fields(tmp_path: Path):
+    """#31: corrective upsert must drop stale gold fields."""
+    from src.storage.store import DocumentStore
+    from src.storage.types import DocumentRecord, FieldRecord
+
+    store = DocumentStore(tmp_path / "docs.db")
+    store.upsert_document(
+        DocumentRecord(
+            document_id="doc-1",
+            application="medical_bills",
+            document_type="hcfa",
+            text="Patient Name: Ada",
+            fields=[
+                FieldRecord("name", "Ada"),
+                FieldRecord("claim_id", "CLM-1"),
+                FieldRecord("dob", "1990-01-01"),
+            ],
+        )
+    )
+    store.upsert_document(
+        DocumentRecord(
+            document_id="doc-1",
+            application="medical_bills",
+            document_type="hcfa",
+            text="Patient Name: Ada",
+            fields=[
+                FieldRecord("name", "Ada Lovelace"),
+                FieldRecord("claim_id", "CLM-1"),
+            ],
+        )
+    )
+    fields = store.get_document("doc-1").ground_truth_fields()
+    assert fields["name"] == "Ada Lovelace"
+    assert fields["claim_id"] == "CLM-1"
+    assert "dob" not in fields
+
+
+def test_assign_split_keeps_record_id_surfaces_together(tmp_path: Path):
+    """#32: typed + noisy rows sharing record_id stay in one split."""
+    import pandas as pd
+
+    from src.classification.random_forest import (
+        SURFACE_HANDWRITING_OCR,
+        SURFACE_TYPED,
+        assign_split_column,
+    )
+
+    rows = []
+    for i in range(12):
+        rid = f"r{i}"
+        label = "loss_notice" if i % 2 == 0 else "repair_estimate"
+        rows.append(
+            {
+                "record_id": rid,
+                "document_type": label,
+                "text": f"typed {rid}",
+                "surface": SURFACE_TYPED,
+            }
+        )
+        rows.append(
+            {
+                "record_id": rid,
+                "document_type": label,
+                "text": f"noisy {rid}",
+                "surface": SURFACE_HANDWRITING_OCR,
+            }
+        )
+    frame = assign_split_column(pd.DataFrame(rows), splits_path=tmp_path / "missing.json")
+    grouped = frame.groupby("record_id")["split"].nunique()
+    assert (grouped == 1).all()
+
+    # Misaligned splits.json (no matching IDs) must not crash.
+    bad = tmp_path / "splits.json"
+    bad.write_text('{"train":["other-1"],"val":[],"test":["other-2"]}', encoding="utf-8")
+    frame2 = assign_split_column(pd.DataFrame(rows), splits_path=bad)
+    assert set(frame2["split"]) <= {"train", "val", "test"}
+    assert (frame2.groupby("record_id")["split"].nunique() == 1).all()
+
+
+def test_carrier_name_not_extracted_as_patient_name():
+    """#33: Carrier Name must not become patient name."""
+    from src.docie.extract import heuristic_extract
+
+    carrier_only = "CLAIM FORM\nCarrier Name: American Family\nClaim Number: CLM-9\n"
+    fields = heuristic_extract(carrier_only, ["name", "claim_id"])
+    assert "name" not in fields
+    assert fields["claim_id"][0] == "CLM-9"
+
+    both = (
+        "HCFA\nPatient Name: Jane Q Public\nCarrier Name: American Family\n"
+        "Claim Number: CLM-10\n"
+    )
+    fields2 = heuristic_extract(both, ["name", "claim_id"])
+    assert "Jane" in fields2["name"][0]
+    assert "American Family" not in fields2["name"]
+
+
+def test_render_forms_safe_ids_avoid_collision(tmp_path: Path):
+    """#34: :: vs __ record IDs must not overwrite the same PNG."""
+    from src.extraction.render_forms import _cache_safe_id, render_documents
+    from src.utils.io import write_jsonl
+
+    a = "CLM-1::loss_notice::0"
+    b = "CLM-1__loss_notice__0"
+    assert _cache_safe_id(a) != _cache_safe_id(b)
+    docs = tmp_path / "docs.jsonl"
+    write_jsonl(
+        docs,
+        [
+            {
+                "record_id": a,
+                "claim_id": "CLM-1",
+                "document_type": "loss_notice",
+                "text": "LOSS NOTICE A\nClaim Number: CLM-1\n",
+            },
+            {
+                "record_id": b,
+                "claim_id": "CLM-1",
+                "document_type": "loss_notice",
+                "text": "LOSS NOTICE B\nClaim Number: CLM-1\n",
+            },
+        ],
+    )
+    out = render_documents(docs, tmp_path / "rendered")
+    images = list((tmp_path / "rendered" / "images").glob("*.png"))
+    assert len(images) == 2
+
+
+def test_eval_harness_zero_cost_on_free_model_fallback():
+    """#35: free OpenRouter models must record $0 and actual model_id."""
+    from evaluation.eval_harness import FrontierBackend, ModelPricing, run_eval
+
+    class FreeFallbackBackend(FrontierBackend):
+        def __init__(self):
+            self.name = "anthropic"
+            self.model_slug = "anthropic/claude-sonnet-4.5"
+            self.pricing = ModelPricing(input_per_million=3.0, output_per_million=15.0)
+            self.client = None  # unused — run() is overridden
+
+        def run(self, task, example):
+            return "loss_notice", 1000, 100, 0.2, "openrouter/free"
+
+    results = run_eval(
+        tasks=["classification"],
+        backends={"anthropic": FreeFallbackBackend()},
+        eval_set=[
+            {
+                "example_id": "cls-free",
+                "task": "classification",
+                "prompt_fields": {"document_text": "x"},
+                "ground_truth": "loss_notice",
+            }
+        ],
+        frontier_pricing={"anthropic": ModelPricing(3.0, 15.0)},
+        run_id="free-test",
+        dry_run=False,
+    )
+    assert len(results) == 1
+    assert results[0].error is None
+    assert results[0].model_id == "openrouter/free"
+    assert results[0].cost_usd == 0.0

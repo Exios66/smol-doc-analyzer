@@ -98,20 +98,51 @@ def _validate_download_url(url: str) -> str:
     return url
 
 
-async def _download_url(url: str, dest: Path) -> Path:
-    import asyncio
-    import urllib.request
+_MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
+_MAX_REDIRECTS = 5
 
-    safe_url = _validate_download_url(url)
+
+async def _download_url(url: str, dest: Path) -> Path:
+    """Download ``url`` to ``dest``, re-validating every redirect hop (SSRF-safe)."""
+    import asyncio
+    import urllib.error
+    import urllib.request
+    from urllib.parse import urljoin
+
+    class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+            return None
+
     dest.parent.mkdir(parents=True, exist_ok=True)
+    current = _validate_download_url(url)
 
     def _fetch() -> bytes:
-        req = urllib.request.Request(
-            safe_url,
-            headers={"User-Agent": "smol-doc-analyzer-discord-bot/1.0.0b0"},
-        )
-        with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310
-            return resp.read()
+        opener = urllib.request.build_opener(_NoRedirectHandler())
+        hops = 0
+        next_url = current
+        while True:
+            req = urllib.request.Request(
+                next_url,
+                headers={"User-Agent": "smol-doc-analyzer-discord-bot/1.0.0b0"},
+            )
+            try:
+                with opener.open(req, timeout=60) as resp:  # noqa: S310
+                    data = resp.read(_MAX_DOWNLOAD_BYTES + 1)
+                    if len(data) > _MAX_DOWNLOAD_BYTES:
+                        raise ValueError(
+                            f"Download exceeds {_MAX_DOWNLOAD_BYTES} byte size limit."
+                        )
+                    return data
+            except urllib.error.HTTPError as exc:
+                if exc.code not in {301, 302, 303, 307, 308}:
+                    raise
+                location = exc.headers.get("Location")
+                if not location:
+                    raise ValueError("Redirect response missing Location header.") from exc
+                hops += 1
+                if hops > _MAX_REDIRECTS:
+                    raise ValueError(f"Too many redirects (>{_MAX_REDIRECTS}).") from exc
+                next_url = _validate_download_url(urljoin(next_url, location))
 
     data = await asyncio.to_thread(_fetch)
     dest.write_bytes(data)
@@ -139,17 +170,27 @@ async def analyze_insurance_document_impl(
     text: Optional[str] = None,
     attachment_index: int = 0,
     file_url: Optional[str] = None,
+    local_path: Optional[str | Path] = None,
     enable_vision: bool = True,
     record_id: Optional[str] = None,
     message=None,
 ) -> dict:
-    """Core pipeline invocation used by the Chloride tool (and unit tests)."""
+    """Core pipeline invocation used by the Chloride tool (and unit tests).
+
+    Prefer ``local_path`` for files already saved to the Discord inbox (slash
+    attachments). ``file_url`` remains http(s)-only for SSRF safety.
+    """
     path: Path | None = None
     kind = "text"
     source_text = (text or "").strip()
 
     try:
-        if file_url:
+        if local_path is not None:
+            path = Path(local_path)
+            if not path.is_file():
+                return {"ok": False, "error": f"Local attachment not found: {path}"}
+            kind = _guess_kind(path)
+        elif file_url:
             parsed = urlparse(file_url)
             name = _safe_filename(Path(parsed.path).name or "download.bin")
             msg_id = getattr(message, "id", "adhoc")
@@ -163,7 +204,8 @@ async def analyze_insurance_document_impl(
         elif not source_text:
             return {
                 "error": (
-                    "Provide `text`, `file_url`, or attach a PDF/PNG to the Discord message."
+                    "Provide `text`, `file_url`, `local_path`, or attach a PDF/PNG "
+                    "to the Discord message."
                 )
             }
 

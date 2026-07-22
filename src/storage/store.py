@@ -159,6 +159,16 @@ class DocumentStore:
                 ),
             )
             if doc.fields:
+                # Replace semantics per role: omitted keys must not linger as
+                # stale gold labels after a corrective re-import. An empty
+                # fields list leaves existing labels untouched (document-only
+                # upserts).
+                roles = {f.field_role for f in doc.fields}
+                for role in roles:
+                    conn.execute(
+                        "DELETE FROM document_fields WHERE document_id = ? AND field_role = ?",
+                        (doc.document_id, role),
+                    )
                 for f in doc.fields:
                     conn.execute(
                         """
@@ -166,9 +176,6 @@ class DocumentStore:
                             document_id, field_name, field_value, field_role,
                             confidence, created_at
                         ) VALUES (?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(document_id, field_name, field_role) DO UPDATE SET
-                            field_value = excluded.field_value,
-                            confidence = excluded.confidence
                         """,
                         (
                             doc.document_id,
