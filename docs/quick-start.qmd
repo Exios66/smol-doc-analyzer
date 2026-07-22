@@ -1,0 +1,80 @@
+---
+title: "Quick Start"
+---
+
+Get a working local install and run a minimal pipeline path. For the full
+command reference, see [Usage](usage.md).
+
+## 1. Install
+
+Python **3.11+** required.
+
+```bash
+pip install -e ".[dev]"
+```
+
+Optional extras you may want soon:
+
+```bash
+pip install -e ".[notebooks]"   # Jupyter walkthroughs
+pip install -e ".[ocr]"         # pytesseract for page images
+pip install -e ".[serve]"       # FastAPI DICIE REST server
+```
+
+## 2. Secrets
+
+```bash
+python scripts/setup_env.py          # create gitignored .env from template
+# edit .env — paste keys (never commit)
+python scripts/setup_env.py --status # which secrets are set (values never printed)
+```
+
+Useful variables: `OPENROUTER_API_KEY`, `WANDB_API_KEY`, optional `HF_TOKEN`.
+See [Usage § Secrets](usage.md) and `.env.example`.
+
+## 3. Minimal DICIE demo (no training)
+
+```bash
+python -m src.docie \
+  --application salvage_claims \
+  --text "LETTER OF GUARANTEE
+Claim Number: CLM-2024-100200
+VIN: 1HGCM82633A004352
+Year: 2018
+Make: Honda
+Model: Accord" \
+  --response-only
+```
+
+## 4. Sample corpus (optional)
+
+```bash
+python -m src.storage seed --seed 42 --also-export
+```
+
+Details: [Sample Document Corpus](sample_document_corpus.md).
+
+## 5. Notebooks
+
+```bash
+pip install -e ".[notebooks]"
+# browse via this Quarto site, or:
+jupyter notebook notebooks/
+```
+
+Portal: [Notebooks](notebooks/index.qmd).
+
+## 6. Documentation website
+
+```bash
+# install Quarto CLI from https://quarto.org/docs/get-started/
+quarto preview docs
+```
+
+Full steps: [How-to: launch the Quarto docs site](how-to/launch-quarto-site.qmd).
+
+## Next steps
+
+- Train classifier / extractor smoke paths — [Usage](usage.md)
+- Memo chain (`src.pipeline.orchestrator`) — [Architecture](architecture.md)
+- Discord bot — [Usage](usage.md) and `discord/smol-doc-analyzer/README.md`

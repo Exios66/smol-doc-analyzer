@@ -40,7 +40,9 @@ Phase 4 (fine-tuned summarizer LoRA) still pending — the chain currently uses 
 template memo grounded in upstream extraction/vision outputs, with a hook for a
 local generative model when configured.
 
-**Docs:** [docs/usage.md](docs/usage.md) · [docs/architecture.md](docs/architecture.md) · [CHANGELOG.md](CHANGELOG.md)
+**Docs:** [Quarto site](docs/how-to/launch-quarto-site.qmd) (`quarto preview docs`) ·
+[docs/usage.md](docs/usage.md) · [docs/architecture.md](docs/architecture.md) ·
+[CHANGELOG.md](CHANGELOG.md)
 
 ## Data disclosure
 
@@ -157,6 +159,22 @@ For GPU training, omit `--smoke` and use the default DeBERTa-v3 / ViT / LayoutLM
 On high-RAM local hosts, point `VISION_LLM_MODEL_PATH` at a downloaded Qwen2-VL
 (or similar) checkpoint and set `VISION_LLM_LOAD=1` to refine extraction from
 page images inside the same chain.
+
+## Documentation website (Quarto)
+
+Guides, architecture notes, and notebooks are published as a Quarto website
+under [`docs/`](docs/) (`docs/_quarto.yml`).
+
+```bash
+# install Quarto CLI: https://quarto.org/docs/get-started/
+quarto preview docs                 # live local portal
+./scripts/preview_docs_site.sh      # same, with a PATH check
+quarto render docs                  # static build → docs/_site/
+```
+
+How-to: [docs/how-to/launch-quarto-site.qmd](docs/how-to/launch-quarto-site.qmd).
+Quick start page: [docs/quick-start.qmd](docs/quick-start.qmd).
+Notebook portal: [docs/notebooks/index.qmd](docs/notebooks/index.qmd).
 
 ## Repository structure
 
