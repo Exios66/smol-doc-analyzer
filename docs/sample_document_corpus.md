@@ -117,7 +117,22 @@ together.
 | `src/storage/schema.py` | DDL + schema version |
 | `src/storage/types.py` | `ClaimRecord`, `DocumentRecord`, `FieldRecord` |
 | `src/storage/sample_generator.py` | Realistic synthetic medical + salvage templates |
+| `src/storage/training.py` | Prepare train/val/test + TF-IDF RF from the store |
 | `src/storage/__main__.py` | CLI (`seed`, `summary`, `list`, `show`, `export`, `import-jsonl`) |
+
+## Notebooks
+
+| Notebook | Focus |
+|----------|--------|
+| [`notebooks/sample_document_corpus_walkthrough.ipynb`](../notebooks/sample_document_corpus_walkthrough.ipynb) | New corpus pipelines: generate → seed → export → DICIE |
+| [`notebooks/sample_corpus_sql_integrations.ipynb`](../notebooks/sample_corpus_sql_integrations.ipynb) | Every SQL surface (DDL, CRUD, joins, provenance, analytics) |
+| [`notebooks/sample_corpus_train_test_pipeline.ipynb`](../notebooks/sample_corpus_train_test_pipeline.ipynb) | Full SQL → prepare → train → test → DICIE eval scorecard |
+
+Regenerate the notebooks from the builder script:
+
+```bash
+python scripts/build_sample_corpus_notebooks.py
+```
 
 ## Provenance
 

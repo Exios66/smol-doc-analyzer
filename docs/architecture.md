@@ -64,6 +64,7 @@ src/
   docie/            # paper Fig. 1 DICIE: process → classify → extract → respond
                     #   (see src/docie/README.md)
   storage/          # SQLite sample corpus for medical bills + salvage docs
+                    #   (+ training prep / TF-IDF RF helpers)
   pipeline/         # orchestrator + markdown convert + batch_runner (memo chain)
   discord_bot/      # Chloride Discord front-end + analyze_insurance_document tool
   utils/            # config, provenance, LLM client, WandB tracking

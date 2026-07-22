@@ -187,7 +187,19 @@ python -m src.storage export --format docie --application salvage_claims \
 - Design notes: [docs/sample_document_corpus.md](docs/sample_document_corpus.md)
 - Schemas: `data/schemas/medical_bill_skeleton.schema.json`,
   `data/schemas/salvage_document_skeleton.schema.json`
-- Tests: `pytest tests/test_document_store.py`
+- Tests: `pytest tests/test_document_store.py tests/test_storage_training.py`
+- Notebooks:
+  - [`notebooks/sample_document_corpus_walkthrough.ipynb`](notebooks/sample_document_corpus_walkthrough.ipynb)
+  - [`notebooks/sample_corpus_sql_integrations.ipynb`](notebooks/sample_corpus_sql_integrations.ipynb)
+  - [`notebooks/sample_corpus_train_test_pipeline.ipynb`](notebooks/sample_corpus_train_test_pipeline.ipynb)
+
+```bash
+# optional: regenerate the three sample-corpus notebooks
+python scripts/build_sample_corpus_notebooks.py
+# interactive:
+#   pip install -e ".[notebooks]"
+#   jupyter notebook notebooks/sample_corpus_train_test_pipeline.ipynb
+```
 
 ## Discord bot (Chloride)
 
