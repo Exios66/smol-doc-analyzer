@@ -32,10 +32,24 @@ claimant documents. Application label sets live in
 `taxonomy/medical_bills.yaml` and `taxonomy/salvage_claims.yaml`. Batch DICIE
 runs append provenance rows with `stage=docie_pipeline`.
 
+## Sample medical + salvage document corpus
+
+The queryable corpus store (`src/storage/`, see
+[sample_document_corpus.md](sample_document_corpus.md)) houses larger sets of
+fictional medical bills and salvage documentation (Letters of Guarantee, salvage
+sales receipts, towing/storage attachments) patterned after AmFam-style intake
+surfaces. No proprietary insurer files are ingested. Seed/import events log
+`stage=sample_corpus_seed` / `sample_corpus_import`.
+
+Skeleton schemas:
+
+- `data/schemas/medical_bill_skeleton.schema.json`
+- `data/schemas/salvage_document_skeleton.schema.json`
+
 ## Committed vs gitignored
 
-- **Committed:** schemas, taxonomy (ACORD + medical bills + salvage claims), characteristic profiles (`data/profiles/*.json`), tiny test fixtures (including DICIE samples)
-- **Gitignored:** bulk `data/raw/*`, synthetic JSONL outputs, provenance log, trained model weights, pipeline/DICIE caches under `data/pipeline/`
+- **Committed:** schemas, taxonomy (ACORD + medical bills + salvage claims), characteristic profiles (`data/profiles/*.json`), tiny test fixtures (including DICIE samples), sample-corpus seed exports under `data/sample_corpus/seeds/`
+- **Gitignored:** bulk `data/raw/*`, synthetic JSONL outputs, provenance log, trained model weights, pipeline/DICIE caches under `data/pipeline/`, sample corpus SQLite DB + regenerable exports under `data/sample_corpus/`
 
 ## Reproducibility
 

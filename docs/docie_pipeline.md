@@ -79,6 +79,11 @@ python -m src.docie.eval --application salvage_claims
 
 Gold set: `data/eval/docie_eval_set.jsonl`.
 
+For a larger regenerable sample house (claim bundles, richer skeletons, train/val/test
+splits), use the SQLite corpus in [`src/storage/`](../src/storage/) — see
+[sample_document_corpus.md](sample_document_corpus.md). Export DICIE JSONL with
+`python -m src.storage export --format docie`.
+
 ## Usage
 
 ```bash

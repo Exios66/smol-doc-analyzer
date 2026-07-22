@@ -169,6 +169,26 @@ This is separate from the markdown → memo chain in `src/pipeline/` (used by
 the Discord bot). Prefer DICIE for paper-aligned workflow apps; prefer
 `src.pipeline.orchestrator` when you need adjuster-style memos.
 
+## Sample document corpus (`src/storage/`)
+
+Queryable SQLite store for **synthetic** medical bills and salvage documentation
+(Letters of Guarantee, salvage sales receipts, towing/storage attachments)
+patterned after AmFam-style intake — without proprietary insurer data.
+
+```bash
+# Seed realistic samples + optional JSONL export
+python -m src.storage seed --seed 42 --also-export
+
+# Export for DICIE / classification / extraction training
+python -m src.storage export --format docie --application salvage_claims \
+  --out data/sample_corpus/exports/salvage_docie.jsonl
+```
+
+- Design notes: [docs/sample_document_corpus.md](docs/sample_document_corpus.md)
+- Schemas: `data/schemas/medical_bill_skeleton.schema.json`,
+  `data/schemas/salvage_document_skeleton.schema.json`
+- Tests: `pytest tests/test_document_store.py`
+
 ## Discord bot (Chloride)
 
 Optional Discord front-end via [Chloride](https://github.com/S4IL21/chloride)

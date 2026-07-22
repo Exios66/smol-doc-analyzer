@@ -1,0 +1,39 @@
+{
+  "db_path": "/workspace/data/sample_corpus/documents.db",
+  "schema_version": 1,
+  "claims": 58,
+  "documents": 66,
+  "fields": 330,
+  "by_application_type": [
+    {
+      "application": "medical_bills",
+      "document_type": "hcfa",
+      "count": 11
+    },
+    {
+      "application": "medical_bills",
+      "document_type": "other",
+      "count": 11
+    },
+    {
+      "application": "medical_bills",
+      "document_type": "ub04",
+      "count": 11
+    },
+    {
+      "application": "salvage_claims",
+      "document_type": "log",
+      "count": 11
+    },
+    {
+      "application": "salvage_claims",
+      "document_type": "other",
+      "count": 11
+    },
+    {
+      "application": "salvage_claims",
+      "document_type": "sales",
+      "count": 11
+    }
+  ]
+}

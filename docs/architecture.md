@@ -63,14 +63,16 @@ src/
   extraction/       # form render, LayoutLMv3 train/eval
   docie/            # paper Fig. 1 DICIE: process → classify → extract → respond
                     #   (see src/docie/README.md)
+  storage/          # SQLite sample corpus for medical bills + salvage docs
   pipeline/         # orchestrator + markdown convert + batch_runner (memo chain)
   discord_bot/      # Chloride Discord front-end + analyze_insurance_document tool
   utils/            # config, provenance, LLM client, WandB tracking
 discord/
   smol-doc-analyzer/  # Chloride bot workspace (config templates, compose)
 data/
-  schemas/          # claim_skeleton.schema.json
+  schemas/          # claim_skeleton + medical_bill + salvage_document schemas
   profiles/         # committed characteristic profiles (small JSON)
+  sample_corpus/    # queryable medical/salvage sample DB + seed exports
   raw/              # downloaded public samples (gitignored)
   synthetic/        # generated skeletons/documents/memos (gitignored)
   pipeline/         # inference outputs + markdown/render cache (gitignored)
