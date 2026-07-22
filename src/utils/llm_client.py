@@ -138,7 +138,7 @@ def _build_openrouter_client(cfg: Config) -> OpenAI:
             # OpenRouter uses these for its public rankings/analytics —
             # optional but recommended, and harmless if left generic.
             "HTTP-Referer": cfg.openrouter_app_url or "https://github.com/",
-            "X-Title": cfg.openrouter_app_name or "insurance-doc-ai",
+            "X-Title": cfg.openrouter_app_name or "smol-doc-analyzer",
         },
     )
 

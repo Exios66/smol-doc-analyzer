@@ -2,6 +2,8 @@
 
 This project uses **no real insurance company data**. Training and evaluation data are either public corpora (used for distributional / stylistic characteristics) or synthetically generated from randomized claim skeletons.
 
+Usage guide: [usage.md](usage.md) · Version history: [CHANGELOG.md](../CHANGELOG.md).
+
 ## Public sources (prime examples)
 
 | Source | What we take | What we do **not** take |

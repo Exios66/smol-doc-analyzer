@@ -1,7 +1,8 @@
 # Sample Document Corpus Store
 
 Queryable storage for **synthetic** medical-bill and salvage-claim documents
-used for analysis, evaluation, and model fine-tuning.
+used for analysis, evaluation, and model fine-tuning. Command cheatsheet:
+[usage.md](usage.md) §4.
 
 This project does **not** have access to proprietary American Family Insurance
 claim files. The corpus instead houses **reality-tied, fictional** examples that

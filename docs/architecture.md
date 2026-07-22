@@ -1,5 +1,7 @@
 # Architecture — smol-doc-analyzer
 
+**Version:** `1.0.0-beta` · Usage: [usage.md](usage.md) · History: [CHANGELOG.md](../CHANGELOG.md)
+
 ## Pipeline
 
 Two complementary inference chains are available:
@@ -74,10 +76,14 @@ data/
   schemas/          # claim_skeleton + medical_bill + salvage_document schemas
   profiles/         # committed characteristic profiles (small JSON)
   sample_corpus/    # queryable medical/salvage sample DB + seed exports
+  notebook_demo/    # small prepared datasets for notebook smoke paths
   raw/              # downloaded public samples (gitignored)
   synthetic/        # generated skeletons/documents/memos (gitignored)
   pipeline/         # inference outputs + markdown/render cache (gitignored)
 taxonomy/           # ACORD + medical_bills + salvage_claims application labels
+notebooks/          # pipeline, DICIE, and Random Forest walkthroughs
+scripts/            # setup_env, Discord autostart, notebook builders
+docs/               # architecture, usage, DICIE, corpus, provenance, plan
 evaluation/         # frontier vs. local eval harness + reports/
   eval_harness.py   # Phase 7 cost/accuracy comparison runner
   metrics.py        # per-(task, backend) scoring → summary.csv
@@ -85,8 +91,10 @@ evaluation/         # frontier vs. local eval harness + reports/
   cost_model/       # committed spreadsheet template (formula-driven)
   pricing.yaml      # frontier $/M tokens + local GPU hourly rate
   prompts/          # versioned eval prompt templates
-  reports/          # classification + extraction eval outputs
+  reports/          # classification + extraction + DICIE eval outputs
   results/          # harness JSONL/CSV run logs (gitignored)
+tests/              # unit/integration coverage for pipelines, corpus, Discord
+CHANGELOG.md        # version history (0.1.0 → 1.0.0-beta)
 ```
 
 ## Discord (Chloride)
@@ -95,12 +103,15 @@ Optional Discord agent powered by [Chloride](https://github.com/S4IL21/chloride)
 Install `pip install -e ".[discord]"`, set `DISCORD_TOKEN` (+ OpenRouter/AI key),
 then `python -m src.discord_bot`.
 
-**Slash commands** (synced on startup): `/analyze`, `/analyze_url`, `/status`, `/help`,
-`/ping` — run the **memo chain** (`src/pipeline/`) from Discord's command picker.
-DICIE (`src/docie/`) is exposed via CLI / optional FastAPI, not Discord slash commands.
+**Slash commands** (synced on startup) include docs (`/analyze`, `/analyze_url`),
+notes/STT (`/note`, `/transcribe`, `/remind`), DJ/vibes (`/play`, `/queue`,
+`/vibe`, …), and utils (`/poll`, `/status`, `/help`, `/ping`). Document commands
+run the **memo chain** (`src/pipeline/`). DICIE (`src/docie/`) is exposed via
+CLI / optional FastAPI, not Discord slash commands.
 
 **Chat / tools:** mention the bot or use the `--` prefix; the agent can call
-`analyze_insurance_document`. Right-click → **Ask Me** analyzes a selected message.
+`analyze_insurance_document` plus notes/STT/vibe helpers. Right-click →
+**Ask Me** analyzes a selected message.
 
 See [discord/smol-doc-analyzer/README.md](../discord/smol-doc-analyzer/README.md).
 

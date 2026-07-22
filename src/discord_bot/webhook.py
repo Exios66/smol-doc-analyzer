@@ -70,7 +70,7 @@ def post_webhook(
         data=data,
         headers={
             "Content-Type": "application/json",
-            "User-Agent": "smol-doc-analyzer-discord-webhook/0.1",
+            "User-Agent": "smol-doc-analyzer-discord-webhook/1.0.0b0",
         },
         method="POST",
     )

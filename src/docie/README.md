@@ -18,6 +18,7 @@ extract → vision → summarize memo chain in [`src/pipeline/`](../pipeline/).
 
 Longer design notes: [`docs/docie_pipeline.md`](../../docs/docie_pipeline.md).
 Architecture overview: [`docs/architecture.md`](../../docs/architecture.md).
+Full project usage guide: [`docs/usage.md`](../../docs/usage.md).
 
 ---
 

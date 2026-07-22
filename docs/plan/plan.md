@@ -1,8 +1,14 @@
-# Implementation & Development Plan — insurance-doc-ai
+# Implementation & Development Plan — smol-doc-analyzer
+
+**Current package version:** `1.0.0-beta` (`1.0.0b0`) — see [CHANGELOG.md](../../CHANGELOG.md).
 
 ## Overview
 
-This plan sequences the project into 7 phases. Each phase has a goal, concrete tasks, deliverables, and an exit criterion — the thing that must be true before moving on. Phases 1-3 can partially overlap; 4-6 are mostly sequential since each depends on the previous component's output.
+This plan sequences the project into 7 phases (plus DICIE and sample-corpus
+extensions). Each phase has a goal, concrete tasks, deliverables, and an exit
+criterion — the thing that must be true before moving on. Phases 1–3 can
+partially overlap; 4–6 are mostly sequential since each depends on the previous
+component's output.
 
 ---
 
@@ -138,6 +144,24 @@ with heuristic backends (no trained weights required).
 
 ---
 
+## Phase 5c: Sample document corpus — status: implemented
+
+**Goal:** Queryable synthetic medical-bill and salvage-document house for
+analysis, evaluation, and fine-tuning (no proprietary insurer files).
+
+Tasks:
+- SQLite `DocumentStore` with claims / documents / fields / pages / provenance
+- Realistic sample generator for HCFA, UB-04, LOG, salvage sales, towing
+- CLI: seed, summary, list, show, export (docie / classification / extraction), import-jsonl
+- Schemas under `data/schemas/medical_bill_skeleton.schema.json` and
+  `salvage_document_skeleton.schema.json`
+- Docs: `docs/sample_document_corpus.md`
+
+**Status:** Implemented in `src/storage/`. Default DB
+`data/sample_corpus/documents.db` is regenerable (`python -m src.storage seed`).
+
+---
+
 ## Phase 6: Deployment Packaging (est. 1-2 weeks)
 
 **Goal:** Package for offline/in-house deployment.
@@ -164,12 +188,18 @@ Tasks:
 - Write `docs/architecture.md` final version (design rationale; dual chains: DICIE + memo)
 - Keep `src/docie/README.md` + `docs/docie_pipeline.md` aligned with the Fig. 1 path
 - Write `docs/data_provenance.md` (full synthetic data sourcing disclosure, including DICIE fixtures)
+- Write `docs/usage.md` — end-to-end command reference for every pipeline and component
+- Maintain `CHANGELOG.md` with incremental versions through `1.0.0-beta`
 - Write `docs/handoff/amfam_pipeline_recipe.md` — the consulting deliverable, pointing only at reproducible pipeline/training code, not synthetic data specifics
 - Write portfolio-facing project writeup (results, architecture diagram, cost comparison)
 
 Deliverable: complete documentation set, benchmark report, public-facing writeup.
 
 Exit criterion: both deliverables (AmFam recipe doc, GitHub portfolio writeup) are complete and internally consistent with the data provenance disclosure.
+
+**Status (partial):** Eval harness, cost model, architecture, provenance, DICIE
+docs, usage guide, and changelog are in place for `1.0.0-beta`. Handoff recipe
+and portfolio writeup remain open; Phase 4 LoRA is still pending.
 
 ---
 

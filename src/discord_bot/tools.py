@@ -108,7 +108,7 @@ async def _download_url(url: str, dest: Path) -> Path:
     def _fetch() -> bytes:
         req = urllib.request.Request(
             safe_url,
-            headers={"User-Agent": "smol-doc-analyzer-discord-bot/0.1"},
+            headers={"User-Agent": "smol-doc-analyzer-discord-bot/1.0.0b0"},
         )
         with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310
             return resp.read()
