@@ -1,0 +1,35 @@
+---
+title: "Notebooks"
+---
+
+Interactive walkthroughs for the memo chain, DICIE pipeline, classical
+baselines, and the sample document corpus. Pages below are rendered from the
+repository `notebooks/` directory (via symlinks) with execution disabled at
+site build time.
+
+For a live Jupyter kernel:
+
+```bash
+pip install -e ".[notebooks]"
+jupyter notebook notebooks/
+```
+
+## Portal
+
+| Notebook | Description |
+|----------|-------------|
+| [Pipeline walkthrough](pipeline_walkthrough.ipynb) | Memo-chain analysis: markdown → classify → extract → vision → summarize |
+| [DICIE pipeline walkthrough](docie_pipeline_walkthrough.ipynb) | Paper Fig. 1 path for medical bills / salvage claims |
+| [Random Forest text + handwriting](random_forest_text_handwriting_classification.ipynb) | TF-IDF + Random Forest baseline with OCR/handwriting noise |
+| [Sample corpus walkthrough](sample_document_corpus_walkthrough.ipynb) | Seed and query the SQLite medical / salvage store |
+| [Sample corpus SQL integrations](sample_corpus_sql_integrations.ipynb) | SQL-oriented views and integrations over the sample corpus |
+| [Sample corpus train/test pipeline](sample_corpus_train_test_pipeline.ipynb) | Export corpus data into train/eval preparation paths |
+
+## Regenerating sample-corpus notebooks
+
+```bash
+python scripts/build_sample_corpus_notebooks.py
+```
+
+See also [Sample Document Corpus](../sample_document_corpus.md) and
+[How-to: launch this site](../how-to/launch-quarto-site.qmd).

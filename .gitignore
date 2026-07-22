@@ -26,6 +26,11 @@ Thumbs.db
 **/.ipynb_checkpoints/
 *.executed.ipynb
 
+# Quarto documentation website build artifacts
+docs/_site/
+.quarto/
+**/_freeze/
+
 # Logs (runtime / debug; not source of truth)
 *.log
 logs/

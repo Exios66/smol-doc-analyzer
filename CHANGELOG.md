@@ -13,6 +13,16 @@ from scaffolding through the current beta baseline.
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Quarto documentation website under `docs/` (`_quarto.yml`, home, quick start,
+  how-to launch guide, notebooks portal with symlinks into `notebooks/`)
+- `scripts/preview_docs_site.sh` — convenience wrapper for `quarto preview docs`
+
+---
+
 ## [1.0.0-beta] — 2026-07-22
 
 ### Added

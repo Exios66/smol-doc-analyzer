@@ -12,7 +12,27 @@ serving, and operating the Discord bot.
 | [docie_pipeline.md](docie_pipeline.md) | Paper Fig. 1 DICIE path |
 | [sample_document_corpus.md](sample_document_corpus.md) | SQLite medical / salvage sample store |
 | [data_provenance.md](data_provenance.md) | Synthetic-only data disclosure |
+| [quick-start.qmd](quick-start.qmd) | Condensed install + first run |
+| [how-to/launch-quarto-site.qmd](how-to/launch-quarto-site.qmd) | Preview / render this Quarto docs site |
+| [notebooks/index.qmd](notebooks/index.qmd) | Notebook portal |
 | [CHANGELOG.md](../CHANGELOG.md) | Version history through `1.0.0-beta` |
+
+### Documentation website (Quarto)
+
+Browse guides and notebooks as a local Quarto website (requires the
+[Quarto CLI](https://quarto.org/docs/get-started/)):
+
+```bash
+# live preview with reload (run inside docs/ — see how-to)
+cd docs && quarto preview
+# or from repo root:
+./scripts/preview_docs_site.sh
+
+# static build → docs/_site/
+cd docs && quarto render
+```
+
+Full setup notes: [How-to: launch the Quarto docs site](how-to/launch-quarto-site.qmd).
 
 ---
 

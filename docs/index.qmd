@@ -1,0 +1,41 @@
+---
+title: "smol-doc-analyzer"
+subtitle: "Local insurance document classification, extraction, and memo generation"
+---
+
+**smol-doc-analyzer** is a small, locally deployable LLM pipeline for insurance
+document intake — classification, field extraction, and adjuster-style memos —
+built as a cost-efficient alternative to frontier API models for high-volume
+workflows.
+
+This Quarto site gathers the project guides, architecture notes, and interactive
+notebooks into one browsable portal.
+
+## Start here
+
+| Page | What you get |
+|------|----------------|
+| [Quick Start](quick-start.qmd) | Install, secrets, and a minimal first run |
+| [Usage](usage.md) | Full command reference for both pipelines, corpus, training, eval, Discord |
+| [Architecture](architecture.md) | Dual-pipeline design and repository map |
+| [Notebooks](notebooks/index.qmd) | Walkthrough notebooks rendered in the portal |
+| [How-to: launch this site](how-to/launch-quarto-site.qmd) | Preview and render with the Quarto CLI |
+
+## Two inference paths
+
+- **DICIE** (`src/docie/`) — paper Fig. 1: process → classify → extract → respond
+  (medical bills / salvage claims). See [DICIE Pipeline](docie_pipeline.md).
+- **Memo chain** (`src/pipeline/`) — markdown → classify → extract → vision →
+  summarize for adjuster-style memos. See [Usage](usage.md).
+
+All training and demo data is synthetic or public; see
+[Data Provenance](data_provenance.md).
+
+## Preview this site
+
+```bash
+# requires Quarto CLI — run inside docs/ (see how-to for why)
+cd docs && quarto preview
+# or from repo root:
+./scripts/preview_docs_site.sh
+```

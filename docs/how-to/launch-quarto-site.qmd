@@ -1,0 +1,117 @@
+---
+title: "How-to: Launch the Quarto Documentation Website"
+---
+
+This guide explains how to preview and build the **smol-doc-analyzer**
+documentation portal with the [Quarto](https://quarto.org/) CLI.
+
+## Prerequisites
+
+1. **Quarto CLI** — install from
+   [quarto.org/docs/get-started](https://quarto.org/docs/get-started/).
+   Confirm:
+
+   ```bash
+   quarto --version
+   quarto check
+   ```
+
+2. **Repository checkout** — work from the repo root (the directory that
+   contains `docs/` and `notebooks/`).
+
+3. **Optional Python extras** — only needed if you also run notebooks
+   interactively in Jupyter (not required for Quarto preview/render):
+
+   ```bash
+   pip install -e ".[notebooks]"
+   ```
+
+Notebook pages in this site use `execute: eval: false`, so Quarto does **not**
+re-run notebooks at render time. Stored outputs (when present) still display.
+
+## Preview (live local portal)
+
+Run Quarto **from the `docs/` directory** (not the repo root). The repository
+root `.env.example` lists optional secrets with empty defaults; if Quarto’s
+working directory is the repo root, dotenv-safe treats those keys as required
+and preview/render fails.
+
+```bash
+cd docs
+quarto preview
+```
+
+Or use the helper script from the repository root (it `cd`s into `docs/`):
+
+```bash
+./scripts/preview_docs_site.sh
+```
+
+Quarto opens a local URL (typically `http://localhost:xxxx`) with live reload
+when you edit site sources under `docs/`.
+
+Stop the preview with `Ctrl+C` in the terminal.
+
+## Render (static site)
+
+Build HTML into `docs/_site/`:
+
+```bash
+cd docs
+quarto render
+```
+
+Serve the built site with any static file server, for example (from repo root):
+
+```bash
+python -m http.server 8080 --directory docs/_site
+```
+
+Then open `http://localhost:8080` in a browser.
+
+You can also re-preview the rendered output:
+
+```bash
+cd docs
+quarto preview _site
+```
+
+## What the site includes
+
+| Section | Sources |
+|---------|---------|
+| Home / Quick Start | `docs/index.qmd`, `docs/quick-start.qmd` |
+| Usage / Architecture | `docs/usage.md`, `docs/architecture.md` |
+| Pipelines | `docs/docie_pipeline.md`, `docs/sample_document_corpus.md` |
+| Data provenance | `docs/data_provenance.md` |
+| Notebooks portal | `docs/notebooks/` (symlinks into repo `notebooks/`) |
+| This how-to | `docs/how-to/launch-quarto-site.qmd` |
+
+Project config: [`docs/_quarto.yml`](../_quarto.yml).
+
+## Notebook symlinks
+
+Notebook pages under `docs/notebooks/*.ipynb` are **git symlinks** to
+`../../notebooks/*.ipynb`. Edit notebooks in the top-level `notebooks/`
+directory; the docs portal picks up the same files.
+
+On Windows, enable Developer Mode or run Git as Administrator so symlinks
+checkout correctly (`core.symlinks=true`). If a symlink appears as a plain
+text file, recreate it or re-clone with symlink support.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `quarto: command not found` | Install Quarto CLI and ensure it is on `PATH` |
+| `MissingEnvVarsError` / `.env.example` | `cd docs` before `quarto preview` / `quarto render` (or use `./scripts/preview_docs_site.sh`) |
+| Preview port already in use | `cd docs && quarto preview --port 4444` (or another free port) |
+| Notebook page missing / empty | Confirm symlink: `ls -l docs/notebooks/` should show `→ ../../notebooks/...` |
+| Render fails on internal docs | By design only nav-listed pages render; `docs/plan/` and audit notes are excluded |
+| Want to re-execute notebooks | Temporarily set `execute.eval: true` in `_quarto.yml` (needs models/data; not the default docs path) |
+
+## Related
+
+- [Quick Start](../quick-start.qmd) — install the Python package
+- [Usage](../usage.md) — full CLI reference
+- [Notebooks portal](../notebooks/index.qmd) — browse walkthroughs in the site
