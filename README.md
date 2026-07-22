@@ -1,5 +1,7 @@
 # smol-doc-analyzer
 
+**Version:** [`1.0.0-beta`](CHANGELOG.md) (`1.0.0b0`)
+
 A small, locally-deployable LLM pipeline for insurance document classification, extraction, and memo generation — built as a cost-efficient alternative to frontier enterprise models for high-volume document intake.
 
 ## Why this exists
@@ -16,23 +18,29 @@ All three run offline, on modest hardware, with no per-token API costs.
 
 ## Status
 
-**Package version:** `0.5.0` — covers Phases 0–3 and 5, DICIE, Discord bot,
-eval/cost harness, and classical/ViT classifiers (Phase 4 summarizer LoRA still pending).
+**Package version:** `1.0.0-beta` (`1.0.0b0`) — see [CHANGELOG.md](CHANGELOG.md)
+for the incremental history from `0.1.0` through this beta.
 
-Phases 0–3 and Phase 5 (chained inference orchestrator) implemented, plus a
-paper-aligned DICIE path:
+Covers Phases 0–3 and 5, DICIE (5b), sample corpus store, Discord bot,
+eval/cost harness, and classical/ViT classifiers (Phase 4 summarizer LoRA
+still pending):
 
 - Characteristic profiles from public document/layout/legal-style priors
 - Synthetic skeleton → document → memo → OCR-noise pipeline (optional OpenRouter LLM; auto-routes to free models on credit exhaustion, else template fallback)
-- Document-type classifier train/eval (text DeBERTa + optional ViT image path)
+- Document-type classifier train/eval (text DeBERTa + optional ViT image path + TF-IDF Random Forest baseline)
 - Field extraction train/eval with noisy stress reporting
 - **DICIE (Fig. 1)**: document processing → classification → information extraction → aggregated response (`src/docie/`) for medical bills and salvage claims
 - **Single-action analysis chain**: to_markdown → classify → extract → vision_llm → summarize (`src/pipeline/`)
 - PNG/PDF → structured markdown before LLM stages (token + context optimization)
+- **Sample corpus store**: queryable SQLite house for synthetic medical / salvage docs (`src/storage/`)
+- **Discord bot** (Chloride): `/analyze` memo chain plus notes, STT, DJ/vibes, chat
+- **Frontier vs. local eval harness** + cost-model spreadsheet
 
 Phase 4 (fine-tuned summarizer LoRA) still pending — the chain currently uses a
 template memo grounded in upstream extraction/vision outputs, with a hook for a
 local generative model when configured.
+
+**Docs:** [docs/usage.md](docs/usage.md) · [docs/architecture.md](docs/architecture.md) · [CHANGELOG.md](CHANGELOG.md)
 
 ## Data disclosure
 
@@ -152,7 +160,8 @@ page images inside the same chain.
 
 ## Repository structure
 
-See [docs/architecture.md](docs/architecture.md).
+See [docs/architecture.md](docs/architecture.md). Full command reference:
+[docs/usage.md](docs/usage.md).
 
 ## DICIE module (`src/docie/`)
 

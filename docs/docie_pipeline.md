@@ -5,6 +5,7 @@ chain from Raj, Dickinson & Fung, *Document Classification and Information
 Extraction framework for Insurance Applications*.
 
 Module README (API, CLI, layout): [`src/docie/README.md`](../src/docie/README.md).
+End-to-end usage (both pipelines): [`docs/usage.md`](usage.md).
 
 ```
 Input (PDF / page images; structured · tabular · unstructured)

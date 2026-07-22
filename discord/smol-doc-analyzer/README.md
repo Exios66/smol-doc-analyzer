@@ -1,10 +1,12 @@
 # Discord bot (Chloride)
 
-All-purpose Discord agent for **smol-doc-analyzer**, powered by
+All-purpose Discord agent for **smol-doc-analyzer** (`1.0.0-beta`), powered by
 [Chloride](https://github.com/S4IL21/chloride) (Coral agent + Discord integration).
 
 Specialty: insurance document analysis. Also: **notes / transcription**, **DJ / vibes**,
 and free-form **chat** when you mention the bot or use the `--` prefix.
+
+Project usage guide: [docs/usage.md](../../docs/usage.md).
 
 ## Setup
 
