@@ -97,46 +97,103 @@ def load_text_handwriting_corpus(
     return frame
 
 
-def assign_split_column(frame: pd.DataFrame, splits_path: Path | None = None) -> pd.DataFrame:
-    """Attach train/val/test using project splits when available; else stratified holdout."""
-    cfg = Config.load()
-    path = splits_path or cfg.splits_path
-    out = frame.copy()
-    if path.exists():
-        splits = read_json(path)
-        id_to_split: dict[str, str] = {}
-        for split_name in ("train", "val", "test"):
-            for rid in splits.get(split_name, []):
-                id_to_split[rid] = split_name
-        out["split"] = out["record_id"].map(id_to_split)
-        missing = out["split"].isna()
-        if missing.any():
-            # Stable fallback for rows not listed in splits.json
-            rng = np.random.default_rng(42)
-            choices = rng.choice(["train", "val", "test"], size=int(missing.sum()), p=[0.7, 0.15, 0.15])
-            out.loc[missing, "split"] = choices
-    else:
-        # Stratify when every class has enough rows; otherwise fall back to random split.
-        counts = out["document_type"].value_counts()
-        can_stratify = bool(len(out) >= 10 and counts.min() >= 2)
-        stratify = out["document_type"] if can_stratify else None
-        train_idx, temp_idx = train_test_split(
-            out.index,
-            test_size=0.3,
-            random_state=42,
-            stratify=stratify,
+def _split_map_for_record_ids(
+    record_ids: list[str],
+    labels_by_id: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """Assign train/val/test once per unique ``record_id`` (no surface leakage)."""
+    unique_ids = list(dict.fromkeys(record_ids))
+    if not unique_ids:
+        return {}
+    if len(unique_ids) == 1:
+        return {unique_ids[0]: "train"}
+
+    id_frame = pd.DataFrame({"record_id": unique_ids})
+    if labels_by_id:
+        id_frame["document_type"] = id_frame["record_id"].map(labels_by_id)
+        counts = id_frame["document_type"].value_counts(dropna=True)
+        can_stratify = bool(
+            len(id_frame) >= 10
+            and not id_frame["document_type"].isna().any()
+            and len(counts) > 0
+            and counts.min() >= 2
         )
-        temp_labels = out.loc[temp_idx, "document_type"]
-        can_stratify_temp = bool(len(temp_idx) >= 4 and temp_labels.value_counts().min() >= 2)
-        val_idx, test_idx = train_test_split(
-            temp_idx,
+        stratify = id_frame["document_type"] if can_stratify else None
+    else:
+        stratify = None
+
+    train_ids, temp_ids = train_test_split(
+        id_frame["record_id"],
+        test_size=0.3,
+        random_state=42,
+        stratify=stratify,
+    )
+    temp_list = list(temp_ids)
+    if len(temp_list) == 1:
+        val_ids, test_ids = temp_list, []
+    else:
+        temp_labels = (
+            [labels_by_id.get(rid) for rid in temp_list] if labels_by_id else None
+        )
+        can_stratify_temp = False
+        if temp_labels is not None and None not in temp_labels:
+            temp_counts = pd.Series(temp_labels).value_counts()
+            can_stratify_temp = bool(len(temp_list) >= 4 and temp_counts.min() >= 2)
+        val_ids, test_ids = train_test_split(
+            temp_list,
             test_size=0.5,
             random_state=42,
             stratify=temp_labels if can_stratify_temp else None,
         )
-        out["split"] = "train"
-        out.loc[val_idx, "split"] = "val"
-        out.loc[test_idx, "split"] = "test"
+
+    mapping: dict[str, str] = {rid: "train" for rid in train_ids}
+    mapping.update({rid: "val" for rid in val_ids})
+    mapping.update({rid: "test" for rid in test_ids})
+    return mapping
+
+
+def assign_split_column(frame: pd.DataFrame, splits_path: Path | None = None) -> pd.DataFrame:
+    """Attach train/val/test using project splits when available; else stratified holdout.
+
+    Splits are assigned per unique ``record_id`` so typed and handwriting/OCR
+    surfaces of the same document always share a split (no train/test leakage).
+    """
+    cfg = Config.load()
+    path = splits_path or cfg.splits_path
+    out = frame.copy()
+    # Object dtype avoids TypeError when assigning string labels over all-NaN float columns.
+    out["split"] = pd.Series([pd.NA] * len(out), dtype="object", index=out.index)
+
+    labels_by_id: dict[str, str] = {}
+    if "document_type" in out.columns:
+        for rid, label in zip(out["record_id"].astype(str), out["document_type"].astype(str)):
+            labels_by_id.setdefault(rid, label)
+
+    id_to_split: dict[str, str] = {}
+    if path.exists():
+        splits = read_json(path)
+        for split_name in ("train", "val", "test"):
+            for rid in splits.get(split_name, []):
+                id_to_split[str(rid)] = split_name
+
+    mapped = out["record_id"].astype(str).map(id_to_split)
+    out["split"] = mapped.astype("object")
+    missing_mask = out["split"].isna()
+
+    # Fallback when splits.json is missing, matches nothing, or only covers some IDs.
+    if missing_mask.any():
+        missing_ids = out.loc[missing_mask, "record_id"].astype(str).tolist()
+        fallback = _split_map_for_record_ids(missing_ids, labels_by_id=labels_by_id)
+        out.loc[missing_mask, "split"] = (
+            out.loc[missing_mask, "record_id"].astype(str).map(fallback)
+        )
+
+    # Final safety: any still-missing IDs go to train (should be rare).
+    still_missing = out["split"].isna()
+    if still_missing.any():
+        out.loc[still_missing, "split"] = "train"
+
+    out["split"] = out["split"].astype(str)
     return out
 
 

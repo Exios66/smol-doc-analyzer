@@ -13,6 +13,29 @@ from scaffolding through the current beta baseline.
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **#28** Discord `/analyze` PDF/PNG attachments: pass trusted inbox files via
+  `local_path` instead of routing local paths through `file_url` SSRF checks
+- **#29** Discord URL download SSRF: disable auto-redirects, re-validate every
+  hop, and cap download size at 25 MiB
+- **#30** DICIE serve path traversal: sanitize `record_id` and keep upload
+  writes under the temp directory
+- **#31** Sample corpus upsert: replace ground-truth (per role) so omitted
+  fields do not linger after re-import
+- **#32** Random Forest splits: assign train/val/test per unique `record_id`
+  so typed + handwriting/OCR surfaces never leak across splits
+- **#33** DICIE name extraction: do not treat `Carrier Name:` as patient name
+- **#34** `render_forms` PNG collisions: use collision-safe `cache_safe_id`
+  (shared with pipeline cache)
+- **#35** Eval harness: record the actually-used OpenRouter model and set
+  `cost_usd=0` after free-model fallback
+- RF notebook `SEED_N` resynced to `2000` (matched builder script + tests)
+
+---
+
 ## [1.0.0-beta] — 2026-07-22
 
 ### Added

@@ -39,7 +39,7 @@ from evaluation.cost_model_helpers import local_cost_per_call, load_pricing_raw
 from evaluation.local_backends import build_local_task_endpoints
 from evaluation.metrics import normalize_label
 from src.utils.config import Config
-from src.utils.llm_client import OpenRouterClient
+from src.utils.llm_client import OpenRouterClient, is_free_model
 from src.utils.prompts import load_prompt
 from src.utils.provenance import ProvenanceLogger
 
@@ -106,7 +106,7 @@ class FrontierBackend:
         self.pricing = pricing
         self.client = OpenRouterClient(model=model_slug, cfg=cfg)
 
-    def run(self, task: str, example: dict) -> tuple[Any, int, int, float]:
+    def run(self, task: str, example: dict) -> tuple[Any, int, int, float, str]:
         prompt_template = load_prompt(f"eval_{task}")
         prompt = prompt_template.format(**_stringify_prompt_fields(example["prompt_fields"]))
 
@@ -115,11 +115,13 @@ class FrontierBackend:
         latency = time.perf_counter() - start
 
         prediction = parse_prediction(task, response["text"])
+        used_model = str(response.get("model") or self.model_slug)
         return (
             prediction,
             response["usage"]["input_tokens"],
             response["usage"]["output_tokens"],
             latency,
+            used_model,
         )
 
 
@@ -151,7 +153,7 @@ class LocalBackend:
         self.task_endpoints = task_endpoints  # task -> callable(example) -> pred
         self.model_slug = "local"
 
-    def run(self, task: str, example: dict) -> tuple[Any, int, int, float]:
+    def run(self, task: str, example: dict) -> tuple[Any, int, int, float, str]:
         endpoint = self.task_endpoints.get(task)
         if endpoint is None:
             raise ValueError(f"No local endpoint wired for task '{task}'")
@@ -162,7 +164,7 @@ class LocalBackend:
 
         # Local models don't bill per-token; report 0/0 here and let the
         # cost model derive $/doc from gpu_hourly_rate * latency instead.
-        return prediction, 0, 0, latency
+        return prediction, 0, 0, latency, self.model_slug
 
 
 def parse_prediction(task: str, raw_text: str) -> Any:
@@ -225,17 +227,21 @@ def run_eval(
                     continue
                 start = time.perf_counter()
                 try:
-                    prediction, in_tok, out_tok, latency = backend.run(task, ex)
+                    prediction, in_tok, out_tok, latency, used_model = backend.run(task, ex)
                     # Prefer harness wall time so failures and successes share one clock.
                     wall = time.perf_counter() - start
                     latency = max(float(latency), wall)
-                    model_id = getattr(backend, "model_slug", "local")
+                    model_id = str(used_model or getattr(backend, "model_slug", "local"))
                     if isinstance(backend, FrontierBackend):
-                        cost = compute_cost(
-                            frontier_pricing.get(backend_name, backend.pricing),
-                            in_tok,
-                            out_tok,
-                        )
+                        if is_free_model(model_id):
+                            # Free OpenRouter routes must not inherit paid slug pricing.
+                            cost = 0.0
+                        else:
+                            cost = compute_cost(
+                                frontier_pricing.get(backend_name, backend.pricing),
+                                in_tok,
+                                out_tok,
+                            )
                     else:
                         cost = local_cost_per_call(backend.gpu_hourly_rate, latency)
                     parse_error = (

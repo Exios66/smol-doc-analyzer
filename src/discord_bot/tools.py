@@ -98,20 +98,70 @@ def _validate_download_url(url: str) -> str:
     return url
 
 
-async def _download_url(url: str, dest: Path) -> Path:
-    import asyncio
-    import urllib.request
+_MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024  # 25 MiB
+_MAX_REDIRECTS = 5
+_REDIRECT_CODES = frozenset({301, 302, 303, 307, 308})
 
-    safe_url = _validate_download_url(url)
+
+async def _download_url(url: str, dest: Path) -> Path:
+    """Download an http(s) URL with per-hop SSRF checks and a size cap.
+
+    Automatic redirects are disabled; each ``Location`` is re-validated with
+    the same host/IP blocks as the original URL before the next hop.
+    """
+    import asyncio
+    import urllib.error
+    import urllib.request
+    from urllib.parse import urljoin
+
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+            # Returning None makes urllib raise HTTPError for the 3xx response.
+            return None
+
     dest.parent.mkdir(parents=True, exist_ok=True)
 
+    def _read_capped(resp) -> bytes:  # noqa: ANN001
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = resp.read(64 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > _MAX_DOWNLOAD_BYTES:
+                raise ValueError(
+                    f"Download exceeds max size of {_MAX_DOWNLOAD_BYTES} bytes."
+                )
+            chunks.append(chunk)
+        return b"".join(chunks)
+
     def _fetch() -> bytes:
-        req = urllib.request.Request(
-            safe_url,
-            headers={"User-Agent": "smol-doc-analyzer-discord-bot/1.0.0b0"},
-        )
-        with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310
-            return resp.read()
+        current = _validate_download_url(url)
+        opener = urllib.request.build_opener(NoRedirect)
+        for _ in range(_MAX_REDIRECTS + 1):
+            req = urllib.request.Request(
+                current,
+                headers={"User-Agent": "smol-doc-analyzer-discord-bot/1.0.0b0"},
+                method="GET",
+            )
+            try:
+                with opener.open(req, timeout=60) as resp:  # noqa: S310
+                    return _read_capped(resp)
+            except urllib.error.HTTPError as exc:
+                if exc.code not in _REDIRECT_CODES:
+                    raise
+                location = exc.headers.get("Location") if exc.headers else None
+                try:
+                    exc.close()
+                except Exception:  # noqa: BLE001
+                    pass
+                if not location:
+                    raise ValueError(
+                        f"Redirect ({exc.code}) missing Location header."
+                    ) from exc
+                current = _validate_download_url(urljoin(current, location))
+        raise ValueError(f"Too many redirects (>{_MAX_REDIRECTS}) while downloading URL.")
 
     data = await asyncio.to_thread(_fetch)
     dest.write_bytes(data)
@@ -139,17 +189,28 @@ async def analyze_insurance_document_impl(
     text: Optional[str] = None,
     attachment_index: int = 0,
     file_url: Optional[str] = None,
+    local_path: Path | str | None = None,
     enable_vision: bool = True,
     record_id: Optional[str] = None,
     message=None,
 ) -> dict:
-    """Core pipeline invocation used by the Chloride tool (and unit tests)."""
+    """Core pipeline invocation used by the Chloride tool (and unit tests).
+
+    ``local_path`` is for files already saved by Discord slash commands / inbox
+    helpers. It is trusted and never routed through URL download validation.
+    ``file_url`` remains http(s)-only.
+    """
     path: Path | None = None
     kind = "text"
     source_text = (text or "").strip()
 
     try:
-        if file_url:
+        if local_path is not None:
+            path = Path(local_path).expanduser().resolve()
+            if not path.is_file():
+                return {"error": f"Local attachment not found: {path}"}
+            kind = _guess_kind(path)
+        elif file_url:
             parsed = urlparse(file_url)
             name = _safe_filename(Path(parsed.path).name or "download.bin")
             msg_id = getattr(message, "id", "adhoc")
@@ -163,7 +224,8 @@ async def analyze_insurance_document_impl(
         elif not source_text:
             return {
                 "error": (
-                    "Provide `text`, `file_url`, or attach a PDF/PNG to the Discord message."
+                    "Provide `text`, `file_url`, `local_path`, or attach a PDF/PNG "
+                    "to the Discord message."
                 )
             }
 

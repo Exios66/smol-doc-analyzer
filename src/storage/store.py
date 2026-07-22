@@ -158,7 +158,18 @@ class DocumentStore:
                     doc.updated_at,
                 ),
             )
-            if doc.fields:
+            if doc.fields is not None:
+                # Replace semantics per role present in the payload so omitted
+                # keys do not linger as stale gold labels after re-import.
+                roles_present = {f.field_role for f in doc.fields}
+                for role in roles_present:
+                    conn.execute(
+                        """
+                        DELETE FROM document_fields
+                        WHERE document_id = ? AND field_role = ?
+                        """,
+                        (doc.document_id, role),
+                    )
                 for f in doc.fields:
                     conn.execute(
                         """
@@ -166,9 +177,6 @@ class DocumentStore:
                             document_id, field_name, field_value, field_role,
                             confidence, created_at
                         ) VALUES (?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(document_id, field_name, field_role) DO UPDATE SET
-                            field_value = excluded.field_value,
-                            confidence = excluded.confidence
                         """,
                         (
                             doc.document_id,
@@ -189,9 +197,23 @@ class DocumentStore:
         *,
         role: str = "ground_truth",
         confidence: float | None = None,
+        replace: bool = True,
     ) -> None:
+        """Set fields for ``role``.
+
+        When ``replace`` is True (default), the role's prior field set is
+        deleted first so omitted keys do not remain as stale labels.
+        """
         now = time.time()
         with _LOCK, self._connect() as conn:
+            if replace:
+                conn.execute(
+                    """
+                    DELETE FROM document_fields
+                    WHERE document_id = ? AND field_role = ?
+                    """,
+                    (document_id, role),
+                )
             for name, value in fields.items():
                 conn.execute(
                     """

@@ -239,3 +239,33 @@ def test_annotate_updates_correct_when_judge_score_present():
     assert rows[0]["score"] == pytest.approx(0.4)
     assert rows[0]["correct"] is False
     assert rows[0]["score_source"] == "judge"
+
+
+def test_render_forms_avoids_colon_underscore_path_collision(tmp_path: Path):
+    from src.extraction.render_forms import render_documents
+    from src.utils.io import cache_safe_id, write_jsonl
+
+    docs = [
+        {
+            "record_id": "CLM-1::loss_notice::0",
+            "claim_id": "CLM-1",
+            "document_type": "loss_notice",
+            "text": "LOSS NOTICE\nClaim Number: CLM-1\n",
+        },
+        {
+            "record_id": "CLM-1__loss_notice__0",
+            "claim_id": "CLM-1",
+            "document_type": "loss_notice",
+            "text": "LOSS NOTICE\nClaim Number: CLM-1B\n",
+        },
+    ]
+    assert cache_safe_id(docs[0]["record_id"]) != cache_safe_id(docs[1]["record_id"])
+    inp = tmp_path / "docs.jsonl"
+    write_jsonl(inp, docs)
+    out = tmp_path / "rendered"
+    rendered_path = render_documents(inp, out)
+    rows = [__import__("json").loads(line) for line in rendered_path.read_text().splitlines()]
+    paths = [Path(r["image_path"]) for r in rows]
+    assert paths[0] != paths[1]
+    assert paths[0].exists() and paths[1].exists()
+    assert paths[0].name != paths[1].name

@@ -7,13 +7,12 @@ stages and returns the aggregated classification + extraction prediction.
 Optional dependency: ``pip install fastapi uvicorn python-multipart``
 """
 
-from __future__ import annotations
-
 import argparse
 import logging
+import re
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Tuple
 
 from src.docie.applications import list_applications
 from src.docie.pipeline import DociePipeline
@@ -21,11 +20,34 @@ from src.utils.config import Config
 
 logger = logging.getLogger(__name__)
 
+_SAFE_RECORD_ID = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _sanitize_upload_record_id(record_id: str) -> str:
+    """Collapse ``record_id`` to a basename-safe token (no path separators)."""
+    raw = (record_id or "upload").strip() or "upload"
+    # Reject absolute / parent-traversal attempts before basename cleanup.
+    base = Path(raw).name
+    cleaned = _SAFE_RECORD_ID.sub("_", base).strip("._") or "upload"
+    return cleaned[:120]
+
+
+def _safe_upload_path(tmp_dir: Path, record_id: str, suffix: str) -> Tuple[str, Path]:
+    """Return ``(safe_record_id, path)`` guaranteed to stay under ``tmp_dir``."""
+    safe_id = _sanitize_upload_record_id(record_id)
+    # Normalize suffix to a simple extension token.
+    safe_suffix = suffix if re.fullmatch(r"\.[A-Za-z0-9]{1,16}", suffix or "") else ".bin"
+    root = tmp_dir.resolve()
+    path = (root / f"{safe_id}{safe_suffix}").resolve()
+    if not path.is_relative_to(root):
+        raise ValueError(f"Upload path escaped temp directory: {path}")
+    return safe_id, path
+
 
 def create_app(
     application: str = "salvage_claims",
     *,
-    cfg: Config | None = None,
+    cfg: Optional[Config] = None,
 ) -> Any:
     try:
         from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -79,13 +101,16 @@ def create_app(
             raise HTTPException(status_code=400, detail="Empty upload")
 
         with tempfile.TemporaryDirectory(prefix="docie_upload_") as tmp:
-            path = Path(tmp) / f"{record_id}{suffix}"
+            try:
+                safe_id, path = _safe_upload_path(Path(tmp), record_id, suffix)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
             path.write_bytes(raw)
             pipe = _pipe(application_name)
             if suffix == ".pdf":
-                prediction = pipe.process(record_id=record_id, pdf_path=path)
+                prediction = pipe.process(record_id=safe_id, pdf_path=path)
             elif suffix in {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}:
-                prediction = pipe.process(record_id=record_id, image_path=path)
+                prediction = pipe.process(record_id=safe_id, image_path=path)
             else:
                 raise HTTPException(
                     status_code=400,

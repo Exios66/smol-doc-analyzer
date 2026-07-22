@@ -56,6 +56,11 @@ def _is_free_model(model: str) -> bool:
     return slug == "openrouter/free" or slug.endswith(":free")
 
 
+def is_free_model(model: str) -> bool:
+    """Public helper — True when ``model`` is a $0 OpenRouter free route."""
+    return _is_free_model(model)
+
+
 def parse_free_fallback_models(raw: str | None = None) -> tuple[str, ...]:
     """Parse comma-separated free fallback slugs from env or an explicit string."""
     text = (raw if raw is not None else os.getenv("OPENROUTER_FREE_FALLBACK_MODELS", "")).strip()
