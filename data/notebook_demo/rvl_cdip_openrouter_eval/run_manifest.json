@@ -1,6 +1,6 @@
 {
   "experiment": "rvl_cdip_openrouter_eval",
-  "created_at": "2026-07-23T05:16:08.325786+00:00",
+  "created_at": "2026-07-23T17:11:39.140923+00:00",
   "n_samples": 1040,
   "vision_models": [
     "openai/gpt-4o-mini",
@@ -27,7 +27,7 @@
     "n_with_ocr": 0,
     "n_errors": 1040,
     "archive_present": false,
-    "images_dir": "/Users/morningstar/Desktop/Cold_Storage/smol-doc-analyzer/.venv/rvl_cdip/source/images"
+    "images_dir": "/mnt/home/jburleson/smol-doc-analyzer/.venv/rvl_cdip/source/images"
   },
   "classification": {
     "per_model": [
