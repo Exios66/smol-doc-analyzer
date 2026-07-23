@@ -12,7 +12,7 @@ pypdf==6.14.2
 rfc3339-validator==0.1.4
 pexpect==4.9.0
 pydantic-evals==2.9.0
-jupyterlab==4.6.1
+jupyterlab==4.6.2
 pydantic-graph==2.9.0
 fqdn==1.5.1
 jaraco.functools==4.5.0
@@ -74,7 +74,7 @@ httpcore2==2.5.0
 anyio==4.14.1
 propcache==0.5.2
 opentelemetry-exporter-otlp-proto-http==1.42.1
-GitPython==3.1.50
+GitPython==3.1.52
 evaluate==0.4.6
 jupyter-console==6.6.3
 matplotlib-inline==0.2.2
@@ -90,7 +90,7 @@ docstring_parser==0.18.0
 xxhash==3.8.1
 mistune==3.3.3
 numpy==2.4.6
-setuptools==82.0.0
+setuptools==83.0.0
 pandocfilters==1.5.1
 googleapis-common-protos==1.75.0
 ruff==0.15.21
