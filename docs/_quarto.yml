@@ -13,6 +13,7 @@ project:
     - data_provenance.md
     - docie_pipeline.qmd
     - sample_document_corpus.md
+    - rvl_cdip_sql.md
     - bugfix_audit_round2.md
     - CHANGELOG.md
     - how-to/launch-quarto-site.qmd
@@ -61,6 +62,8 @@ website:
             text: DICIE Pipeline
           - href: sample_document_corpus.md
             text: Sample Corpus
+          - href: rvl_cdip_sql.md
+            text: RVL-CDIP SQL Index
       - href: notebooks/index.qmd
         text: Notebooks
       - href: reference/commands.qmd
@@ -150,9 +153,11 @@ format:
     theme:
       light: [flatly, styles.scss]
       dark: [darkly, styles.scss]
-    # Bundle CSS/JS/images into each page so figures work on Posit Cloud
-    # and when HTML is viewed without sidecar asset folders.
-    embed-resources: true
+    # Website publish uploads the whole `_site/` tree (shared site_libs +
+    # notebook `*_files/`). Keep embed-resources off — with it on, Pandoc
+    # warns "Could not fetch resource ./other-page.html" for every in-site
+    # link to a page that has not been rendered yet in this pass.
+    embed-resources: false
     toc: true
     toc-depth: 3
     toc-location: right

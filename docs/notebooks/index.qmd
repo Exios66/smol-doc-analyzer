@@ -10,9 +10,9 @@ Notebooks portal
 
 ::: {.hero-lead}
 Pages below are git symlinks to repository `notebooks/*.ipynb`. Quarto renders
-them with **`execute: eval: false`** using **stored cell outputs**. Site HTML
-uses `embed-resources: true`, so plots and page images are **base64-embedded**
-in each page (portable on Posit Connect without sidecar folders).
+them with **`execute: eval: false`** using **stored cell outputs** and figure
+sidecar folders under `_site/notebooks/` (published with the whole site to
+Posit Connect).
 :::
 
 ::: {.callout-tip}

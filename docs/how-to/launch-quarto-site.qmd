@@ -135,13 +135,15 @@ cd docs
 quarto preview _site
 ```
 
-## Portable figures
+## Portable site assets
 
-The site is built with:
+Posit Connect Cloud receives the whole `docs/_site/` tree (shared `site_libs/`,
+notebook `*_files/` figure folders, CSS/JS). Keep **`embed-resources: false`**
+in `_quarto.yml` — turning it on makes Pandoc try to fetch every in-site
+`./other-page.html` link during render and spam
+`Could not fetch resource ./….html` warnings for pages not yet built in that pass.
 
-- `embed-resources: true` — CSS, JS, logos, notebook plots, and Mermaid PNGs are
-  inlined into each HTML page (no broken sidecar `_files/` on Posit Cloud)
-- `mermaid-format: png` — diagrams are static images, not client-only JS canvases
+Mermaid diagrams use client-side JS (`mermaid` theme in `_quarto.yml`).
 
 Re-publish after doc/notebook changes:
 
