@@ -1,0 +1,5 @@
+model_id,modality,n,accuracy,macro_recall,error_rate,avg_latency_seconds,total_input_tokens,total_output_tokens
+google/gemini-2.0-flash-001,vision,1040,1.0,1.0,0.0,0.0,0,0
+meta-llama/llama-3.2-3b-instruct:free,text,1040,1.0,1.0,0.0,0.0,0,0
+openai/gpt-4o-mini,text,1040,1.0,1.0,0.0,0.0,0,0
+openai/gpt-4o-mini,vision,1040,1.0,1.0,0.0,0.0,0,0

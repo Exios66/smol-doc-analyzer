@@ -19,8 +19,12 @@ automatically route subsequent calls to free OpenRouter models
 
 from __future__ import annotations
 
+import base64
+import io
 import logging
+import mimetypes
 import os
+from pathlib import Path
 from typing import Any, Sequence
 
 from openai import OpenAI
@@ -158,6 +162,50 @@ def _extract_usage(response: Any) -> dict[str, int]:
     }
 
 
+def encode_image_data_url(
+    image: Path | bytes | str,
+    *,
+    max_long_edge: int = 1280,
+    jpeg_quality: int = 85,
+) -> str:
+    """Encode a page image as a ``data:image/...;base64,...`` URL for OpenRouter.
+
+    TIFF/PNG/JPEG inputs are loaded via Pillow when available, resized so the
+    long edge is at most ``max_long_edge``, and re-encoded as JPEG to control
+    vision token cost. Falls back to raw base64 of the original bytes when
+    Pillow is not installed (caller should prefer JPEG/PNG in that case).
+    """
+    raw: bytes
+    if isinstance(image, (str, Path)):
+        raw = Path(image).read_bytes()
+        hint_name = str(image)
+    else:
+        raw = image
+        hint_name = "image.bin"
+
+    try:
+        from PIL import Image
+    except ImportError:
+        mime = mimetypes.guess_type(hint_name)[0] or "image/jpeg"
+        b64 = base64.b64encode(raw).decode("ascii")
+        return f"data:{mime};base64,{b64}"
+
+    with Image.open(io.BytesIO(raw)) as im:
+        im = im.convert("RGB")
+        w, h = im.size
+        long_edge = max(w, h)
+        if long_edge > max_long_edge:
+            scale = max_long_edge / float(long_edge)
+            im = im.resize(
+                (max(1, int(w * scale)), max(1, int(h * scale))),
+                Image.Resampling.LANCZOS,
+            )
+        buf = io.BytesIO()
+        im.save(buf, format="JPEG", quality=jpeg_quality, optimize=True)
+        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+    return f"data:image/jpeg;base64,{b64}"
+
+
 def _chat_once(
     client: OpenAI,
     *,
@@ -165,13 +213,22 @@ def _chat_once(
     system_prompt: str,
     user_prompt: str,
     max_tokens: int,
+    image_data_url: str | None = None,
 ) -> tuple[str, Any]:
+    if image_data_url:
+        user_content: Any = [
+            {"type": "text", "text": user_prompt},
+            {"type": "image_url", "image_url": {"url": image_data_url}},
+        ]
+    else:
+        user_content = user_prompt
+
     response = client.chat.completions.create(
         model=model,
         max_tokens=max_tokens,
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
+            {"role": "user", "content": user_content},
         ],
     )
     if not response.choices:
@@ -324,15 +381,48 @@ class OpenRouterClient:
     def complete(self, prompt: str, **kwargs: Any) -> dict[str, Any]:
         max_tokens = int(kwargs.get("max_tokens", 1024))
         system_prompt = kwargs.get("system_prompt", self._system_prompt)
-        return self._complete_with_routing(prompt, max_tokens, system_prompt)
+        return self._complete_with_routing(
+            prompt, max_tokens, system_prompt, image_data_url=None
+        )
+
+    def complete_multimodal(
+        self,
+        prompt: str,
+        *,
+        image: Path | bytes | str | None = None,
+        image_data_url: str | None = None,
+        max_long_edge: int = 1280,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Chat completion with an optional page image (vision models).
+
+        Provide either ``image`` (path/bytes) or a prebuilt ``image_data_url``.
+        """
+        max_tokens = int(kwargs.get("max_tokens", 1024))
+        system_prompt = kwargs.get("system_prompt", self._system_prompt)
+        data_url = image_data_url
+        if data_url is None and image is not None:
+            data_url = encode_image_data_url(image, max_long_edge=max_long_edge)
+        if data_url is None:
+            raise ValueError("complete_multimodal requires image or image_data_url")
+        return self._complete_with_routing(
+            prompt, max_tokens, system_prompt, image_data_url=data_url
+        )
 
     def _complete_with_routing(
-        self, prompt: str, max_tokens: int, system_prompt: str
+        self,
+        prompt: str,
+        max_tokens: int,
+        system_prompt: str,
+        *,
+        image_data_url: str | None,
     ) -> dict[str, Any]:
         errors: list[str] = []
         for model in self._model_candidates():
             try:
-                return self._complete_with_retry(model, prompt, max_tokens, system_prompt)
+                return self._complete_with_retry(
+                    model, prompt, max_tokens, system_prompt, image_data_url=image_data_url
+                )
             except Exception as exc:
                 if is_credit_unavailable_error(exc):
                     _mark_credits_unavailable(exc)
@@ -354,7 +444,13 @@ class OpenRouterClient:
         )
 
     def _complete_with_retry(
-        self, model: str, prompt: str, max_tokens: int, system_prompt: str
+        self,
+        model: str,
+        prompt: str,
+        max_tokens: int,
+        system_prompt: str,
+        *,
+        image_data_url: str | None,
     ) -> dict[str, Any]:
         @retry(
             stop=stop_after_attempt(self._max_retries),
@@ -369,6 +465,7 @@ class OpenRouterClient:
                 system_prompt=system_prompt,
                 user_prompt=prompt,
                 max_tokens=max_tokens,
+                image_data_url=image_data_url,
             )
             used_model = getattr(response, "model", None) or model
             if model != self.model:

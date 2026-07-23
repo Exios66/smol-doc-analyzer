@@ -142,6 +142,7 @@ website:
           - notebooks/sample_corpus_sql_integrations.ipynb
           - notebooks/sample_corpus_train_test_pipeline.ipynb
           - notebooks/rvl_cdip_recreation_sampling.ipynb
+          - notebooks/rvl_cdip_openrouter_eval.ipynb
       - section: "Project notes"
         contents:
           - plan/plan.md

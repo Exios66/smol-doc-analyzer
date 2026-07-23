@@ -1,0 +1,58 @@
+[
+  {
+    "cell_type": "markdown",
+    "source": "# RVL-CDIP OpenRouter multi-model eval (PoC)\n\nFollow-on to [`rvl_cdip_recreation_sampling.ipynb`](rvl_cdip_recreation_sampling.ipynb).\n\nLoads the recreation experiment set (`recreation_samples.jsonl`, typically **1040** rows =\n65 × 16 classes), materializes page images (selective tar extract when the archive is present),\noptionally OCRs them, then queries **OpenRouter** models to:\n\n1. **Classify** into the 16 RVL-CDIP labels (gold labels available)\n2. **Extract / annotate** structured insurance-style fields (proxy metrics — no gold fields)\n\n**Modality:** vision-first (page image → vision models); OCR text → text models.\n\nRelated: [RVL-CDIP SQL Index](../rvl_cdip_sql.md) · CLI `python -m src.rvl_cdip --help`"
+  },
+  {
+    "cell_type": "markdown",
+    "source": "## 0. Prerequisites\n\n```bash\npython scripts/setup_env.py          # OPENROUTER_API_KEY in .env\npython -m src.rvl_cdip build         # labels + SQLite (if not already)\n# Optional images (~38 GB archive, then selective extract of the 1040 paths):\n# python -m src.rvl_cdip download-images --i-understand-large-download\npip install -e \".[ocr]\"             # only if using the text/OCR path\n```\n\nDefaults below keep **`DRY_RUN=True`** so this notebook is safe for docs/CI."
+  },
+  {
+    "cell_type": "code",
+    "source": "from __future__ import annotations\n\nimport json\nfrom pathlib import Path\n\nimport pandas as pd\nfrom IPython.display import Markdown, display\n\nREPO_ROOT = Path.cwd()\nif not (REPO_ROOT / \"pyproject.toml\").exists():\n    for cand in [REPO_ROOT.parent, *REPO_ROOT.parents]:\n        if (cand / \"pyproject.toml\").exists():\n            REPO_ROOT = cand\n            break\n\nimport sys\n\nif str(REPO_ROOT) not in sys.path:\n    sys.path.insert(0, str(REPO_ROOT))\n\nfrom src.rvl_cdip.openrouter_eval import (\n    DEFAULT_TEXT_MODELS,\n    DEFAULT_VISION_MODELS,\n    load_samples,\n    run_eval,\n)\nfrom src.rvl_cdip.paths import LABEL_NAMES, archive_path\nfrom src.rvl_cdip.sample_images import materialize_samples, summarize_materialize\nfrom src.utils.config import Config\n\nSAMPLES_PATH = REPO_ROOT / \"data/notebook_demo/rvl_cdip_recreation/recreation_samples.jsonl\"\nOUT_DIR = REPO_ROOT / \"data/notebook_demo/rvl_cdip_openrouter_eval\"\n\n# --- knobs -------------------------------------------------------------------\nDRY_RUN = True          # False → live OpenRouter calls (needs OPENROUTER_API_KEY)\nMAX_PER_CLASS = 65      # full PoC = 65 → 1040 docs; use 2–5 for cheap smoke\nRUN_OCR = True          # needed for text modality\nMODALITIES = (\"vision\", \"text\")\nVISION_MODELS = list(DEFAULT_VISION_MODELS)\nTEXT_MODELS = list(DEFAULT_TEXT_MODELS)\n\ncfg = Config.load()\nhas_key = bool(cfg.openrouter_api_key)\ndisplay(\n    Markdown(\n        f\"Repo `{REPO_ROOT}`  \\n\"\n        f\"`OPENROUTER_API_KEY` set: **{has_key}**  ·  `DRY_RUN={DRY_RUN}`  ·  \"\n        f\"`MAX_PER_CLASS={MAX_PER_CLASS}`  ·  archive present: **{archive_path().is_file()}**\"\n    )\n)"
+  },
+  {
+    "cell_type": "markdown",
+    "source": "## 1. Load recreation samples"
+  },
+  {
+    "cell_type": "code",
+    "source": "samples = load_samples(SAMPLES_PATH, max_per_class=MAX_PER_CLASS)\ndf = pd.DataFrame(samples)\ndisplay(Markdown(f\"Loaded **{len(samples)}** samples from `{SAMPLES_PATH.relative_to(REPO_ROOT)}`\"))\ndisplay(df.groupby([\"label_id\", \"label\"], as_index=False).size().head(20))\ndf.head(3)"
+  },
+  {
+    "cell_type": "markdown",
+    "source": "## 2. Materialize images (+ optional OCR)\n\nResolution order: existing `image_abspath` → `.venv/rvl_cdip/source/images/{relpath}` →\nextract that member from `rvl-cdip.tar.gz` when the archive is present."
+  },
+  {
+    "cell_type": "code",
+    "source": "mats = materialize_samples(samples, run_ocr=RUN_OCR and (\"text\" in MODALITIES))\nmat_summary = summarize_materialize(mats)\ndisplay(Markdown(\"### Materialize summary\"))\ndisplay(mat_summary)\nmat_df = pd.DataFrame([m.to_dict() for m in mats])\ndisplay(mat_df.head(5))\nif mat_summary[\"n_with_image\"] == 0 and \"vision\" in MODALITIES and not DRY_RUN:\n    display(\n        Markdown(\n            \"> **Vision path blocked:** no images on disk and archive missing. \"\n            \"Download with `python -m src.rvl_cdip download-images --i-understand-large-download` \"\n            \"then re-run materialize (selective extract of the 1040 paths).\"\n        )\n    )"
+  },
+  {
+    "cell_type": "markdown",
+    "source": "## 3. Run OpenRouter eval (classify + extract/annotate)\n\nTwo calls per document × model × modality. Predictions append to\n`predictions.jsonl` with resume/cache on `(document_id, model_id, task, modality)`."
+  },
+  {
+    "cell_type": "code",
+    "source": "if not DRY_RUN and not has_key:\n    raise RuntimeError(\"Set OPENROUTER_API_KEY (or keep DRY_RUN=True)\")\n\nmanifest = run_eval(\n    samples,\n    materialize=mats,\n    vision_models=VISION_MODELS,\n    text_models=TEXT_MODELS,\n    modalities=MODALITIES,\n    out_dir=OUT_DIR,\n    dry_run=DRY_RUN,\n    cfg=cfg,\n    resume=True,\n)\ndisplay(Markdown(f\"Wrote artifacts under `{OUT_DIR.relative_to(REPO_ROOT)}`\"))\ndisplay(manifest)"
+  },
+  {
+    "cell_type": "markdown",
+    "source": "## 4. Scoreboards\n\n- **Classification:** accuracy + macro recall vs gold `label`\n- **Extraction:** valid-JSON rate, field fill-rates, pairwise agreement (no gold fields)"
+  },
+  {
+    "cell_type": "code",
+    "source": "cls_path = OUT_DIR / \"summary_classification.json\"\next_path = OUT_DIR / \"summary_extraction.json\"\ncls = json.loads(cls_path.read_text()) if cls_path.exists() else {}\next = json.loads(ext_path.read_text()) if ext_path.exists() else {}\n\ncls_df = pd.DataFrame(cls.get(\"per_model\") or [])\next_df = pd.DataFrame(ext.get(\"per_model\") or [])\ndisplay(Markdown(\"### Classification\"))\ndisplay(cls_df)\ndisplay(Markdown(\"### Extraction proxies\"))\ndisplay(ext_df)\nif ext.get(\"pairwise_agreement\"):\n    display(Markdown(\"### Pairwise agreement\"))\n    display(pd.DataFrame(ext[\"pairwise_agreement\"].get(\"pairs\") or []))"
+  },
+  {
+    "cell_type": "markdown",
+    "source": "## 5. Peek at predictions"
+  },
+  {
+    "cell_type": "code",
+    "source": "pred_path = OUT_DIR / \"predictions.jsonl\"\npreds = [\n    json.loads(line)\n    for line in pred_path.read_text(encoding=\"utf-8\").splitlines()\n    if line.strip()\n]\npred_df = pd.DataFrame(preds)\ndisplay(Markdown(f\"**{len(pred_df)}** prediction rows\"))\ncols = [\n    c\n    for c in [\n        \"document_id\",\n        \"label\",\n        \"task\",\n        \"modality\",\n        \"model_id\",\n        \"prediction\",\n        \"error\",\n        \"dry_run\",\n        \"cache_hit\",\n    ]\n    if c in pred_df.columns\n]\ndisplay(pred_df[cols].head(12))"
+  },
+  {
+    "cell_type": "markdown",
+    "source": "## Next steps\n\n- Set `DRY_RUN=False` and ensure images are materialized for a live vision run\n- Lower `MAX_PER_CLASS` (e.g. `2`) for a cheap smoke before the full 1040\n- Compare `summary_classification.csv` across model slugs; review extraction JSONL manually\n- Guide: [RVL-CDIP SQL Index](../rvl_cdip_sql.md)"
+  }
+]

@@ -89,6 +89,21 @@ showcase queries, run
 (regenerate with `python scripts/build_rvl_cdip_recreation_notebook.py`).
 Exports land under `data/notebook_demo/rvl_cdip_recreation/`.
 
+## OpenRouter multi-model eval (PoC)
+
+Chain after the recreation export with
+[`notebooks/rvl_cdip_openrouter_eval.ipynb`](notebooks/rvl_cdip_openrouter_eval.ipynb)
+(regenerate with `python scripts/build_rvl_cdip_openrouter_eval_notebook.py`):
+
+- Materialize the 1040 sample images (selective extract from `rvl-cdip.tar.gz`)
+- Optional OCR for text models
+- OpenRouter **vision + text** calls: classify (gold labels) + structured
+  insurance-style extract/annotate (proxy metrics)
+- Artifacts under `data/notebook_demo/rvl_cdip_openrouter_eval/`
+
+Helpers: `src/rvl_cdip/sample_images.py`, `src/rvl_cdip/openrouter_eval.py`,
+multimodal `OpenRouterClient.complete_multimodal` in `src/utils/llm_client.py`.
+
 Related: the lighter streaming sample ingest used for characteristic profiles
 remains in `src/generation/corpus_ingest.py` (`ingest_rvl_cdip`). This module
 is the full queryable SQL house for the public dataset.

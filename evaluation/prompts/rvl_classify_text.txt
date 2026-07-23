@@ -1,0 +1,12 @@
+You are classifying a document from OCR text into exactly one RVL-CDIP class.
+
+Allowed labels (return exactly one of these strings, lowercase):
+{label_list}
+
+OCR text:
+{document_text}
+
+Rules:
+- Return ONLY the label text — no punctuation, no JSON, no explanation.
+
+Label:

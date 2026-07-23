@@ -1,0 +1,10 @@
+You are classifying a scanned document page image into exactly one RVL-CDIP class.
+
+Allowed labels (return exactly one of these strings, lowercase):
+{label_list}
+
+Rules:
+- Look at layout, typography, and visual cues in the page image.
+- Return ONLY the label text — no punctuation, no JSON, no explanation.
+
+Label:

@@ -1,0 +1,277 @@
+{
+  "experiment": "rvl_cdip_openrouter_eval",
+  "created_at": "2026-07-23T04:55:48.822607+00:00",
+  "n_samples": 1040,
+  "vision_models": [
+    "openai/gpt-4o-mini",
+    "google/gemini-2.0-flash-001"
+  ],
+  "text_models": [
+    "openai/gpt-4o-mini",
+    "meta-llama/llama-3.2-3b-instruct:free"
+  ],
+  "tasks": [
+    "classify",
+    "extract_annotate"
+  ],
+  "modalities": [
+    "vision",
+    "text"
+  ],
+  "dry_run": true,
+  "predictions_path": "data/notebook_demo/rvl_cdip_openrouter_eval/predictions.jsonl",
+  "materialize": {
+    "n_samples": 1040,
+    "n_with_image": 0,
+    "n_extracted": 0,
+    "n_with_ocr": 0,
+    "n_errors": 1040,
+    "archive_present": false,
+    "images_dir": "/Users/morningstar/Desktop/Cold_Storage/smol-doc-analyzer/.venv/rvl_cdip/source/images"
+  },
+  "classification": {
+    "per_model": [
+      {
+        "model_id": "google/gemini-2.0-flash-001",
+        "modality": "vision",
+        "n": 1040,
+        "accuracy": 1.0,
+        "macro_recall": 1.0,
+        "per_class_recall": {
+          "letter": 1.0,
+          "form": 1.0,
+          "email": 1.0,
+          "handwritten": 1.0,
+          "advertisement": 1.0,
+          "scientific report": 1.0,
+          "scientific publication": 1.0,
+          "specification": 1.0,
+          "file folder": 1.0,
+          "news article": 1.0,
+          "budget": 1.0,
+          "invoice": 1.0,
+          "presentation": 1.0,
+          "questionnaire": 1.0,
+          "resume": 1.0,
+          "memo": 1.0
+        },
+        "error_rate": 0.0,
+        "avg_latency_seconds": 0.0,
+        "total_input_tokens": 0,
+        "total_output_tokens": 0
+      },
+      {
+        "model_id": "meta-llama/llama-3.2-3b-instruct:free",
+        "modality": "text",
+        "n": 1040,
+        "accuracy": 1.0,
+        "macro_recall": 1.0,
+        "per_class_recall": {
+          "letter": 1.0,
+          "form": 1.0,
+          "email": 1.0,
+          "handwritten": 1.0,
+          "advertisement": 1.0,
+          "scientific report": 1.0,
+          "scientific publication": 1.0,
+          "specification": 1.0,
+          "file folder": 1.0,
+          "news article": 1.0,
+          "budget": 1.0,
+          "invoice": 1.0,
+          "presentation": 1.0,
+          "questionnaire": 1.0,
+          "resume": 1.0,
+          "memo": 1.0
+        },
+        "error_rate": 0.0,
+        "avg_latency_seconds": 0.0,
+        "total_input_tokens": 0,
+        "total_output_tokens": 0
+      },
+      {
+        "model_id": "openai/gpt-4o-mini",
+        "modality": "text",
+        "n": 1040,
+        "accuracy": 1.0,
+        "macro_recall": 1.0,
+        "per_class_recall": {
+          "letter": 1.0,
+          "form": 1.0,
+          "email": 1.0,
+          "handwritten": 1.0,
+          "advertisement": 1.0,
+          "scientific report": 1.0,
+          "scientific publication": 1.0,
+          "specification": 1.0,
+          "file folder": 1.0,
+          "news article": 1.0,
+          "budget": 1.0,
+          "invoice": 1.0,
+          "presentation": 1.0,
+          "questionnaire": 1.0,
+          "resume": 1.0,
+          "memo": 1.0
+        },
+        "error_rate": 0.0,
+        "avg_latency_seconds": 0.0,
+        "total_input_tokens": 0,
+        "total_output_tokens": 0
+      },
+      {
+        "model_id": "openai/gpt-4o-mini",
+        "modality": "vision",
+        "n": 1040,
+        "accuracy": 1.0,
+        "macro_recall": 1.0,
+        "per_class_recall": {
+          "letter": 1.0,
+          "form": 1.0,
+          "email": 1.0,
+          "handwritten": 1.0,
+          "advertisement": 1.0,
+          "scientific report": 1.0,
+          "scientific publication": 1.0,
+          "specification": 1.0,
+          "file folder": 1.0,
+          "news article": 1.0,
+          "budget": 1.0,
+          "invoice": 1.0,
+          "presentation": 1.0,
+          "questionnaire": 1.0,
+          "resume": 1.0,
+          "memo": 1.0
+        },
+        "error_rate": 0.0,
+        "avg_latency_seconds": 0.0,
+        "total_input_tokens": 0,
+        "total_output_tokens": 0
+      }
+    ]
+  },
+  "extraction": {
+    "per_model": [
+      {
+        "model_id": "google/gemini-2.0-flash-001",
+        "modality": "vision",
+        "n": 1040,
+        "valid_json_rate": 1.0,
+        "mean_field_fill_rate": 0.4,
+        "field_fill_rates": {
+          "document_type_guess": 1.0,
+          "title_or_subject": 1.0,
+          "parties": 0.0,
+          "dates": 0.0,
+          "identifiers": 0.0,
+          "amounts": 0.0,
+          "addresses_or_locations": 0.0,
+          "key_value_fields": 0.0,
+          "summary": 1.0,
+          "extraction_notes": 1.0
+        },
+        "error_rate": 0.0
+      },
+      {
+        "model_id": "meta-llama/llama-3.2-3b-instruct:free",
+        "modality": "text",
+        "n": 1040,
+        "valid_json_rate": 1.0,
+        "mean_field_fill_rate": 0.4,
+        "field_fill_rates": {
+          "document_type_guess": 1.0,
+          "title_or_subject": 1.0,
+          "parties": 0.0,
+          "dates": 0.0,
+          "identifiers": 0.0,
+          "amounts": 0.0,
+          "addresses_or_locations": 0.0,
+          "key_value_fields": 0.0,
+          "summary": 1.0,
+          "extraction_notes": 1.0
+        },
+        "error_rate": 0.0
+      },
+      {
+        "model_id": "openai/gpt-4o-mini",
+        "modality": "text",
+        "n": 1040,
+        "valid_json_rate": 1.0,
+        "mean_field_fill_rate": 0.4,
+        "field_fill_rates": {
+          "document_type_guess": 1.0,
+          "title_or_subject": 1.0,
+          "parties": 0.0,
+          "dates": 0.0,
+          "identifiers": 0.0,
+          "amounts": 0.0,
+          "addresses_or_locations": 0.0,
+          "key_value_fields": 0.0,
+          "summary": 1.0,
+          "extraction_notes": 1.0
+        },
+        "error_rate": 0.0
+      },
+      {
+        "model_id": "openai/gpt-4o-mini",
+        "modality": "vision",
+        "n": 1040,
+        "valid_json_rate": 1.0,
+        "mean_field_fill_rate": 0.4,
+        "field_fill_rates": {
+          "document_type_guess": 1.0,
+          "title_or_subject": 1.0,
+          "parties": 0.0,
+          "dates": 0.0,
+          "identifiers": 0.0,
+          "amounts": 0.0,
+          "addresses_or_locations": 0.0,
+          "key_value_fields": 0.0,
+          "summary": 1.0,
+          "extraction_notes": 1.0
+        },
+        "error_rate": 0.0
+      }
+    ],
+    "pairwise_agreement": {
+      "n_pairs": 6,
+      "pairs": [
+        {
+          "model_a": "google/gemini-2.0-flash-001|vision",
+          "model_b": "meta-llama/llama-3.2-3b-instruct:free|text",
+          "n_compared_fields": 3120,
+          "agreement_rate": 1.0
+        },
+        {
+          "model_a": "google/gemini-2.0-flash-001|vision",
+          "model_b": "openai/gpt-4o-mini|text",
+          "n_compared_fields": 3120,
+          "agreement_rate": 1.0
+        },
+        {
+          "model_a": "google/gemini-2.0-flash-001|vision",
+          "model_b": "openai/gpt-4o-mini|vision",
+          "n_compared_fields": 3120,
+          "agreement_rate": 1.0
+        },
+        {
+          "model_a": "meta-llama/llama-3.2-3b-instruct:free|text",
+          "model_b": "openai/gpt-4o-mini|text",
+          "n_compared_fields": 3120,
+          "agreement_rate": 1.0
+        },
+        {
+          "model_a": "meta-llama/llama-3.2-3b-instruct:free|text",
+          "model_b": "openai/gpt-4o-mini|vision",
+          "n_compared_fields": 3120,
+          "agreement_rate": 1.0
+        },
+        {
+          "model_a": "openai/gpt-4o-mini|text",
+          "model_b": "openai/gpt-4o-mini|vision",
+          "n_compared_fields": 3120,
+          "agreement_rate": 1.0
+        }
+      ]
+    }
+  }
+}

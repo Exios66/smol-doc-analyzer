@@ -91,7 +91,8 @@ python -m src.rvl_cdip query "SELECT split, COUNT(*) AS n FROM documents GROUP B
 # python -m src.rvl_cdip download-images --i-understand-large-download  # ~38 GB
 ```
 
-Guide: [RVL-CDIP SQL Index](../rvl_cdip_sql.md)
+Guide: [RVL-CDIP SQL Index](../rvl_cdip_sql.md) ·
+[OpenRouter eval notebook](../notebooks/rvl_cdip_openrouter_eval.ipynb)
 
 ## Classification & extraction (training)
 

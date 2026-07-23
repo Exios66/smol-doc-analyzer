@@ -84,6 +84,14 @@ Export corpus rows into train/eval preparation paths.
 SQL queries + 60–70 seeded samples per class (0–15).
 :::
 
+::: {.feature-card}
+<span class="pipeline-badge">OpenRouter</span>
+
+### [RVL-CDIP OpenRouter eval](rvl_cdip_openrouter_eval.ipynb)
+
+Vision + OCR multi-model classify / structured extract PoC.
+:::
+
 :::::
 
 ## Regeneration helpers
@@ -92,6 +100,7 @@ SQL queries + 60–70 seeded samples per class (0–15).
 python scripts/build_sample_corpus_notebooks.py
 python scripts/build_rf_notebook.py   # Random Forest notebook builder
 python scripts/build_rvl_cdip_recreation_notebook.py
+python scripts/build_rvl_cdip_openrouter_eval_notebook.py
 ```
 
 ::: {.see-also}
