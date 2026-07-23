@@ -26,7 +26,7 @@ project:
 website:
   title: "smol-doc-analyzer"
   description: "Local insurance document classification, extraction, and memo generation"
-  site-url: https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00
+  site-url: https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud
   repo-url: https://github.com/Exios66/smol-doc-analyzer
   repo-actions: [source, issue]
   favicon: assets/favicon.svg
@@ -87,7 +87,7 @@ website:
         href: https://github.com/Exios66/smol-doc-analyzer
         aria-label: GitHub repository
       - icon: cloud
-        href: https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00
+        href: https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud
         aria-label: Live Posit Connect Cloud site
   page-footer:
     left:
@@ -107,7 +107,7 @@ website:
         href: https://github.com/Exios66/smol-doc-analyzer
         aria-label: GitHub
       - icon: cloud
-        href: https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00
+        href: https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud
         aria-label: Posit Connect Cloud
   sidebar:
     style: docked

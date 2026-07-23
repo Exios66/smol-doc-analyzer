@@ -18,7 +18,7 @@ workflows.
 ::: {.callout-tip}
 ## Live on Posit Connect Cloud
 This portal is published at
-[connect.posit.cloud/…/smol-doc-analyzer](https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00).
+[smol-doc-analyzer on Posit Connect Cloud](https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud).
 Re-publish after edits with `./scripts/publish_docs_site.sh`.
 :::
 

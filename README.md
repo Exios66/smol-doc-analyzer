@@ -33,7 +33,7 @@
   <a href="https://huggingface.co/"><img src="https://img.shields.io/badge/Hugging%20Face-Transformers-FFD21E?style=flat-square&logo=huggingface&logoColor=black" alt="Hugging Face"></a>
   <a href="https://wandb.ai/"><img src="https://img.shields.io/badge/Weights%20%26%20Biases-FFBE00?style=flat-square&logo=weightsandbiases&logoColor=black" alt="Weights & Biases"></a>
   <a href="https://quarto.org/"><img src="https://img.shields.io/badge/Docs-Quarto-39729E?style=flat-square&logo=quarto&logoColor=white" alt="Quarto docs"></a>
-  <a href="https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00"><img src="https://img.shields.io/badge/Posit%20Connect-Live%20docs-447099?style=flat-square&logo=r&logoColor=white" alt="Posit Connect docs"></a>
+  <a href="https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud"><img src="https://img.shields.io/badge/Posit%20Connect-Live%20docs-447099?style=flat-square&logo=r&logoColor=white" alt="Posit Connect docs"></a>
   <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-Optional%20serve-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI"></a>
   <a href="https://www.sqlite.org/"><img src="https://img.shields.io/badge/SQLite-Corpus%20store-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite"></a>
   <a href="https://discord.com/"><img src="https://img.shields.io/badge/Discord-Chloride%20bot-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord bot"></a>
@@ -83,7 +83,7 @@ Phase 4 (fine-tuned summarizer LoRA) still pending — the chain currently uses 
 template memo grounded in upstream extraction/vision outputs, with a hook for a
 local generative model when configured.
 
-**Docs:** [📚 Live Quarto site (Posit Connect Cloud)](https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00) ·
+**Docs:** [📚 Live Quarto site (Posit Connect Cloud)](https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud) ·
 [Usage](docs/usage.md) · [Architecture](docs/architecture.qmd) ·
 [CHANGELOG](CHANGELOG.md) ·
 [Local preview / re-publish](docs/how-to/launch-quarto-site.qmd)

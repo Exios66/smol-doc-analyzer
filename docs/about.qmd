@@ -12,7 +12,7 @@ about:
       href: https://github.com/Exios66/smol-doc-analyzer
     - icon: cloud
       text: Posit Connect Cloud
-      href: https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00
+      href: https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud
     - icon: book
       text: Usage
       href: usage.md

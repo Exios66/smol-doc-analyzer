@@ -2,7 +2,7 @@
   "split": "test",
   "n": 7,
   "accuracy": 0.42857142857142855,
-  "auc_ovr": NaN,
+  "auc_ovr": null,
   "auc_ovo": 1.0,
   "macro_f1": 0.3444444444444444,
   "micro_f1": 0.42857142857142855,
