@@ -26,37 +26,49 @@ Re-publish after edits with `./scripts/publish_docs_site.sh`.
 
 ::: {.feature-card}
 <span class="bi bi-rocket-takeoff"></span>
+
 ### [Quick Start](quick-start.qmd)
+
 Install, secrets, and a minimal DICIE one-liner — no training required.
 :::
 
 ::: {.feature-card}
 <span class="bi bi-book"></span>
+
 ### [Usage](usage.md)
+
 Full CLI reference for both pipelines, corpus, training, eval, and Discord.
 :::
 
 ::: {.feature-card}
 <span class="bi bi-diagram-3"></span>
+
 ### [Architecture](architecture.qmd)
+
 Dual-pipeline design, repository map, and chronological stage contract.
 :::
 
 ::: {.feature-card}
 <span class="bi bi-journal-code"></span>
+
 ### [Notebooks](notebooks/index.qmd)
+
 Rendered walkthroughs with stored outputs, figures, and inline code.
 :::
 
 ::: {.feature-card}
 <span class="bi bi-terminal"></span>
+
 ### [Commands](reference/commands.qmd)
+
 Cheat sheet of the most common entry points.
 :::
 
 ::: {.feature-card}
 <span class="bi bi-shield-check"></span>
+
 ### [Data Provenance](data_provenance.md)
+
 Synthetic-only disclosure — no real insurer data.
 :::
 

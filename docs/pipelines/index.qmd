@@ -25,19 +25,25 @@ flowchart TB
 
 ::: {.feature-card}
 <span class="pipeline-badge">DICIE</span>
+
 ### [Design notes](../docie_pipeline.qmd)
+
 Stages, taxonomies, review gates, FastAPI serve shape.
 :::
 
 ::: {.feature-card}
 <span class="pipeline-badge">Notebook</span>
+
 ### [DICIE walkthrough](../notebooks/docie_pipeline_walkthrough.ipynb)
+
 Stage-by-stage demo with page images and stored outputs.
 :::
 
 ::: {.feature-card}
 <span class="pipeline-badge">CLI</span>
+
 ### [Usage · DICIE](../usage.md)
+
 `python -m src.docie` batch + response-only recipes.
 :::
 
@@ -56,19 +62,25 @@ flowchart LR
 
 ::: {.feature-card}
 <span class="pipeline-badge">Memo</span>
+
 ### [Architecture](../architecture.qmd)
+
 Chronological reaction contract and markdown conversion.
 :::
 
 ::: {.feature-card}
 <span class="pipeline-badge">Notebook</span>
+
 ### [Pipeline walkthrough](../notebooks/pipeline_walkthrough.ipynb)
+
 End-to-end memo-chain analysis with figures.
 :::
 
 ::: {.feature-card}
 <span class="pipeline-badge">CLI</span>
+
 ### [Usage · orchestrator](../usage.md)
+
 `python -m src.pipeline.orchestrator` and batch_runner.
 :::
 

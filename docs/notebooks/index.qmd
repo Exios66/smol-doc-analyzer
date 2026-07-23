@@ -26,37 +26,49 @@ jupyter notebook notebooks/
 
 ::: {.feature-card}
 <span class="pipeline-badge">Memo</span>
+
 ### [Pipeline walkthrough](pipeline_walkthrough.ipynb)
+
 Markdown → classify → extract → vision → summarize with figures.
 :::
 
 ::: {.feature-card}
 <span class="pipeline-badge">DICIE</span>
+
 ### [DICIE pipeline walkthrough](docie_pipeline_walkthrough.ipynb)
+
 Paper Fig. 1 stages, page images, review routing, batch `run_file`.
 :::
 
 ::: {.feature-card}
 <span class="pipeline-badge">Baseline</span>
+
 ### [Random Forest text + handwriting](random_forest_text_handwriting_classification.ipynb)
+
 TF-IDF + Random Forest under OCR / handwriting noise.
 :::
 
 ::: {.feature-card}
 <span class="pipeline-badge">Corpus</span>
+
 ### [Sample corpus walkthrough](sample_document_corpus_walkthrough.ipynb)
+
 Seed and query the SQLite medical / salvage store.
 :::
 
 ::: {.feature-card}
 <span class="pipeline-badge">SQL</span>
+
 ### [Sample corpus SQL integrations](sample_corpus_sql_integrations.ipynb)
+
 SQL-oriented views over `DocumentStore`.
 :::
 
 ::: {.feature-card}
 <span class="pipeline-badge">Train</span>
+
 ### [Sample corpus train → test](sample_corpus_train_test_pipeline.ipynb)
+
 Export corpus rows into train/eval preparation paths.
 :::
 
