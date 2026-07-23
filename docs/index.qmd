@@ -8,10 +8,12 @@ page-layout: full
 Local · synthetic-only · dual pipeline
 :::
 
+::: {.hero-lead}
 **smol-doc-analyzer** is a small, locally deployable pipeline for insurance
 document intake — classification, field extraction, and adjuster-style memos —
 built as a cost-efficient alternative to frontier API models for high-volume
 workflows.
+:::
 
 ::: {.callout-tip}
 ## Live on Posit Connect Cloud
@@ -77,6 +79,7 @@ Synthetic-only disclosure — no real insurer data.
 ## Two inference paths
 
 ```{mermaid}
+%%| fig-cap: "Dual inference paths in smol-doc-analyzer"
 flowchart LR
   IN[(PDF / PNG / text)] --> DICIE
   IN --> MEMO
@@ -97,11 +100,9 @@ Explore both from the [Pipeline hub](pipelines/index.qmd).
 
 ## Sample corpus & classical baseline
 
-::: {.column-margin}
 ::: {.callout-note}
 ## Synthetic only
 All demo data is synthetic or public. See [Data Provenance](data_provenance.md).
-:::
 :::
 
 - [Sample Document Corpus](sample_document_corpus.md) — SQLite house for medical / salvage docs
@@ -122,6 +123,7 @@ Details: [How-to: Quarto site](how-to/launch-quarto-site.qmd) · [About](about.q
 
 ::: {.see-also}
 ### See also
+
 [Implementation plan](plan/plan.md) · [Bugfix audit](bugfix_audit_round2.md) ·
 [Changelog](CHANGELOG.md) · [GitHub repository](https://github.com/Exios66/smol-doc-analyzer)
 :::

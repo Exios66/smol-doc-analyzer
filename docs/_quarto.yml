@@ -169,14 +169,19 @@ format:
     link-external-icon: true
     fig-align: center
     fig-cap-location: bottom
-    # Render Mermaid to static PNG (not client-side JS) for portable viewing
-    mermaid-format: png
+    # Client-side Mermaid (no Chromium at render time — more reliable on Posit)
     mermaid:
       theme: neutral
     grid:
       sidebar-width: 275px
       body-width: 900px
       margin-width: 250px
+    include-in-header:
+      text: |
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
 execute:
   eval: false

@@ -103,6 +103,7 @@ Legacy Quarto Pub:
 `website.site-url` in [`_quarto.yml`](../_quarto.yml) already points at the
 live Posit Connect Cloud deployment recorded in [`_publish.yml`](../_publish.yml).
 Re-run this script whenever you change docs so the public site stays current.
+
 ## Render (static site)
 
 Build HTML into `docs/_site/`:
@@ -132,7 +133,7 @@ quarto preview _site
 | Section | Sources |
 |---------|---------|
 | Home / About / Quick Start | `index.qmd`, `about.qmd`, `quick-start.qmd` |
-| Usage / Architecture / Commands | `usage.md`, `architecture.md`, `reference/commands.qmd` |
+| Usage / Architecture / Commands | `usage.md`, `architecture.qmd`, `reference/commands.qmd` |
 | Pipeline hub | `pipelines/index.qmd` + DICIE + sample corpus guides |
 | Notebooks portal | `docs/notebooks/` (symlinks → repo `notebooks/`, with figures) |
 | Project notes | plan, bugfix audit, changelog |
@@ -159,7 +160,7 @@ text file, recreate it or re-clone with symlink support.
 | `MissingEnvVarsError` / `.env.example` | `cd docs` before `quarto preview` / `quarto render` (or use `./scripts/preview_docs_site.sh`) |
 | Preview port already in use | `cd docs && quarto preview --port 4444` (or another free port) |
 | Notebook page missing / empty | Confirm symlink: `ls -l docs/notebooks/` should show `→ ../../notebooks/...` |
-| `Unable to resolve link target: docs/...` | Notebook links must be Quarto-relative (`../docie_pipeline.md`), not repo-relative (`../docs/...`), because notebooks render from `docs/notebooks/` |
+| `Unable to resolve link target: docs/...` | Notebook links must be Quarto-relative (`../docie_pipeline.qmd`), not repo-relative (`../docs/...`), because notebooks render from `docs/notebooks/` |
 | `BadResource` / SassCache errors | Stop all Quarto processes, then `./scripts/preview_docs_site.sh --clean` |
 | Publish auth fails / wrong account | Log into the correct Posit / Quarto Pub account in your browser, then re-run publish |
 | Want to re-execute notebooks | Temporarily set `execute.eval: true` in `_quarto.yml` (needs models/data; not the default docs path) |

@@ -7,10 +7,13 @@ subtitle: "Choose the right inference path, then dive into guides and notebooks"
 Pipelines
 :::
 
+::: {.hero-lead}
 smol-doc-analyzer ships **two complementary inference chains**. Use this page
 as the map; each card links to design notes, CLI usage, and rendered notebooks.
+:::
 
 ```{mermaid}
+%%| fig-cap: "When to pick DICIE vs the memo chain"
 flowchart TB
   Q{Need paper Fig. 1<br/>medical / salvage<br/>image-first flow?}
   Q -->|Yes| DICIE[DICIE · src/docie/]
@@ -50,6 +53,7 @@ Stage-by-stage demo with page images and stored outputs.
 :::::
 
 ```{mermaid}
+%%| fig-cap: "DICIE stage order (paper Fig. 1)"
 flowchart LR
   A[Document Processing] --> B[Classification]
   B --> C[Information Extraction]
@@ -87,6 +91,7 @@ End-to-end memo-chain analysis with figures.
 :::::
 
 ```{mermaid}
+%%| fig-cap: "Memo-chain chronological stages"
 flowchart LR
   A[to_markdown] --> B[classify]
   B --> C[extract]
@@ -105,6 +110,7 @@ flowchart LR
 
 ::: {.see-also}
 ### See also
+
 [Quick Start](../quick-start.qmd) · [Commands](../reference/commands.qmd) ·
 [Implementation plan](../plan/plan.md)
 :::

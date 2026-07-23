@@ -67,6 +67,7 @@ Characteristic profiles are versioned JSON committed to the repo so synthetic ge
 
 ::: {.see-also}
 ### See also
+
 [Sample Document Corpus](sample_document_corpus.md) ·
 [Architecture](architecture.qmd) · [About](about.qmd) ·
 [Bugfix audit](bugfix_audit_round2.md)

@@ -88,8 +88,9 @@ python -m src.docie.eval --application salvage_claims
 Gold set: `data/eval/docie_eval_set.jsonl`.
 
 For a larger regenerable sample house (claim bundles, richer skeletons, train/val/test
-splits), use the SQLite corpus in [`src/storage/`](../src/storage/) — see
-[sample_document_corpus.md](sample_document_corpus.md). Export DICIE JSONL with
+splits), use the SQLite corpus in
+[`src/storage/`](https://github.com/Exios66/smol-doc-analyzer/tree/main/src/storage)
+— see [Sample Document Corpus](sample_document_corpus.md). Export DICIE JSONL with
 `python -m src.storage export --format docie`.
 
 ## Usage
@@ -146,8 +147,8 @@ pipe = DociePipeline(application="medical_bills")
 prediction = pipe.process(record_id="x", pdf_path="bill.pdf")
 ```
 
-See [`src/docie/README.md`](../src/docie/README.md) for the full CLI flag list,
-prediction schema, and REST contract.
+See [`src/docie/README.md`](https://github.com/Exios66/smol-doc-analyzer/blob/main/src/docie/README.md)
+for the full CLI flag list, prediction schema, and REST contract.
 
 ## Relation to the chained analysis orchestrator
 
@@ -184,6 +185,7 @@ chain runnable without them.
 
 ::: {.see-also}
 ### See also
+
 [Pipeline hub](pipelines/index.qmd) · [Architecture](architecture.qmd) ·
 [Sample corpus](sample_document_corpus.md) ·
 [DICIE notebook](notebooks/docie_pipeline_walkthrough.ipynb) ·

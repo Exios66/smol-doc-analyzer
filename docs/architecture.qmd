@@ -133,7 +133,8 @@ CLI / optional FastAPI, not Discord slash commands.
 `analyze_insurance_document` plus notes/STT/vibe helpers. Right-click →
 **Ask Me** analyzes a selected message.
 
-See [discord/smol-doc-analyzer/README.md](../discord/smol-doc-analyzer/README.md).
+See the Discord bot README on GitHub:
+[discord/smol-doc-analyzer/README.md](https://github.com/Exios66/smol-doc-analyzer/blob/main/discord/smol-doc-analyzer/README.md).
 
 ## Data flow
 
@@ -205,6 +206,7 @@ so the single-action chain remains intact for development and CI.
 
 ::: {.see-also}
 ### See also
+
 [Pipeline hub](pipelines/index.qmd) · [Usage](usage.md) ·
 [DICIE](docie_pipeline.qmd) · [Notebooks](notebooks/index.qmd) ·
 [Data Provenance](data_provenance.md) · [Plan](plan/plan.md)

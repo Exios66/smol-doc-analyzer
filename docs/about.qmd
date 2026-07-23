@@ -21,7 +21,8 @@ about:
       href: notebooks/index.qmd
 ---
 
-::: {#about-body}
+::::: {#about-body}
+
 **smol-doc-analyzer** (package `1.0.0-beta`) explores whether a small,
 specialized, **locally hosted** pipeline can reach “good enough” accuracy for
 insurance document intake without sending claims documents to frontier APIs.
@@ -37,6 +38,7 @@ insurance document intake without sending claims documents to frontier APIs.
 
 ::: {.callout-important}
 ## No real insurer data
+
 Training and demos use synthetic or public sources only.
 See [Data Provenance](data_provenance.md).
 :::
@@ -46,4 +48,5 @@ See [Data Provenance](data_provenance.md).
 1. [Quick Start](quick-start.qmd)
 2. [Pipeline hub](pipelines/index.qmd)
 3. [Commands cheat sheet](reference/commands.qmd)
-:::
+
+:::::

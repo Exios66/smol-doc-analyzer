@@ -8,12 +8,15 @@ page-layout: full
 Notebooks portal
 :::
 
+::: {.hero-lead}
 Pages below are git symlinks to repository `notebooks/*.ipynb`. Quarto renders
 them with **`execute: eval: false`** — stored cell outputs and figures still
 display (especially rich in the DICIE walkthrough).
+:::
 
 ::: {.callout-tip}
 ## Live Jupyter
+
 ```bash
 pip install -e ".[notebooks]"
 jupyter notebook notebooks/
@@ -83,6 +86,7 @@ python scripts/build_rf_notebook.py   # Random Forest notebook builder
 
 ::: {.see-also}
 ### See also
+
 [Pipeline hub](../pipelines/index.qmd) ·
 [Sample Document Corpus](../sample_document_corpus.md) ·
 [DICIE Pipeline](../docie_pipeline.qmd) ·

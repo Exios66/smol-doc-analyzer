@@ -135,7 +135,7 @@ Taxonomies: `taxonomy/salvage_claims.yaml`, `taxonomy/medical_bills.yaml`,
 `taxonomy/acord_form_categories.yaml`.
 
 Module README (CLI flags, prediction schema, REST contract):
-[src/docie/README.md](../src/docie/README.md).
+[src/docie/README.md](https://github.com/Exios66/smol-doc-analyzer/blob/main/src/docie/README.md).
 
 **REST server (optional):**
 
@@ -387,7 +387,7 @@ python -m src.discord_bot
 | Chat | mention bot or `--` prefix |
 | Utils | `/poll`, `/status`, `/help`, `/ping` |
 
-Details: [discord/smol-doc-analyzer/README.md](../discord/smol-doc-analyzer/README.md).
+Details: [discord/smol-doc-analyzer/README.md](https://github.com/Exios66/smol-doc-analyzer/blob/main/discord/smol-doc-analyzer/README.md).
 
 Outbound webhook (no bot process):
 
