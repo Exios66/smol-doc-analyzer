@@ -111,6 +111,9 @@ class Config:
     provenance_log_path: Path
     sample_corpus_dir: Path
     sample_corpus_db_path: Path
+    # RVL-CDIP Hub downloads + SQL index (must stay under .venv)
+    rvl_cdip_root: Path
+    rvl_cdip_db_path: Path
 
     taxonomy_path: Path
     claim_schema_path: Path
@@ -191,6 +194,8 @@ class Config:
             sample_corpus_db_path=_path(
                 "SAMPLE_CORPUS_DB_PATH", "data/sample_corpus/documents.db"
             ),
+            rvl_cdip_root=_path("RVL_CDIP_ROOT", ".venv/rvl_cdip"),
+            rvl_cdip_db_path=_path("RVL_CDIP_DB_PATH", ".venv/rvl_cdip/rvl_cdip.db"),
             taxonomy_path=REPO_ROOT / "taxonomy" / "acord_form_categories.yaml",
             claim_schema_path=REPO_ROOT / "data" / "schemas" / "claim_skeleton.schema.json",
             profiles_dir=_path("PROFILES_DIR", "data/profiles"),

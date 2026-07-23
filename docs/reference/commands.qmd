@@ -71,6 +71,18 @@ Guides: [Sample Document Corpus](../sample_document_corpus.md) ·
 [SQL](../notebooks/sample_corpus_sql_integrations.ipynb) ·
 [Train/test](../notebooks/sample_corpus_train_test_pipeline.ipynb)
 
+## RVL-CDIP SQL (`src/rvl_cdip`)
+
+```bash
+python -m src.rvl_cdip build          # labels → .venv SQLite (~17 MB download)
+python -m src.rvl_cdip summary
+python -m src.rvl_cdip list --split train --label invoice --limit 5
+python -m src.rvl_cdip query "SELECT split, COUNT(*) AS n FROM documents GROUP BY split"
+# python -m src.rvl_cdip download-images --i-understand-large-download  # ~38 GB
+```
+
+Guide: [RVL-CDIP SQL Index](../rvl_cdip_sql.md)
+
 ## Classification & extraction (training)
 
 ```bash

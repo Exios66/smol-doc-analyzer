@@ -87,11 +87,13 @@ src/
                     #   (see src/docie/README.md)
   storage/          # SQLite sample corpus for medical bills + salvage docs
                     #   (+ training prep / TF-IDF RF helpers)
+  rvl_cdip/         # public RVL-CDIP SQL index (Hub downloads stay in .venv)
   pipeline/         # orchestrator + markdown convert + batch_runner (memo chain)
   discord_bot/      # Chloride Discord front-end + analyze_insurance_document tool
   utils/            # config, provenance, LLM client, WandB tracking
 discord/
   smol-doc-analyzer/  # Chloride bot workspace (config templates, compose)
+.venv/rvl_cdip/     # RVL-CDIP Hub cache + labels + SQLite DB (gitignored)
 data/
   schemas/          # claim_skeleton + medical_bill + salvage_document schemas
   profiles/         # committed characteristic profiles (small JSON)

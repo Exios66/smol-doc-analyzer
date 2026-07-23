@@ -229,6 +229,30 @@ python scripts/build_sample_corpus_notebooks.py
 #   jupyter notebook notebooks/sample_corpus_train_test_pipeline.ipynb
 ```
 
+## RVL-CDIP SQL index (`src/rvl_cdip/`)
+
+Queryable SQLite index for the public
+[aharley/rvl_cdip](https://huggingface.co/datasets/aharley/rvl_cdip) dataset
+(400k document images, 16 classes). **All Hub downloads and the DB stay under
+`.venv/rvl_cdip/`.** The default build fetches only the small label files
+(~17 MB); the ~38 GB image archive is opt-in.
+
+```bash
+python -m src.rvl_cdip build
+python -m src.rvl_cdip summary
+python -m src.rvl_cdip list --split train --label invoice --limit 5
+python -m src.rvl_cdip query \
+  "SELECT l.name AS label, COUNT(*) AS n
+   FROM documents d JOIN labels l ON l.label_id = d.label_id
+   GROUP BY l.name ORDER BY n DESC"
+
+# optional — explicit acknowledgement required (~38 GB)
+# python -m src.rvl_cdip download-images --i-understand-large-download
+```
+
+- Design notes: [docs/rvl_cdip_sql.md](docs/rvl_cdip_sql.md)
+- Tests: `pytest tests/test_rvl_cdip_store.py`
+
 ## Discord bot (Chloride)
 
 Optional Discord front-end via [Chloride](https://github.com/S4IL21/chloride)

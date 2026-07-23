@@ -17,6 +17,13 @@ from scaffolding through the current beta baseline.
 
 ### Added
 
+- Queryable **RVL-CDIP** SQLite index (`src/rvl_cdip/`) sourced from
+  [`aharley/rvl_cdip`](https://huggingface.co/datasets/aharley/rvl_cdip); Hub
+  downloads + DB confined to `.venv/rvl_cdip/` (label files by default; ~38 GB
+  image archive opt-in via `--i-understand-large-download`)
+- CLI: `python -m src.rvl_cdip build|summary|list|show|query|download-labels|download-images|paths`
+- Docs: `docs/rvl_cdip_sql.md`
+- Tests: `tests/test_rvl_cdip_store.py`
 - Quarto documentation website under `docs/` (`_quarto.yml`, home, quick start,
   how-to launch guide, notebooks portal with symlinks into `notebooks/`)
 - `scripts/preview_docs_site.sh` — convenience wrapper for `quarto preview docs`
