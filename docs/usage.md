@@ -224,6 +224,31 @@ Default DB: `data/sample_corpus/documents.db` (gitignored; regenerable).
 
 ---
 
+## 4b. RVL-CDIP SQL index (`src/rvl_cdip`)
+
+Public document-image labels from
+[aharley/rvl_cdip](https://huggingface.co/datasets/aharley/rvl_cdip). Downloads
+and the SQLite DB are confined to `.venv/rvl_cdip/` (never `data/` or
+`~/.cache`). Default build uses only the ~17 MB label files; the ~38 GB image
+archive requires `--i-understand-large-download`.
+
+```bash
+python -m src.rvl_cdip build
+python -m src.rvl_cdip summary
+python -m src.rvl_cdip list --split train --label memo --limit 5
+python -m src.rvl_cdip show 'train:<image_relpath>'
+python -m src.rvl_cdip query \
+  "SELECT split, COUNT(*) AS n FROM documents GROUP BY split"
+python -m src.rvl_cdip paths
+
+# optional large download into .venv only
+# python -m src.rvl_cdip download-images --i-understand-large-download
+```
+
+Default DB: `.venv/rvl_cdip/rvl_cdip.db`. Guide: [rvl_cdip_sql.md](rvl_cdip_sql.md).
+
+---
+
 ## 5. Synthetic data generation
 
 ```bash

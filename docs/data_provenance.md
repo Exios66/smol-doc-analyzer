@@ -56,10 +56,20 @@ Skeleton schemas:
 - `data/schemas/medical_bill_skeleton.schema.json`
 - `data/schemas/salvage_document_skeleton.schema.json`
 
+## RVL-CDIP public index
+
+The queryable RVL-CDIP SQL store (`src/rvl_cdip/`, see
+[rvl_cdip_sql.md](rvl_cdip_sql.md)) indexes the public
+[aharley/rvl_cdip](https://huggingface.co/datasets/aharley/rvl_cdip) label
+lists. Hub downloads and the SQLite DB are confined to `.venv/rvl_cdip/`
+(covered by the existing `.venv/` gitignore). Build events log
+`stage=rvl_cdip_build`. The ~38 GB image archive is never fetched unless
+explicitly opted in.
+
 ## Committed vs gitignored
 
 - **Committed:** schemas, taxonomy (ACORD + medical bills + salvage claims), characteristic profiles (`data/profiles/*.json`), tiny test fixtures (including DICIE samples), sample-corpus seed exports under `data/sample_corpus/seeds/`
-- **Gitignored:** bulk `data/raw/*`, synthetic JSONL outputs, provenance log, trained model weights, pipeline/DICIE caches under `data/pipeline/`, sample corpus SQLite DB + regenerable exports under `data/sample_corpus/`
+- **Gitignored:** bulk `data/raw/*`, synthetic JSONL outputs, provenance log, trained model weights, pipeline/DICIE caches under `data/pipeline/`, sample corpus SQLite DB + regenerable exports under `data/sample_corpus/`, RVL-CDIP artifacts under `.venv/rvl_cdip/`
 
 ## Reproducibility
 
@@ -69,6 +79,7 @@ Characteristic profiles are versioned JSON committed to the repo so synthetic ge
 ### See also
 
 [Sample Document Corpus](sample_document_corpus.md) ·
+[RVL-CDIP SQL Index](rvl_cdip_sql.md) ·
 [Architecture](architecture.qmd) · [About](about.qmd) ·
 [Bugfix audit](bugfix_audit_round2.md)
 :::
