@@ -90,7 +90,7 @@ docstring_parser==0.18.0
 xxhash==3.8.1
 mistune==3.3.3
 numpy==2.4.6
-setuptools==82.0.0
+setuptools==83.0.0
 pandocfilters==1.5.1
 googleapis-common-protos==1.75.0
 ruff==0.15.21
