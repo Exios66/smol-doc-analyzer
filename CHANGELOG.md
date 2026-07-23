@@ -26,6 +26,8 @@ from scaffolding through the current beta baseline.
   reader mode, breadcrumbs, page navigation, pipeline hub, commands cheat
   sheet, about page, Mermaid diagrams, feature cards, and cross-page see-also
   links (Posit Connect Cloud URL in README / `site-url`)
+- Portable figures: `embed-resources: true` + `mermaid-format: png`; RF notebook
+  re-executed so classification charts ship as stored outputs
 
 ---
 

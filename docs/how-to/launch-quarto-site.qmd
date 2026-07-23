@@ -128,6 +128,20 @@ cd docs
 quarto preview _site
 ```
 
+## Portable figures
+
+The site is built with:
+
+- `embed-resources: true` — CSS, JS, logos, notebook plots, and Mermaid PNGs are
+  inlined into each HTML page (no broken sidecar `_files/` on Posit Cloud)
+- `mermaid-format: png` — diagrams are static images, not client-only JS canvases
+
+Re-publish after doc/notebook changes:
+
+```bash
+./scripts/publish_docs_site.sh
+```
+
 ## What the site includes
 
 | Section | Sources |
