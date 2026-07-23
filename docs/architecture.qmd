@@ -3,11 +3,18 @@ title: "Architecture"
 subtitle: "Dual pipelines, repository map, and stage contracts"
 ---
 
+::: {.hero-kicker}
+Design
+:::
+
+::: {.hero-lead}
 **Version:** `1.0.0-beta` · [Usage](usage.md) · [Commands](reference/commands.qmd) ·
 [Changelog](CHANGELOG.md)
+:::
 
 ::: {.callout-tip}
 ## Prefer the hub
+
 Side-by-side comparison and notebook links:
 [Pipeline hub](pipelines/index.qmd).
 :::

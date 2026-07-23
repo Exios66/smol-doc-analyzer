@@ -3,12 +3,19 @@ title: "Sample Document Corpus"
 subtitle: "Queryable synthetic medical / salvage store"
 ---
 
+::: {.hero-kicker}
+Corpus
+:::
+
+::: {.hero-lead}
 Queryable storage for **synthetic** medical-bill and salvage-claim documents
 used for analysis, evaluation, and model fine-tuning. Command cheatsheet:
 [Usage §4](usage.md) · [Commands](reference/commands.qmd).
+:::
 
 ::: {.callout-important}
 ## No proprietary claim files
+
 This project does **not** use real American Family (or any insurer) claim
 files. The corpus houses **reality-tied, fictional** examples. See
 [Data Provenance](data_provenance.md).

@@ -1,5 +1,48 @@
 # smol-doc-analyzer
 
+<p align="center">
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/badge/smol--doc--analyzer-v1.0.0b0-0ea5e9?style=for-the-badge&logo=python&logoColor=white" alt="smol-doc-analyzer package"></a>
+  <a href="https://www.python.org/downloads/release/python-3110/"><img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+"></a>
+  <a href="https://wisc.edu/"><img src="https://img.shields.io/badge/UW--Madison-Research-C5050C?style=for-the-badge&logo=google-scholar&logoColor=white" alt="UW-Madison"></a>
+  <a href="https://chtc.cs.wisc.edu/"><img src="https://img.shields.io/badge/CHTC-HTC%20%2F%20GPU-003366?style=for-the-badge&logo=linux&logoColor=white" alt="CHTC"></a>
+  <a href="https://openrouter.ai/"><img src="https://img.shields.io/badge/OpenRouter-LLM%20API-000000?style=for-the-badge&logo=openai&logoColor=white" alt="OpenRouter"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Exios66/smol-doc-analyzer/stargazers"><img src="https://img.shields.io/github/stars/Exios66/smol-doc-analyzer?style=flat-square&logo=github&color=yellow" alt="GitHub stars"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/graphs/contributors"><img src="https://img.shields.io/github/contributors/Exios66/smol-doc-analyzer?style=flat-square&color=informational" alt="Contributors"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/pulls"><img src="https://img.shields.io/github/issues-pr/Exios66/smol-doc-analyzer?style=flat-square&color=blueviolet" alt="Open pull requests"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/pulls?q=is%3Apr+is%3Aclosed"><img src="https://img.shields.io/github/issues-pr-closed/Exios66/smol-doc-analyzer?style=flat-square&color=success" alt="Closed pull requests"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://api.visitorbadge.io/api/visitors?path=Exios66%2Fsmol-doc-analyzer&label=Views&countColor=%230ea5e9&style=flat-square&labelStyle=none" alt="Repository views"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/forks"><img src="https://img.shields.io/github/forks/Exios66/smol-doc-analyzer?style=flat-square&logo=github" alt="Forks"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/watchers"><img src="https://img.shields.io/github/watchers/Exios66/smol-doc-analyzer?style=flat-square&logo=github" alt="Watchers"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Exios66/smol-doc-analyzer/search?l=python"><img src="https://img.shields.io/github/languages/top/Exios66/smol-doc-analyzer?style=flat-square" alt="Top language"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/github/languages/count/Exios66/smol-doc-analyzer?style=flat-square&label=languages" alt="Language count"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/github/languages/code-size/Exios66/smol-doc-analyzer?style=flat-square&label=code%20size" alt="Code size"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/github/repo-size/Exios66/smol-doc-analyzer?style=flat-square&label=repo%20size" alt="Repository size"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.0--beta-orange?style=flat-square" alt="Version 1.0.0-beta"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/commits/main"><img src="https://img.shields.io/github/last-commit/Exios66/smol-doc-analyzer?style=flat-square" alt="Last commit"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/issues"><img src="https://img.shields.io/github/issues/Exios66/smol-doc-analyzer?style=flat-square" alt="Open issues"></a>
+</p>
+
+<p align="center">
+  <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white" alt="PyTorch"></a>
+  <a href="https://huggingface.co/"><img src="https://img.shields.io/badge/Hugging%20Face-Transformers-FFD21E?style=flat-square&logo=huggingface&logoColor=black" alt="Hugging Face"></a>
+  <a href="https://wandb.ai/"><img src="https://img.shields.io/badge/Weights%20%26%20Biases-FFBE00?style=flat-square&logo=weightsandbiases&logoColor=black" alt="Weights & Biases"></a>
+  <a href="https://quarto.org/"><img src="https://img.shields.io/badge/Docs-Quarto-39729E?style=flat-square&logo=quarto&logoColor=white" alt="Quarto docs"></a>
+  <a href="https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00"><img src="https://img.shields.io/badge/Posit%20Connect-Live%20docs-447099?style=flat-square&logo=r&logoColor=white" alt="Posit Connect docs"></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-Optional%20serve-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="https://www.sqlite.org/"><img src="https://img.shields.io/badge/SQLite-Corpus%20store-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite"></a>
+  <a href="https://discord.com/"><img src="https://img.shields.io/badge/Discord-Chloride%20bot-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord bot"></a>
+  <a href="https://jupyter.org/"><img src="https://img.shields.io/badge/Jupyter-Notebooks-F37626?style=flat-square&logo=jupyter&logoColor=white" alt="Jupyter"></a>
+  <img src="https://img.shields.io/badge/status-beta-yellow?style=flat-square" alt="Beta status">
+  <img src="https://img.shields.io/badge/local--first-offline%20capable-2ea44f?style=flat-square" alt="Local-first">
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square&logo=github" alt="PRs welcome">
+</p>
+
 **Version:** [`1.0.0-beta`](CHANGELOG.md) (`1.0.0b0`)
 
 A small, locally-deployable LLM pipeline for insurance document classification, extraction, and memo generation — built as a cost-efficient alternative to frontier enterprise models for high-volume document intake.

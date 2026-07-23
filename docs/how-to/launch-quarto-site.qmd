@@ -1,9 +1,16 @@
 ---
 title: "How-to: Launch the Quarto Documentation Website"
+subtitle: "Preview locally and publish to Posit Connect Cloud"
 ---
 
-This guide explains how to preview and build the **smol-doc-analyzer**
-documentation portal with the [Quarto](https://quarto.org/) CLI.
+::: {.hero-kicker}
+How-to
+:::
+
+::: {.hero-lead}
+Preview and build the **smol-doc-analyzer** documentation portal with the
+[Quarto](https://quarto.org/) CLI.
+:::
 
 ## Prerequisites
 

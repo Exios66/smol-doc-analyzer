@@ -23,6 +23,10 @@ about:
 
 ::::: {#about-body}
 
+::: {.hero-kicker}
+About
+:::
+
 **smol-doc-analyzer** (package `1.0.0-beta`) explores whether a small,
 specialized, **locally hosted** pipeline can reach “good enough” accuracy for
 insurance document intake without sending claims documents to frontier APIs.

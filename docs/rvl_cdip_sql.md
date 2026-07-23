@@ -81,6 +81,14 @@ python -m src.rvl_cdip download-images --i-understand-large-download
 - `src/rvl_cdip/store.py` — SQLite store + read-only `query()`
 - `src/rvl_cdip/__main__.py` — CLI
 
+## Recreation sampling notebook
+
+For a seeded draw of **60–70 documents from each class (0–15)** plus SQL
+showcase queries, run
+[`notebooks/rvl_cdip_recreation_sampling.ipynb`](notebooks/rvl_cdip_recreation_sampling.ipynb)
+(regenerate with `python scripts/build_rvl_cdip_recreation_notebook.py`).
+Exports land under `data/notebook_demo/rvl_cdip_recreation/`.
+
 Related: the lighter streaming sample ingest used for characteristic profiles
 remains in `src/generation/corpus_ingest.py` (`ingest_rvl_cdip`). This module
 is the full queryable SQL house for the public dataset.

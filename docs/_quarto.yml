@@ -138,6 +138,7 @@ website:
           - notebooks/sample_document_corpus_walkthrough.ipynb
           - notebooks/sample_corpus_sql_integrations.ipynb
           - notebooks/sample_corpus_train_test_pipeline.ipynb
+          - notebooks/rvl_cdip_recreation_sampling.ipynb
       - section: "Project notes"
         contents:
           - plan/plan.md
@@ -163,7 +164,7 @@ format:
     code-link: true
     code-fold: false
     code-block-bg: true
-    code-block-border-left: "#0f766e"
+    code-block-border-left: "#3caa7f"
     highlight-style: atom-one
     smooth-scroll: true
     link-external-newwindow: true

@@ -77,6 +77,7 @@ models/**
 # Notebook walkthrough regenerable outputs (page caches, batch dumps, PDFs)
 data/notebook_demo/docie/
 data/notebook_demo/sample_corpus/
+data/notebook_demo/rvl_cdip_recreation/
 data/notebook_demo/**/cache/
 
 # Eval harness run artifacts (JSONL/CSV cost logs)

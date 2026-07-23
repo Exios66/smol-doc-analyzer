@@ -3,8 +3,18 @@ title: "Commands cheat sheet"
 subtitle: "High-frequency entry points — full detail lives in Usage"
 ---
 
+::: {.hero-kicker}
+Reference
+:::
+
+::: {.hero-lead}
+High-frequency CLI entry points. Full flag semantics and recipes live in
+[Usage](../usage.md).
+:::
+
 ::: {.callout-note}
 ## Canonical reference
+
 This page is a **quick map**. Flag semantics, flags, and recipes:
 [Usage](../usage.md).
 :::

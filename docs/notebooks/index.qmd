@@ -76,6 +76,14 @@ SQL-oriented views over `DocumentStore`.
 Export corpus rows into train/eval preparation paths.
 :::
 
+::: {.feature-card}
+<span class="pipeline-badge">RVL-CDIP</span>
+
+### [RVL-CDIP recreation sampling](rvl_cdip_recreation_sampling.ipynb)
+
+SQL queries + 60–70 seeded samples per class (0–15).
+:::
+
 :::::
 
 ## Regeneration helpers
@@ -83,6 +91,7 @@ Export corpus rows into train/eval preparation paths.
 ```bash
 python scripts/build_sample_corpus_notebooks.py
 python scripts/build_rf_notebook.py   # Random Forest notebook builder
+python scripts/build_rvl_cdip_recreation_notebook.py
 ```
 
 ::: {.see-also}
@@ -90,6 +99,7 @@ python scripts/build_rf_notebook.py   # Random Forest notebook builder
 
 [Pipeline hub](../pipelines/index.qmd) ·
 [Sample Document Corpus](../sample_document_corpus.md) ·
+[RVL-CDIP SQL Index](../rvl_cdip_sql.md) ·
 [DICIE Pipeline](../docie_pipeline.qmd) ·
 [How-to: Quarto site](../how-to/launch-quarto-site.qmd)
 :::

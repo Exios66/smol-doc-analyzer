@@ -3,8 +3,19 @@ title: "Data Provenance"
 subtitle: "Synthetic-only disclosure — no real insurer data"
 ---
 
+::: {.hero-kicker}
+Provenance
+:::
+
+::: {.hero-lead}
+Training and evaluation data are either **public corpora** (distributional /
+stylistic characteristics only) or **synthetically generated** from randomized
+claim skeletons — never real insurer files.
+:::
+
 ::: {.callout-important}
 ## No real insurance company data
+
 Training and evaluation data are either **public corpora** (distributional /
 stylistic characteristics only) or **synthetically generated** from randomized
 claim skeletons.

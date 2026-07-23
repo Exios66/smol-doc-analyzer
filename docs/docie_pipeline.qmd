@@ -3,12 +3,19 @@ title: "DICIE Pipeline"
 subtitle: "Paper Fig. 1 — process → classify → extract → respond"
 ---
 
+::: {.hero-kicker}
+DICIE
+:::
+
+::: {.hero-lead}
 Implements the **Document Image Classification and Information Extraction**
 chain from Raj, Dickinson & Fung, *Document Classification and Information
 Extraction framework for Insurance Applications*.
+:::
 
 ::: {.callout-note}
 ## Jump links
+
 [Usage](usage.md) · [Pipeline hub](pipelines/index.qmd) ·
 [Notebook walkthrough](notebooks/docie_pipeline_walkthrough.ipynb) ·
 [Commands](reference/commands.qmd)

@@ -3,10 +3,17 @@ title: "Quick Start"
 subtitle: "Install, secrets, and a minimal first run"
 ---
 
+::: {.hero-kicker}
+Getting started
+:::
+
+::: {.hero-lead}
 Get a working local install and run a minimal pipeline path.
+:::
 
 ::: {.callout-tip}
 ## Full reference
+
 [Usage](usage.md) · [Commands cheat sheet](reference/commands.qmd) ·
 [Pipeline hub](pipelines/index.qmd)
 :::
