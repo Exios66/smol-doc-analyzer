@@ -10,8 +10,10 @@ Examples:
   python -m src.rvl_cdip list --split train --label invoice --limit 5
   python -m src.rvl_cdip query "SELECT label, COUNT(*) AS n FROM documents d JOIN labels l ON l.label_id = d.label_id GROUP BY label ORDER BY n DESC"
 
-  # Optional: download the ~38 GB image archive (explicit opt-in)
-  python -m src.rvl_cdip download-images --i-understand-large-download
+  # Optional: download the ~38 GB image archive (explicit dual opt-in)
+  python -m src.rvl_cdip download-images --preflight
+  python -m src.rvl_cdip download-images \\
+    --i-understand-large-download --confirm-writes-under-venv
 """
 
 from __future__ import annotations
@@ -21,7 +23,13 @@ import json
 import sys
 from pathlib import Path
 
-from src.rvl_cdip.download import download_images, download_labels, free_bytes
+from src.rvl_cdip.download import (
+    download_images,
+    download_labels,
+    format_image_download_preflight,
+    free_bytes,
+    image_download_preflight,
+)
 from src.rvl_cdip.paths import (
     HF_DATASET_ID,
     IMAGE_ARCHIVE_BYTES_ESTIMATE,
@@ -60,14 +68,35 @@ def _build_parser() -> argparse.ArgumentParser:
     img = sub.add_parser(
         "download-images",
         help=(
-            f"Download rvl-cdip.tar.gz into .venv "
-            f"(~{IMAGE_ARCHIVE_BYTES_ESTIMATE / (1024**3):.0f} GB; opt-in)"
+            f"Download rvl-cdip.tar.gz into .venv/rvl_cdip only "
+            f"(~{IMAGE_ARCHIVE_BYTES_ESTIMATE / (1024**3):.0f} GB; dual opt-in)"
         ),
+    )
+    img.add_argument(
+        "--preflight",
+        action="store_true",
+        help="Print paths + free-space check only (no download)",
     )
     img.add_argument(
         "--i-understand-large-download",
         action="store_true",
         help="Required acknowledgement that the archive is ~38 GB",
+    )
+    img.add_argument(
+        "--confirm-writes-under-venv",
+        action="store_true",
+        help=(
+            "Required acknowledgement that Hub cache + archive write only under "
+            ".venv/rvl_cdip/ (not data/ or ~/.cache)"
+        ),
+    )
+    img.add_argument(
+        "--interactive-confirm",
+        action="store_true",
+        help=(
+            "Prompt on stdin to type the ack phrase before downloading "
+            "(still requires --i-understand-large-download)"
+        ),
     )
     img.add_argument("--force", action="store_true")
 
@@ -156,17 +185,57 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "download-images":
+        plan = image_download_preflight(force=args.force)
+        if args.preflight:
+            print(format_image_download_preflight(plan))
+            _print_json(plan)
+            return 0 if plan["enough_free_space"] or plan["archive_already_present"] else 2
+
+        print(format_image_download_preflight(plan))
+        print()
+
+        confirmed = bool(args.confirm_writes_under_venv)
+        if args.interactive_confirm:
+            phrase = str(plan["confirmation_phrase"])
+            print(f'Type exactly: {phrase}')
+            try:
+                typed = input("> ").strip()
+            except EOFError:
+                typed = ""
+            if typed != phrase:
+                print(
+                    "Confirmation phrase did not match; aborting download.",
+                    file=sys.stderr,
+                )
+                return 2
+            confirmed = True
+
         if not args.i_understand_large_download:
             print(
                 "Refusing to download rvl-cdip.tar.gz (~38 GB). "
-                "Re-run with --i-understand-large-download after checking disk space.",
+                "Re-run with --i-understand-large-download after checking disk space.\n"
+                "Also pass --confirm-writes-under-venv (or --interactive-confirm).",
                 file=sys.stderr,
             )
             return 2
-        result = download_images(
-            force=args.force,
-            i_understand_large_download=True,
-        )
+        if not confirmed:
+            print(
+                "Refusing to download without --confirm-writes-under-venv "
+                "(writes stay under .venv/rvl_cdip only). "
+                "Preview: python -m src.rvl_cdip download-images --preflight",
+                file=sys.stderr,
+            )
+            return 2
+
+        try:
+            result = download_images(
+                force=args.force,
+                i_understand_large_download=True,
+                confirm_writes_under_venv=True,
+            )
+        except RuntimeError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
         store = RvlCdipStore(db_path)
         store.record_download(result)
         n = store.refresh_image_paths()
@@ -177,6 +246,8 @@ def main(argv: list[str] | None = None) -> int:
                 "bytes": result.bytes,
                 "skipped": result.skipped,
                 "image_abspath_updated": n,
+                "writes_only_under": plan["writes_only_under"],
+                "detail": result.detail,
             }
         )
         return 0

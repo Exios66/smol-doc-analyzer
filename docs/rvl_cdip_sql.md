@@ -57,8 +57,11 @@ python -m src.rvl_cdip query \
    FROM documents d JOIN labels l ON l.label_id = d.label_id
    GROUP BY l.name ORDER BY n DESC"
 
-# Optional: pull the image archive into .venv (explicit opt-in)
-python -m src.rvl_cdip download-images --i-understand-large-download
+# Optional: pull the image archive into .venv/rvl_cdip ONLY (dual opt-in)
+python -m src.rvl_cdip download-images --preflight   # paths + free-space check
+python -m src.rvl_cdip download-images \
+  --i-understand-large-download --confirm-writes-under-venv
+# or: --i-understand-large-download --interactive-confirm
 ```
 
 ## Class labels

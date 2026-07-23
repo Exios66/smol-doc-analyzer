@@ -142,6 +142,40 @@ def test_download_images_requires_opt_in(venv_layout: Path):
         download_images(i_understand_large_download=False)
 
 
+def test_download_images_requires_venv_confirm(venv_layout: Path):
+    from src.rvl_cdip.download import download_images
+
+    with pytest.raises(RuntimeError, match="confirm-writes-under-venv"):
+        download_images(
+            i_understand_large_download=True,
+            confirm_writes_under_venv=False,
+        )
+
+
+def test_image_download_preflight(venv_layout: Path):
+    from src.rvl_cdip.download import (
+        format_image_download_preflight,
+        image_download_preflight,
+    )
+
+    plan = image_download_preflight()
+    assert ".venv" in plan["writes_only_under"]
+    assert "rvl_cdip" in plan["writes_only_under"]
+    assert plan["confirmation_phrase"] == "writes only under .venv/rvl_cdip"
+    text = format_image_download_preflight(plan)
+    assert "writes only under" in text
+    assert "Free space now" in text
+
+
+def test_cli_download_images_preflight(venv_layout: Path, capsys: pytest.CaptureFixture[str]):
+    from src.rvl_cdip.__main__ import main
+
+    code = main(["download-images", "--preflight"])
+    out = capsys.readouterr().out
+    assert "writes_only_under" in out or ".venv" in out
+    assert code in (0, 2)  # 2 if free space insufficient on tiny tmp volumes
+
+
 def test_cli_paths(venv_layout: Path, capsys: pytest.CaptureFixture[str]):
     from src.rvl_cdip.__main__ import main
 

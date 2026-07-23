@@ -22,6 +22,8 @@ from src.rvl_cdip.paths import (
     apply_hf_cache_env,
     archive_path,
     assert_path_under_venv,
+    hf_home,
+    images_dir,
     labels_dir,
     rvl_root,
     source_dir,
@@ -145,14 +147,72 @@ def download_labels(*, force: bool = False) -> list[DownloadResult]:
     return results
 
 
+def image_download_preflight(*, force: bool = False) -> dict[str, Any]:
+    """Report paths + free space for the ~38 GB archive download (no network I/O).
+
+    All write targets are under ``.venv/rvl_cdip/`` (never ``data/`` or ``~/.cache``).
+    """
+    apply_hf_cache_env()
+    root = rvl_root()
+    dest = archive_path()
+    free = free_bytes(dest.parent)
+    already = dest.is_file() and dest.stat().st_size > 0 and not force
+    enough_space = free >= IMAGE_DOWNLOAD_MIN_FREE_BYTES
+    return {
+        "dataset_id": HF_DATASET_ID,
+        "remote_ref": f"{HF_DATASET_ID}/{IMAGE_ARCHIVE_REMOTE}",
+        "writes_only_under": str(root.resolve()),
+        "archive_path": str(dest.resolve()),
+        "source_dir": str(source_dir().resolve()),
+        "images_dir": str(images_dir().resolve()),
+        "hf_home": str(hf_home().resolve()),
+        "archive_estimate_gb": round(IMAGE_ARCHIVE_BYTES_ESTIMATE / (1024**3), 2),
+        "min_free_gb": round(IMAGE_DOWNLOAD_MIN_FREE_BYTES / (1024**3), 2),
+        "free_gb": round(free / (1024**3), 2),
+        "free_bytes": free,
+        "enough_free_space": enough_space,
+        "archive_already_present": already,
+        "confirmation_phrase": "writes only under .venv/rvl_cdip",
+    }
+
+
+def format_image_download_preflight(plan: dict[str, Any] | None = None) -> str:
+    """Human-readable confirmation block for CLI / notebook."""
+    plan = plan or image_download_preflight()
+    lines = [
+        "RVL-CDIP image archive download — preflight",
+        "",
+        "CONFIRMATION: all Hub cache + archive writes stay under:",
+        f"  {plan['writes_only_under']}",
+        "  (not data/, not ~/.cache/huggingface)",
+        "",
+        f"Remote:     {plan['remote_ref']}",
+        f"Archive →   {plan['archive_path']}",
+        f"HF home →   {plan['hf_home']}",
+        f"Images dir: {plan['images_dir']}",
+        "",
+        f"Archive size (est.): {plan['archive_estimate_gb']} GB",
+        f"Free space now:      {plan['free_gb']} GB "
+        f"(need ≥ {plan['min_free_gb']} GB)",
+        f"Enough free space:   {plan['enough_free_space']}",
+        f"Already present:     {plan['archive_already_present']}",
+        "",
+        f"Ack phrase: \"{plan['confirmation_phrase']}\"",
+    ]
+    return "\n".join(lines)
+
+
 def download_images(
     *,
     force: bool = False,
     i_understand_large_download: bool = False,
+    confirm_writes_under_venv: bool = False,
 ) -> DownloadResult:
     """Download the ~38 GB image archive into ``.venv/rvl_cdip/source/``.
 
-    Requires ``i_understand_large_download=True``. Checks free disk space first.
+    Requires ``i_understand_large_download=True`` and
+    ``confirm_writes_under_venv=True`` (explicit acknowledgement that all
+    writes stay under ``.venv/rvl_cdip/``). Checks free disk space first.
     """
     if not i_understand_large_download:
         raise RuntimeError(
@@ -160,10 +220,29 @@ def download_images(
             "--i-understand-large-download if you have enough disk space "
             f"(recommend ≥ {IMAGE_DOWNLOAD_MIN_FREE_BYTES // (1024**3)} GB free)."
         )
+    if not confirm_writes_under_venv:
+        raise RuntimeError(
+            "Refusing to download without explicit confirmation that writes "
+            "stay under .venv/rvl_cdip/. Re-run with --confirm-writes-under-venv "
+            "(or call download_images(confirm_writes_under_venv=True)). "
+            "Preview with: python -m src.rvl_cdip download-images --preflight"
+        )
 
     apply_hf_cache_env()
     dest = archive_path()
     assert_path_under_venv(dest)
+    assert_path_under_venv(hf_home())
+
+    plan = image_download_preflight(force=force)
+    if not plan["enough_free_space"] and not (
+        dest.exists() and dest.stat().st_size > 0 and not force
+    ):
+        raise RuntimeError(
+            f"Insufficient free disk space for RVL-CDIP images: "
+            f"{plan['free_gb']:.1f} GB free, need ≥ {plan['min_free_gb']:.0f} GB "
+            f"(archive ≈ {plan['archive_estimate_gb']:.1f} GB). "
+            f"All writes would have gone under {plan['writes_only_under']}."
+        )
 
     if dest.exists() and dest.stat().st_size > 0 and not force:
         return DownloadResult(
@@ -172,21 +251,17 @@ def download_images(
             local_path=dest,
             bytes=dest.stat().st_size,
             skipped=True,
-            detail={"reason": "already_present"},
+            detail={
+                "reason": "already_present",
+                "writes_only_under": plan["writes_only_under"],
+            },
         )
 
-    free = free_bytes(dest.parent)
-    if free < IMAGE_DOWNLOAD_MIN_FREE_BYTES:
-        raise RuntimeError(
-            f"Insufficient free disk space for RVL-CDIP images: "
-            f"{free / (1024**3):.1f} GB free, need ≥ "
-            f"{IMAGE_DOWNLOAD_MIN_FREE_BYTES / (1024**3):.0f} GB "
-            f"(archive ≈ {IMAGE_ARCHIVE_BYTES_ESTIMATE / (1024**3):.1f} GB)."
-        )
+    free = int(plan["free_bytes"])
 
     logger.warning(
-        "Downloading RVL-CDIP image archive (~%.1f GB) into %s — this is large "
-        "and may take a long time.",
+        "Downloading RVL-CDIP image archive (~%.1f GB) into %s — writes stay "
+        "under .venv/rvl_cdip only; this may take a long time.",
         IMAGE_ARCHIVE_BYTES_ESTIMATE / (1024**3),
         dest.parent,
     )
@@ -211,7 +286,11 @@ def download_images(
         remote_ref=f"{HF_DATASET_ID}/{IMAGE_ARCHIVE_REMOTE}",
         local_path=dest,
         bytes=size,
-        detail={"elapsed_s": elapsed, "free_bytes_before": free},
+        detail={
+            "elapsed_s": elapsed,
+            "free_bytes_before": free,
+            "writes_only_under": plan["writes_only_under"],
+        },
     )
 
 

@@ -88,7 +88,9 @@ python -m src.rvl_cdip build          # labels → .venv SQLite (~17 MB download
 python -m src.rvl_cdip summary
 python -m src.rvl_cdip list --split train --label invoice --limit 5
 python -m src.rvl_cdip query "SELECT split, COUNT(*) AS n FROM documents GROUP BY split"
-# python -m src.rvl_cdip download-images --i-understand-large-download  # ~38 GB
+# python -m src.rvl_cdip download-images --preflight
+# python -m src.rvl_cdip download-images \
+#   --i-understand-large-download --confirm-writes-under-venv   # ~38 GB → .venv only
 ```
 
 Guide: [RVL-CDIP SQL Index](../rvl_cdip_sql.md) ·
