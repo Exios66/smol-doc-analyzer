@@ -15,6 +15,8 @@ from scaffolding through the current beta baseline.
 
 ## [Unreleased]
 
+<!-- changelog-auto: 2026-07-23 00:15 CDT · 15 commit(s) scanned -->
+
 ### Added
 
 - Queryable **RVL-CDIP** SQLite index (`src/rvl_cdip/`) sourced from
@@ -35,8 +37,31 @@ from scaffolding through the current beta baseline.
   links (Posit Connect Cloud URL in README / `site-url`)
 - Portable figures: `embed-resources: true` + `mermaid-format: png`; RF notebook
   re-executed so classification charts ship as stored outputs
-
 ---
+- Add OpenRouter evaluation notebook and update documentation (85b9066)
+- Add queryable RVL-CDIP SQLite index under .venv (#41) (1932ad2)
+- Add Quarto documentation website (#38) (8f681be)
+- Add sample document corpus store, SQL notebooks, and train/test pipeline (#25) (a68c887)
+- Add SQLite sample corpus for medical bills and salvage docs (#24) (8b50ecc)
+
+### Changed
+
+- Update run manifest timestamp and enhance Random Forest classification notebook (455af8c)
+- Update OpenRouter evaluation notebook with sample count and configuration changes (a441010)
+- Update Quarto configuration and documentation structure (37d1526)
+- Update documentation and enhance styling for Quarto site (d123536)
+- Enhance documentation and improve notebook functionality (9378701)
+- Enhance documentation structure and fix notebook errors (25d6b22)
+- Refactor documentation links and update Quarto configuration (350d865)
+- Update documentation and configuration for Quarto site (332db04)
+
+### Removed
+
+- Remove obsolete `index.html` file from notebooks directory to streamline documentation structure and improve site performance (89ff9a5)
+
+### Fixed
+
+- Fix critical audit bugs across Discord, DICIE, store, RF, and eval (#36) (d4556fd)
 
 ## [1.0.0-beta] — 2026-07-22
 

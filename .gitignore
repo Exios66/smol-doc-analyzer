@@ -87,6 +87,9 @@ results/eval_run_*/
 
 # Discord agent runtime data
 data/discord/**
+
+# Changelog updater (LaunchAgent / cron state + logs)
+data/changelog/
 !data/discord/.gitkeep
 
 # Sample medical/salvage document corpus DB + regenerable exports

@@ -192,6 +192,12 @@ python -m src.discord_bot
 ./scripts/install_discord_bot_loginitem.sh
 # See discord/smol-doc-analyzer/README.md
 
+# --- Changelog (Keep a Changelog [Unreleased] from git) ---
+python scripts/update_changelog.py              # run once now
+python scripts/update_changelog.py --dry-run --print-unreleased
+./scripts/install_changelog_launchagent.sh      # Wed 11pm America/Chicago (LaunchAgent)
+# ./scripts/install_changelog_launchagent.sh --crontab   # optional user-crontab instead
+
 # full-scale generation (when ready)
 python -m src.generation.skeleton_sampler --n 5000 --out data/synthetic/skeletons/
 python -m src.generation.stage_a_document_gen --in data/synthetic/skeletons/skeletons_n5000_seed42.jsonl
