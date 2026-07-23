@@ -1,6 +1,15 @@
-# Implementation & Development Plan — smol-doc-analyzer
+---
+title: "Implementation plan"
+subtitle: "Phased build plan and exit criteria"
+---
 
-**Current package version:** `1.0.0-beta` (`1.0.0b0`) — see [CHANGELOG.md](../../CHANGELOG.md).
+**Current package version:** `1.0.0-beta` (`1.0.0b0`) — see [Changelog](../CHANGELOG.md).
+
+::: {.callout-note}
+## Portal map
+[Home](../index.qmd) · [Architecture](../architecture.md) ·
+[Pipeline hub](../pipelines/index.qmd) · [Changelog](../CHANGELOG.md)
+:::
 
 ## Overview
 

@@ -1,4 +1,7 @@
-# Usage Guide — smol-doc-analyzer
+---
+title: "Usage"
+subtitle: "End-to-end command reference"
+---
 
 **Version:** `1.0.0-beta` (`1.0.0b0`)
 
@@ -8,18 +11,20 @@ serving, and operating the Discord bot.
 
 | Doc | Purpose |
 |-----|---------|
-| [architecture.md](architecture.md) | Dual-pipeline design and repository map |
-| [docie_pipeline.md](docie_pipeline.md) | Paper Fig. 1 DICIE path |
-| [sample_document_corpus.md](sample_document_corpus.md) | SQLite medical / salvage sample store |
-| [data_provenance.md](data_provenance.md) | Synthetic-only data disclosure |
-| [quick-start.qmd](quick-start.qmd) | Condensed install + first run |
-| [how-to/launch-quarto-site.qmd](how-to/launch-quarto-site.qmd) | Preview / render this Quarto docs site |
-| [notebooks/index.qmd](notebooks/index.qmd) | Notebook portal |
-| [CHANGELOG.md](../CHANGELOG.md) | Version history through `1.0.0-beta` |
+| [Architecture](architecture.md) | Dual-pipeline design and repository map |
+| [Pipeline hub](pipelines/index.qmd) | Choose DICIE vs memo chain |
+| [DICIE Pipeline](docie_pipeline.md) | Paper Fig. 1 DICIE path |
+| [Sample Document Corpus](sample_document_corpus.md) | SQLite medical / salvage sample store |
+| [Data Provenance](data_provenance.md) | Synthetic-only data disclosure |
+| [Quick Start](quick-start.qmd) | Condensed install + first run |
+| [Commands](reference/commands.qmd) | High-frequency cheat sheet |
+| [How-to: Quarto site](how-to/launch-quarto-site.qmd) | Preview / publish this portal |
+| [Notebooks](notebooks/index.qmd) | Notebook portal |
+| [Changelog](CHANGELOG.md) | Version history through `1.0.0-beta` |
 
 ### Documentation website (Quarto)
 
-Browse guides and notebooks as a local Quarto website (requires the
+Browse guides and notebooks locally (requires the
 [Quarto CLI](https://quarto.org/docs/get-started/)):
 
 ```bash
@@ -30,6 +35,9 @@ cd docs && quarto preview
 
 # static build → docs/_site/
 cd docs && quarto render
+
+# publish publicly via Posit Connect Cloud (no GitHub Actions)
+./scripts/publish_docs_site.sh
 ```
 
 Full setup notes: [How-to: launch the Quarto docs site](how-to/launch-quarto-site.qmd).

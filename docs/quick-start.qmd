@@ -1,9 +1,15 @@
 ---
 title: "Quick Start"
+subtitle: "Install, secrets, and a minimal first run"
 ---
 
-Get a working local install and run a minimal pipeline path. For the full
-command reference, see [Usage](usage.md).
+Get a working local install and run a minimal pipeline path.
+
+::: {.callout-tip}
+## Full reference
+[Usage](usage.md) · [Commands cheat sheet](reference/commands.qmd) ·
+[Pipeline hub](pipelines/index.qmd)
+:::
 
 ## 1. Install
 
@@ -67,9 +73,12 @@ Portal: [Notebooks](notebooks/index.qmd).
 ## 6. Documentation website
 
 ```bash
-# install Quarto CLI from https://quarto.org/docs/get-started/
+# local preview — install Quarto CLI from https://quarto.org/docs/get-started/
 cd docs && quarto preview
 # or: ./scripts/preview_docs_site.sh
+
+# publish to Posit Connect Cloud (no GitHub Actions)
+./scripts/publish_docs_site.sh
 ```
 
 Full steps: [How-to: launch the Quarto docs site](how-to/launch-quarto-site.qmd).
@@ -78,4 +87,11 @@ Full steps: [How-to: launch the Quarto docs site](how-to/launch-quarto-site.qmd)
 
 - Train classifier / extractor smoke paths — [Usage](usage.md)
 - Memo chain (`src.pipeline.orchestrator`) — [Architecture](architecture.md)
-- Discord bot — [Usage](usage.md) and `discord/smol-doc-analyzer/README.md`
+- Discord bot — [Usage](usage.md)
+- Browse rendered notebooks — [Notebooks](notebooks/index.qmd)
+
+::: {.see-also}
+### See also
+[About](about.qmd) · [Data Provenance](data_provenance.md) ·
+[DICIE](docie_pipeline.md) · [Live Posit site](https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00)
+:::

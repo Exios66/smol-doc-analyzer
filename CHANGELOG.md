@@ -20,6 +20,12 @@ from scaffolding through the current beta baseline.
 - Quarto documentation website under `docs/` (`_quarto.yml`, home, quick start,
   how-to launch guide, notebooks portal with symlinks into `notebooks/`)
 - `scripts/preview_docs_site.sh` — convenience wrapper for `quarto preview docs`
+- `scripts/publish_docs_site.sh` — publish the Quarto docs site via
+  Posit Connect Cloud / Quarto Pub from your machine (no GitHub Actions)
+- Expanded Quarto portal UI: light/dark themes, custom SCSS, logo, search,
+  reader mode, breadcrumbs, page navigation, pipeline hub, commands cheat
+  sheet, about page, Mermaid diagrams, feature cards, and cross-page see-also
+  links (Posit Connect Cloud URL in README / `site-url`)
 
 ---
 

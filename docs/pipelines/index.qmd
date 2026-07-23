@@ -1,0 +1,101 @@
+---
+title: "Pipeline hub"
+subtitle: "Choose the right inference path, then dive into guides and notebooks"
+---
+
+::: {.hero-kicker}
+Pipelines
+:::
+
+smol-doc-analyzer ships **two complementary inference chains**. Use this page
+as the map; each card links to design notes, CLI usage, and rendered notebooks.
+
+```{mermaid}
+%%| fig-cap: "When to pick DICIE vs the memo chain"
+flowchart TB
+  Q{Need paper Fig. 1<br/>medical / salvage<br/>image-first flow?}
+  Q -->|Yes| DICIE[DICIE · src/docie/]
+  Q -->|No — need memos / ACORD intake| MEMO[Memo chain · src/pipeline/]
+  DICIE --> DN[Notebook: DICIE walkthrough]
+  MEMO --> MN[Notebook: Pipeline walkthrough]
+```
+
+## DICIE — Document Image Classification & Information Extraction
+
+::: {.feature-grid}
+
+::: {.feature-card}
+<span class="pipeline-badge">DICIE</span>
+### [Design notes](../docie_pipeline.md)
+Stages, taxonomies, review gates, FastAPI serve shape.
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">Notebook</span>
+### [DICIE walkthrough](../notebooks/docie_pipeline_walkthrough.ipynb)
+Stage-by-stage demo with page images and stored outputs.
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">CLI</span>
+### [Usage · DICIE](../usage.md)
+`python -m src.docie` batch + response-only recipes.
+:::
+
+:::
+
+```{mermaid}
+%%| fig-cap: "DICIE stage order (paper Fig. 1)"
+flowchart LR
+  A[Document Processing] --> B[Classification]
+  B --> C[Information Extraction]
+  C --> D[Aggregate / respond]
+```
+
+## Memo chain — markdown → classify → extract → vision → summarize
+
+::: {.feature-grid}
+
+::: {.feature-card}
+<span class="pipeline-badge">Memo</span>
+### [Architecture](../architecture.md)
+Chronological reaction contract and markdown conversion.
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">Notebook</span>
+### [Pipeline walkthrough](../notebooks/pipeline_walkthrough.ipynb)
+End-to-end memo-chain analysis with figures.
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">CLI</span>
+### [Usage · orchestrator](../usage.md)
+`python -m src.pipeline.orchestrator` and batch_runner.
+:::
+
+:::
+
+```{mermaid}
+%%| fig-cap: "Memo-chain chronological stages"
+flowchart LR
+  A[to_markdown] --> B[classify]
+  B --> C[extract]
+  C --> D[vision_llm]
+  D --> E[summarize]
+```
+
+## Supporting systems
+
+| System | Role | Links |
+|--------|------|-------|
+| Sample corpus | Queryable synthetic medical / salvage store | [Guide](../sample_document_corpus.md) · [Walkthrough](../notebooks/sample_document_corpus_walkthrough.ipynb) |
+| Classical RF | TF-IDF + Random Forest baseline | [Notebook](../notebooks/random_forest_text_handwriting_classification.ipynb) |
+| Discord (Chloride) | `/analyze` memo-chain front-end | [Usage](../usage.md) |
+| Provenance | Synthetic-only disclosure | [Data Provenance](../data_provenance.md) |
+
+::: {.see-also}
+### See also
+[Quick Start](../quick-start.qmd) · [Commands](../reference/commands.qmd) ·
+[Implementation plan](../plan/plan.md)
+:::

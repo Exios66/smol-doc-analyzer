@@ -1,8 +1,28 @@
-# Architecture — smol-doc-analyzer
+---
+title: "Architecture"
+subtitle: "Dual pipelines, repository map, and stage contracts"
+---
 
-**Version:** `1.0.0-beta` · Usage: [usage.md](usage.md) · History: [CHANGELOG.md](../CHANGELOG.md)
+**Version:** `1.0.0-beta` · [Usage](usage.md) · [Commands](reference/commands.qmd) ·
+[Changelog](CHANGELOG.md)
 
-## Pipeline
+::: {.callout-tip}
+## Prefer the hub
+Side-by-side comparison and notebook links:
+[Pipeline hub](pipelines/index.qmd).
+:::
+
+## Pipeline overview
+
+```mermaid
+flowchart TB
+  TAX[Taxonomies YAML] --> DICIE
+  TAX --> MEMO
+  CORP[(Sample corpus / synthetic)] --> DICIE
+  CORP --> MEMO
+  DICIE[src/docie DICIE] --> OUT1[Response / review queue]
+  MEMO[src/pipeline memo chain] --> OUT2[Memo + analysis JSONL]
+```
 
 Two complementary inference chains are available:
 
@@ -18,8 +38,8 @@ Extraction framework for Insurance Applications*:
 
 Application profiles: `medical_bills`, `salvage_claims` (plus `acord`).
 
-- Module README: [`src/docie/README.md`](../src/docie/README.md)
-- Design notes: [`docs/docie_pipeline.md`](docie_pipeline.md)
+- Design notes: [DICIE Pipeline](docie_pipeline.md)
+- Notebook: [DICIE walkthrough](notebooks/docie_pipeline_walkthrough.ipynb)
 - Taxonomies: `taxonomy/medical_bills.yaml`, `taxonomy/salvage_claims.yaml`
 
 ### B. Chained analysis (memo path) — `src/pipeline/`
@@ -117,18 +137,19 @@ See [discord/smol-doc-analyzer/README.md](../discord/smol-doc-analyzer/README.md
 
 ## Data flow
 
+```mermaid
+flowchart LR
+  PUB[Public corpora] --> PROF[Profiles]
+  PROF --> SKEL[Skeletons]
+  SKEL --> DOCS[Documents + noise]
+  DOCS --> CLF[Classifier / Extractor]
+  SKEL --> MEMO_T[Memos · Phase 4 targets]
 ```
-Public corpora → profiles → skeletons → documents (+ noisy) → classifier (text and/or ViT on renders) / extractor
-                                         └→ memos (Phase 4 training targets)
 
-Paper Fig. 1 (DICIE):
-  Inbound PDF/images → process (pages+OCR) → classify (aggregate) → extract → response / downstream
+**DICIE:** inbound PDF/images → process → classify → extract → response / downstream
 
-Memo chain:
-  Inbound PNG/PDF/text → to_markdown → classify → extract → vision_llm → summarize
-                                ↓
-                       structured markdown (LLM context)
-```
+**Memo chain:** inbound PNG/PDF/text → `to_markdown` → classify → extract → `vision_llm` → summarize
+(structured markdown is the default LLM context)
 
 ## Chronological reaction contract
 
@@ -181,3 +202,10 @@ so the single-action chain remains intact for development and CI.
 - Inference chain falls back to heuristics when fine-tuned weights are absent
 - LLM context prefers markdown over raw PNG/PDF pixels
 - Training / eval / seed-pipeline runs tracked in Weights & Biases (`src/utils/wandb_utils.py`); disable with `--no-wandb` or `WANDB_MODE=disabled`
+
+::: {.see-also}
+### See also
+[Pipeline hub](pipelines/index.qmd) · [Usage](usage.md) ·
+[DICIE](docie_pipeline.md) · [Notebooks](notebooks/index.qmd) ·
+[Data Provenance](data_provenance.md) · [Plan](plan/plan.md)
+:::

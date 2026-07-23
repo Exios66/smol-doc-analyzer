@@ -40,9 +40,10 @@ Phase 4 (fine-tuned summarizer LoRA) still pending — the chain currently uses 
 template memo grounded in upstream extraction/vision outputs, with a hook for a
 local generative model when configured.
 
-**Docs:** [Quarto site](docs/how-to/launch-quarto-site.qmd) (`cd docs && quarto preview`) ·
-[docs/usage.md](docs/usage.md) · [docs/architecture.md](docs/architecture.md) ·
-[CHANGELOG.md](CHANGELOG.md)
+**Docs:** [📚 Live Quarto site (Posit Connect Cloud)](https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00) ·
+[Usage](docs/usage.md) · [Architecture](docs/architecture.md) ·
+[CHANGELOG](CHANGELOG.md) ·
+[Local preview / re-publish](docs/how-to/launch-quarto-site.qmd)
 
 ## Data disclosure
 

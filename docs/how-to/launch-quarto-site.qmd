@@ -47,11 +47,62 @@ Or use the helper script from the repository root (it `cd`s into `docs/`):
 ./scripts/preview_docs_site.sh
 ```
 
+If preview hits a Sass / Deno cache error (`BadResource: Bad resource ID`),
+clean caches and restart:
+
+```bash
+./scripts/preview_docs_site.sh --clean
+# or:
+QUARTO_CLEAN=1 ./scripts/preview_docs_site.sh
+```
+
 Quarto opens a local URL (typically `http://localhost:xxxx`) with live reload
 when you edit site sources under `docs/`.
 
 Stop the preview with `Ctrl+C` in the terminal.
 
+**Do not** run `quarto render` in another terminal while `quarto preview` is
+active — concurrent Quarto processes corrupt the Sass cache.
+
+## Public website (Quarto / Posit Connect Cloud)
+
+Host the site with Quarto’s publish command from your machine — **no GitHub
+Actions**. New projects should use
+[Posit Connect Cloud](https://quarto.org/docs/publishing/posit-connect-cloud.html)
+(free tier for static sites; successor to Quarto Pub).
+
+### One-time account
+
+1. Create a free account at [connect.posit.cloud](https://connect.posit.cloud)
+   (or [quartopub.com](https://quartopub.com) if you prefer legacy Quarto Pub)
+2. Stay logged in in your default browser
+
+### Publish
+
+From the repo root:
+
+```bash
+./scripts/publish_docs_site.sh
+# same as:
+#   cd docs && quarto publish posit-connect-cloud
+```
+
+The first run opens a browser to authorize Quarto CLI, then renders and
+uploads the site. Destination details are written to
+[`docs/_publish.yml`](../_publish.yml) (safe to commit — no secrets).
+
+Re-publish after doc changes with the same command.
+
+Legacy Quarto Pub:
+
+```bash
+./scripts/publish_docs_site.sh quarto-pub
+# or: cd docs && quarto publish quarto-pub
+```
+
+`website.site-url` in [`_quarto.yml`](../_quarto.yml) already points at the
+live Posit Connect Cloud deployment recorded in [`_publish.yml`](../_publish.yml).
+Re-run this script whenever you change docs so the public site stays current.
 ## Render (static site)
 
 Build HTML into `docs/_site/`:
@@ -80,12 +131,13 @@ quarto preview _site
 
 | Section | Sources |
 |---------|---------|
-| Home / Quick Start | `docs/index.qmd`, `docs/quick-start.qmd` |
-| Usage / Architecture | `docs/usage.md`, `docs/architecture.md` |
-| Pipelines | `docs/docie_pipeline.md`, `docs/sample_document_corpus.md` |
-| Data provenance | `docs/data_provenance.md` |
-| Notebooks portal | `docs/notebooks/` (symlinks into repo `notebooks/`) |
-| This how-to | `docs/how-to/launch-quarto-site.qmd` |
+| Home / About / Quick Start | `index.qmd`, `about.qmd`, `quick-start.qmd` |
+| Usage / Architecture / Commands | `usage.md`, `architecture.md`, `reference/commands.qmd` |
+| Pipeline hub | `pipelines/index.qmd` + DICIE + sample corpus guides |
+| Notebooks portal | `docs/notebooks/` (symlinks → repo `notebooks/`, with figures) |
+| Project notes | plan, bugfix audit, changelog |
+| Theme / UI | `_quarto.yml` + `styles.scss` + `assets/` (light/dark, search, cards) |
+| This how-to | `how-to/launch-quarto-site.qmd` |
 
 Project config: [`docs/_quarto.yml`](../_quarto.yml).
 
@@ -107,7 +159,9 @@ text file, recreate it or re-clone with symlink support.
 | `MissingEnvVarsError` / `.env.example` | `cd docs` before `quarto preview` / `quarto render` (or use `./scripts/preview_docs_site.sh`) |
 | Preview port already in use | `cd docs && quarto preview --port 4444` (or another free port) |
 | Notebook page missing / empty | Confirm symlink: `ls -l docs/notebooks/` should show `→ ../../notebooks/...` |
-| Render fails on internal docs | By design only nav-listed pages render; `docs/plan/` and audit notes are excluded |
+| `Unable to resolve link target: docs/...` | Notebook links must be Quarto-relative (`../docie_pipeline.md`), not repo-relative (`../docs/...`), because notebooks render from `docs/notebooks/` |
+| `BadResource` / SassCache errors | Stop all Quarto processes, then `./scripts/preview_docs_site.sh --clean` |
+| Publish auth fails / wrong account | Log into the correct Posit / Quarto Pub account in your browser, then re-run publish |
 | Want to re-execute notebooks | Temporarily set `execute.eval: true` in `_quarto.yml` (needs models/data; not the default docs path) |
 
 ## Related

@@ -1,41 +1,116 @@
 ---
 title: "smol-doc-analyzer"
 subtitle: "Local insurance document classification, extraction, and memo generation"
+page-layout: full
 ---
 
-**smol-doc-analyzer** is a small, locally deployable LLM pipeline for insurance
+::: {.hero-kicker}
+Local · synthetic-only · dual pipeline
+:::
+
+**smol-doc-analyzer** is a small, locally deployable pipeline for insurance
 document intake — classification, field extraction, and adjuster-style memos —
 built as a cost-efficient alternative to frontier API models for high-volume
 workflows.
 
-This Quarto site gathers the project guides, architecture notes, and interactive
-notebooks into one browsable portal.
+::: {.callout-tip}
+## Live on Posit Connect Cloud
+This portal is published at
+[connect.posit.cloud/…/smol-doc-analyzer](https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00).
+Re-publish after edits with `./scripts/publish_docs_site.sh`.
+:::
 
 ## Start here
 
-| Page | What you get |
-|------|----------------|
-| [Quick Start](quick-start.qmd) | Install, secrets, and a minimal first run |
-| [Usage](usage.md) | Full command reference for both pipelines, corpus, training, eval, Discord |
-| [Architecture](architecture.md) | Dual-pipeline design and repository map |
-| [Notebooks](notebooks/index.qmd) | Walkthrough notebooks rendered in the portal |
-| [How-to: launch this site](how-to/launch-quarto-site.qmd) | Preview and render with the Quarto CLI |
+::: {.feature-grid}
+
+::: {.feature-card}
+<span class="bi bi-rocket-takeoff"></span>
+### [Quick Start](quick-start.qmd)
+Install, secrets, and a minimal DICIE one-liner — no training required.
+:::
+
+::: {.feature-card}
+<span class="bi bi-book"></span>
+### [Usage](usage.md)
+Full CLI reference for both pipelines, corpus, training, eval, and Discord.
+:::
+
+::: {.feature-card}
+<span class="bi bi-diagram-3"></span>
+### [Architecture](architecture.md)
+Dual-pipeline design, repository map, and chronological stage contract.
+:::
+
+::: {.feature-card}
+<span class="bi bi-journal-code"></span>
+### [Notebooks](notebooks/index.qmd)
+Rendered walkthroughs with stored outputs, figures, and inline code.
+:::
+
+::: {.feature-card}
+<span class="bi bi-terminal"></span>
+### [Commands](reference/commands.qmd)
+Cheat sheet of the most common entry points.
+:::
+
+::: {.feature-card}
+<span class="bi bi-shield-check"></span>
+### [Data Provenance](data_provenance.md)
+Synthetic-only disclosure — no real insurer data.
+:::
+
+:::
 
 ## Two inference paths
 
-- **DICIE** (`src/docie/`) — paper Fig. 1: process → classify → extract → respond
-  (medical bills / salvage claims). See [DICIE Pipeline](docie_pipeline.md).
-- **Memo chain** (`src/pipeline/`) — markdown → classify → extract → vision →
-  summarize for adjuster-style memos. See [Usage](usage.md).
+```{mermaid}
+%%| fig-cap: "Dual inference paths in smol-doc-analyzer"
+flowchart LR
+  IN[(PDF / PNG / text)] --> DICIE
+  IN --> MEMO
+  subgraph DICIE["DICIE · src/docie/"]
+    D1[Process] --> D2[Classify] --> D3[Extract] --> D4[Respond]
+  end
+  subgraph MEMO["Memo chain · src/pipeline/"]
+    M1[to_markdown] --> M2[classify] --> M3[extract] --> M4[vision] --> M5[summarize]
+  end
+```
 
-All training and demo data is synthetic or public; see
-[Data Provenance](data_provenance.md).
+| Path | Best for | Guide | Notebook |
+|------|----------|-------|----------|
+| **DICIE** | Paper Fig. 1 medical / salvage image-first flow | [DICIE Pipeline](docie_pipeline.md) | [Walkthrough](notebooks/docie_pipeline_walkthrough.ipynb) |
+| **Memo chain** | ACORD-style intake + adjuster memos | [Usage](usage.md) · [Architecture](architecture.md) | [Walkthrough](notebooks/pipeline_walkthrough.ipynb) |
 
-## Preview this site
+Explore both from the [Pipeline hub](pipelines/index.qmd).
+
+## Sample corpus & classical baseline
+
+::: {.column-margin}
+::: {.callout-note}
+## Synthetic only
+All demo data is synthetic or public. See [Data Provenance](data_provenance.md).
+:::
+:::
+
+- [Sample Document Corpus](sample_document_corpus.md) — SQLite house for medical / salvage docs
+- [Random Forest notebook](notebooks/random_forest_text_handwriting_classification.ipynb) — TF-IDF + RF with OCR/handwriting noise
+- [Corpus SQL notebook](notebooks/sample_corpus_sql_integrations.ipynb) · [Train/test notebook](notebooks/sample_corpus_train_test_pipeline.ipynb)
+
+## Preview & publish
 
 ```bash
-# requires Quarto CLI — run inside docs/ (see how-to for why)
-cd docs && quarto preview
-# or from repo root:
+# local preview
 ./scripts/preview_docs_site.sh
+
+# public Posit Connect Cloud (no GitHub Actions)
+./scripts/publish_docs_site.sh
 ```
+
+Details: [How-to: Quarto site](how-to/launch-quarto-site.qmd) · [About](about.qmd)
+
+::: {.see-also}
+### See also
+[Implementation plan](plan/plan.md) · [Bugfix audit](bugfix_audit_round2.md) ·
+[Changelog](CHANGELOG.md) · [GitHub repository](https://github.com/Exios66/smol-doc-analyzer)
+:::

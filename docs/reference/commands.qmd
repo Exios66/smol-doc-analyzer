@@ -1,0 +1,108 @@
+---
+title: "Commands cheat sheet"
+subtitle: "High-frequency entry points — full detail lives in Usage"
+---
+
+::: {.callout-note}
+## Canonical reference
+This page is a **quick map**. Flag semantics, flags, and recipes:
+[Usage](../usage.md).
+:::
+
+## Environment
+
+```bash
+pip install -e ".[dev]"
+python scripts/setup_env.py
+python scripts/setup_env.py --status
+```
+
+## DICIE (`src/docie`)
+
+```bash
+# one-shot text demo
+python -m src.docie \
+  --application salvage_claims \
+  --text "LETTER OF GUARANTEE ..." \
+  --response-only
+
+# batch JSONL
+python -m src.docie \
+  --application medical_bills \
+  --in data/eval/docie_eval_set.jsonl \
+  --out-dir data/pipeline/docie_run
+
+# optional REST surface
+python -m src.docie.serve
+```
+
+Guides: [DICIE Pipeline](../docie_pipeline.md) ·
+[Notebook](../notebooks/docie_pipeline_walkthrough.ipynb)
+
+## Memo chain (`src/pipeline`)
+
+```bash
+python -m src.pipeline.orchestrator \
+  --in data/synthetic/documents/documents.jsonl \
+  --out data/pipeline/analysis.jsonl \
+  --vision
+
+python -m src.pipeline.orchestrator --pdf claim.pdf --vision
+python -m src.pipeline.batch_runner \
+  --in data/synthetic/documents/documents.jsonl \
+  --out-dir data/pipeline/batch_run \
+  --vision
+```
+
+Guides: [Architecture](../architecture.md) ·
+[Notebook](../notebooks/pipeline_walkthrough.ipynb)
+
+## Sample corpus (`src/storage`)
+
+```bash
+python -m src.storage seed --seed 42 --also-export
+python -m src.storage stats
+python -m src.storage export-docie --application salvage_claims \
+  --out data/sample_corpus/exports/salvage.jsonl
+```
+
+Guides: [Sample Document Corpus](../sample_document_corpus.md) ·
+[Walkthrough](../notebooks/sample_document_corpus_walkthrough.ipynb) ·
+[SQL](../notebooks/sample_corpus_sql_integrations.ipynb) ·
+[Train/test](../notebooks/sample_corpus_train_test_pipeline.ipynb)
+
+## Classification & extraction (training)
+
+```bash
+python -m src.classification.prepare_dataset \
+  --in data/synthetic/documents/documents_from_skeletons_n240_seed42.jsonl
+python -m src.classification.train_classifier \
+  --prepared data/synthetic/documents/classification_prepared --smoke
+python -m src.classification.eval \
+  --model-dir models/classifier_smoke \
+  --prepared data/synthetic/documents/classification_prepared
+```
+
+Classical baseline notebook:
+[Random Forest](../notebooks/random_forest_text_handwriting_classification.ipynb)
+
+## Discord bot
+
+```bash
+pip install -e ".[discord]"
+python -m src.discord_bot
+```
+
+## Documentation site
+
+```bash
+./scripts/preview_docs_site.sh          # local Quarto preview
+./scripts/publish_docs_site.sh          # Posit Connect Cloud
+```
+
+::: {.see-also}
+### See also
+[Quick Start](../quick-start.qmd) · [Usage](../usage.md) ·
+[Pipeline hub](../pipelines/index.qmd) ·
+[How-to: Quarto site](../how-to/launch-quarto-site.qmd)
+:::

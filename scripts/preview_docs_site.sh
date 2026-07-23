@@ -18,6 +18,18 @@ if [[ ! -f "$DOCS/_quarto.yml" ]]; then
   exit 1
 fi
 
+# Concurrent quarto render/preview can corrupt Deno KV SassCache
+# (ERROR: BadResource: Bad resource ID). Clear local project cache when
+# requested, or when a previous preview left a broken cache behind.
+if [[ "${QUARTO_CLEAN:-}" == "1" ]] || [[ "${1:-}" == "--clean" ]]; then
+  if [[ "${1:-}" == "--clean" ]]; then
+    shift
+  fi
+  echo "Cleaning Quarto project + Sass caches..."
+  rm -rf "$DOCS/.quarto" "$HOME/Library/Caches/quarto/sass"
+fi
+
 cd "$DOCS"
 echo "Starting Quarto preview for docs/ (Ctrl+C to stop)..."
+echo "Tip: QUARTO_CLEAN=1 ./scripts/preview_docs_site.sh  # or --clean"
 exec quarto preview "$@"

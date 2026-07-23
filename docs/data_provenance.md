@@ -1,8 +1,16 @@
-# Data provenance
+---
+title: "Data Provenance"
+subtitle: "Synthetic-only disclosure — no real insurer data"
+---
 
-This project uses **no real insurance company data**. Training and evaluation data are either public corpora (used for distributional / stylistic characteristics) or synthetically generated from randomized claim skeletons.
+::: {.callout-important}
+## No real insurance company data
+Training and evaluation data are either **public corpora** (distributional /
+stylistic characteristics only) or **synthetically generated** from randomized
+claim skeletons.
+:::
 
-Usage guide: [usage.md](usage.md) · Version history: [CHANGELOG.md](../CHANGELOG.md).
+[Usage](usage.md) · [Changelog](CHANGELOG.md) · [Sample corpus](sample_document_corpus.md)
 
 ## Public sources (prime examples)
 
@@ -56,3 +64,10 @@ Skeleton schemas:
 ## Reproducibility
 
 Characteristic profiles are versioned JSON committed to the repo so synthetic generation can run without re-downloading multi-GB corpora. Corpus ingest scripts remain available to refresh profiles from Hub samples when needed.
+
+::: {.see-also}
+### See also
+[Sample Document Corpus](sample_document_corpus.md) ·
+[Architecture](architecture.md) · [About](about.qmd) ·
+[Bugfix audit](bugfix_audit_round2.md)
+:::

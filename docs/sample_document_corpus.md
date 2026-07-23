@@ -1,18 +1,24 @@
-# Sample Document Corpus Store
+---
+title: "Sample Document Corpus"
+subtitle: "Queryable synthetic medical / salvage store"
+---
 
 Queryable storage for **synthetic** medical-bill and salvage-claim documents
 used for analysis, evaluation, and model fine-tuning. Command cheatsheet:
-[usage.md](usage.md) §4.
+[Usage §4](usage.md) · [Commands](reference/commands.qmd).
 
-This project does **not** have access to proprietary American Family Insurance
-claim files. The corpus instead houses **reality-tied, fictional** examples that
-mimic the granular document surfaces an auto insurer would collect for:
+::: {.callout-important}
+## No proprietary claim files
+This project does **not** use real American Family (or any insurer) claim
+files. The corpus houses **reality-tied, fictional** examples. See
+[Data Provenance](data_provenance.md).
+:::
+
+Surfaces covered:
 
 - Casualty medical billing review (HCFA / CMS-1500, UB-04, non-standard statements)
 - Total-loss salvage workflows (Letters of Guarantee, salvage sales receipts,
   towing/storage and related attachments)
-
-See [data_provenance.md](data_provenance.md).
 
 ## Why this exists
 
@@ -125,9 +131,9 @@ together.
 
 | Notebook | Focus |
 |----------|--------|
-| [`notebooks/sample_document_corpus_walkthrough.ipynb`](../notebooks/sample_document_corpus_walkthrough.ipynb) | New corpus pipelines: generate → seed → export → DICIE |
-| [`notebooks/sample_corpus_sql_integrations.ipynb`](../notebooks/sample_corpus_sql_integrations.ipynb) | Every SQL surface (DDL, CRUD, joins, provenance, analytics) |
-| [`notebooks/sample_corpus_train_test_pipeline.ipynb`](../notebooks/sample_corpus_train_test_pipeline.ipynb) | Full SQL → prepare → train → test → DICIE eval scorecard |
+| [Corpus walkthrough](notebooks/sample_document_corpus_walkthrough.ipynb) | Generate → seed → export → DICIE |
+| [SQL integrations](notebooks/sample_corpus_sql_integrations.ipynb) | DDL, CRUD, joins, provenance, analytics |
+| [Train → test pipeline](notebooks/sample_corpus_train_test_pipeline.ipynb) | SQL → prepare → train → test → DICIE eval |
 
 Regenerate the notebooks from the builder script:
 
@@ -142,3 +148,9 @@ python scripts/build_sample_corpus_notebooks.py
   `stage=sample_corpus_seed` / `sample_corpus_import`.
 - All generated records set `is_synthetic=1` and
   `metadata.carrier_style=american_family_simulation`.
+
+::: {.see-also}
+### See also
+[Pipeline hub](pipelines/index.qmd) · [DICIE](docie_pipeline.md) ·
+[Notebooks portal](notebooks/index.qmd) · [Data Provenance](data_provenance.md)
+:::

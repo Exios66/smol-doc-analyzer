@@ -1,18 +1,25 @@
-# DICIE Pipeline (Paper Fig. 1)
+---
+title: "DICIE Pipeline"
+subtitle: "Paper Fig. 1 — process → classify → extract → respond"
+---
 
 Implements the **Document Image Classification and Information Extraction**
 chain from Raj, Dickinson & Fung, *Document Classification and Information
 Extraction framework for Insurance Applications*.
 
-Module README (API, CLI, layout): [`src/docie/README.md`](../src/docie/README.md).
-End-to-end usage (both pipelines): [`docs/usage.md`](usage.md).
+::: {.callout-note}
+## Jump links
+[Usage](usage.md) · [Pipeline hub](pipelines/index.qmd) ·
+[Notebook walkthrough](notebooks/docie_pipeline_walkthrough.ipynb) ·
+[Commands](reference/commands.qmd)
+:::
 
-```
-Input (PDF / page images; structured · tabular · unstructured)
-  → Stage 1  Document Processing
-  → Stage 2  Document Classification  (+ page aggregation)
-  → Stage 3  Information Extraction
-  → Output   Aggregated prediction → response / downstream
+```mermaid
+flowchart LR
+  IN[PDF / images / text] --> S1[1 · Document Processing]
+  S1 --> S2[2 · Classification]
+  S2 --> S3[3 · Information Extraction]
+  S3 --> OUT[4 · Aggregate + respond]
 ```
 
 This module (`src/docie/`) is **image-first** and application-scoped. It
@@ -174,3 +181,11 @@ Synthetic fixtures (no real insurer data):
 
 Trained ViT / LayoutLM weights are optional; heuristic backends keep the
 chain runnable without them.
+
+::: {.see-also}
+### See also
+[Pipeline hub](pipelines/index.qmd) · [Architecture](architecture.md) ·
+[Sample corpus](sample_document_corpus.md) ·
+[DICIE notebook](notebooks/docie_pipeline_walkthrough.ipynb) ·
+[Data Provenance](data_provenance.md)
+:::

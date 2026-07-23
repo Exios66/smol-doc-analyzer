@@ -1,0 +1,144 @@
+/*-- scss:defaults --*/
+$primary: #0f766e;
+$secondary: #334155;
+$link-color: #0d9488;
+$navbar-bg: #134e4a;
+$navbar-fg: #f8fafc;
+$sidebar-bg: #f1f5f9;
+$footer-bg: #0f172a;
+$footer-fg: #cbd5e1;
+$toc-color: #0f766e;
+$callout-border-width: 5px;
+$font-family-sans-serif: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+$headings-font-weight: 650;
+$code-block-bg: #f8fafc;
+$code-color: #0f766e;
+
+/*-- scss:rules --*/
+.navbar {
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
+}
+
+.navbar-brand {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+#title-block-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(15, 118, 110, 0.18);
+}
+
+.hero-kicker {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $primary;
+  margin-bottom: 0.35rem;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 1.75rem;
+}
+
+.feature-card {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 0.85rem;
+  padding: 1.1rem 1.15rem 1.15rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  height: 100%;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.feature-card h3 {
+  margin-top: 0.35rem;
+  font-size: 1.15rem;
+}
+
+.feature-card p {
+  margin-bottom: 0.65rem;
+  color: #475569;
+}
+
+.feature-card .bi {
+  font-size: 1.35rem;
+  color: $primary;
+}
+
+.pipeline-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(15, 118, 110, 0.12);
+  color: #115e59;
+}
+
+.see-also {
+  margin-top: 2.5rem;
+  padding: 1rem 1.15rem;
+  border-left: 4px solid $primary;
+  background: rgba(15, 118, 110, 0.06);
+  border-radius: 0 0.65rem 0.65rem 0;
+}
+
+.see-also h2,
+.see-also h3 {
+  margin-top: 0;
+  font-size: 1.05rem;
+}
+
+.quarto-title-meta {
+  color: #64748b;
+}
+
+div.sourceCode {
+  border-radius: 0.65rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.cell-output img,
+.quarto-figure img {
+  border-radius: 0.5rem;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+/* Dark mode polish */
+.quarto-dark {
+  .feature-card {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    border-color: rgba(148, 163, 184, 0.18);
+  }
+
+  .feature-card p {
+    color: #cbd5e1;
+  }
+
+  .pipeline-badge {
+    background: rgba(45, 212, 191, 0.15);
+    color: #5eead4;
+  }
+
+  .see-also {
+    background: rgba(45, 212, 191, 0.08);
+  }
+
+  #title-block-header {
+    border-bottom-color: rgba(148, 163, 184, 0.2);
+  }
+}

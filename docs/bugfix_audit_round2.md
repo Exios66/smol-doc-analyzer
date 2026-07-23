@@ -1,4 +1,13 @@
-# Bugfix audit (round 2)
+---
+title: "Bugfix audit (round 2)"
+subtitle: "Regression notes after PR #20"
+---
+
+::: {.callout-note}
+## Related
+[Changelog](CHANGELOG.md) · [Architecture](architecture.md) ·
+[Home](index.qmd)
+:::
 
 Follow-up to PR #20 (`Fix full-repo audit bugs`). This pass covers regressions
 and new silent bugs introduced after that merge (Discord SSRF hardening side

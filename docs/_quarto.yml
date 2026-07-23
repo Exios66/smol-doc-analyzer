@@ -1,22 +1,49 @@
 project:
   type: website
   output-dir: _site
+  preview:
+    port: 5905
+    browser: true
   render:
     - index.qmd
+    - about.qmd
     - quick-start.qmd
     - usage.md
     - architecture.md
     - data_provenance.md
     - docie_pipeline.md
     - sample_document_corpus.md
+    - bugfix_audit_round2.md
+    - CHANGELOG.md
     - how-to/launch-quarto-site.qmd
+    - plan/plan.md
+    - pipelines/index.qmd
+    - reference/commands.qmd
     - notebooks/index.qmd
     - notebooks/*.ipynb
 
 website:
   title: "smol-doc-analyzer"
   description: "Local insurance document classification, extraction, and memo generation"
+  site-url: https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00
+  repo-url: https://github.com/Exios66/smol-doc-analyzer
+  repo-actions: [source, issue]
+  favicon: assets/favicon.svg
+  page-navigation: true
+  bread-crumbs: true
+  back-to-top-navigation: true
+  reader-mode: true
+  search:
+    location: navbar
+    type: overlay
+    copy-button: true
+  open-graph: true
+  twitter-card: true
   navbar:
+    background: primary
+    logo: assets/logo.svg
+    logo-alt: "smol-doc-analyzer"
+    title: "smol-doc-analyzer"
     left:
       - href: index.qmd
         text: Home
@@ -28,50 +55,130 @@ website:
         text: Architecture
       - text: Pipelines
         menu:
+          - href: pipelines/index.qmd
+            text: Pipeline hub
           - href: docie_pipeline.md
             text: DICIE Pipeline
           - href: sample_document_corpus.md
             text: Sample Corpus
-      - href: data_provenance.md
-        text: Data Provenance
       - href: notebooks/index.qmd
         text: Notebooks
-      - href: how-to/launch-quarto-site.qmd
-        text: How-to
+      - href: reference/commands.qmd
+        text: Commands
+      - text: More
+        menu:
+          - href: data_provenance.md
+            text: Data Provenance
+          - href: how-to/launch-quarto-site.qmd
+            text: How-to — Quarto site
+          - href: plan/plan.md
+            text: Implementation plan
+          - href: bugfix_audit_round2.md
+            text: Bugfix audit
+          - href: CHANGELOG.md
+            text: Changelog
+          - href: about.qmd
+            text: About
+    right:
+      - icon: github
+        href: https://github.com/Exios66/smol-doc-analyzer
+        aria-label: GitHub repository
+      - icon: cloud
+        href: https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00
+        aria-label: Live Posit Connect Cloud site
   page-footer:
-    left: "smol-doc-analyzer · local insurance document pipeline"
-    right: "Synthetic data only · no real insurer data"
+    left:
+      - text: "smol-doc-analyzer · synthetic data only"
+        href: index.qmd
+    center:
+      - text: Quick Start
+        href: quick-start.qmd
+      - text: Notebooks
+        href: notebooks/index.qmd
+      - text: Commands
+        href: reference/commands.qmd
+      - text: Pipelines
+        href: pipelines/index.qmd
+    right:
+      - icon: github
+        href: https://github.com/Exios66/smol-doc-analyzer
+        aria-label: GitHub
+      - icon: cloud
+        href: https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00
+        aria-label: Posit Connect Cloud
   sidebar:
-    - title: "Guides"
-      contents:
-        - index.qmd
-        - quick-start.qmd
-        - usage.md
-        - architecture.md
-        - how-to/launch-quarto-site.qmd
-    - title: "Pipelines"
-      contents:
-        - docie_pipeline.md
-        - sample_document_corpus.md
-        - data_provenance.md
-    - title: "Notebooks"
-      contents:
-        - notebooks/index.qmd
-        - notebooks/pipeline_walkthrough.ipynb
-        - notebooks/docie_pipeline_walkthrough.ipynb
-        - notebooks/random_forest_text_handwriting_classification.ipynb
-        - notebooks/sample_document_corpus_walkthrough.ipynb
-        - notebooks/sample_corpus_sql_integrations.ipynb
-        - notebooks/sample_corpus_train_test_pipeline.ipynb
+    style: docked
+    collapse-level: 2
+    search: true
+    contents:
+      - section: "Start"
+        contents:
+          - index.qmd
+          - about.qmd
+          - quick-start.qmd
+          - reference/commands.qmd
+      - section: "Guides"
+        contents:
+          - usage.md
+          - architecture.md
+          - how-to/launch-quarto-site.qmd
+          - data_provenance.md
+      - section: "Pipelines"
+        contents:
+          - pipelines/index.qmd
+          - docie_pipeline.md
+          - sample_document_corpus.md
+      - section: "Notebooks"
+        contents:
+          - notebooks/index.qmd
+          - notebooks/pipeline_walkthrough.ipynb
+          - notebooks/docie_pipeline_walkthrough.ipynb
+          - notebooks/random_forest_text_handwriting_classification.ipynb
+          - notebooks/sample_document_corpus_walkthrough.ipynb
+          - notebooks/sample_corpus_sql_integrations.ipynb
+          - notebooks/sample_corpus_train_test_pipeline.ipynb
+      - section: "Project notes"
+        contents:
+          - plan/plan.md
+          - bugfix_audit_round2.md
+          - CHANGELOG.md
 
 format:
   html:
-    theme: cosmo
+    theme:
+      light: [flatly, styles.scss]
+      dark: [darkly, styles.scss]
     toc: true
     toc-depth: 3
+    toc-location: right
+    toc-title: "On this page"
+    number-sections: false
     code-copy: true
     code-overflow: wrap
+    code-tools: true
+    code-link: true
+    code-fold: false
+    code-block-bg: true
+    code-block-border-left: "#0f766e"
+    highlight-style: atom-one
     smooth-scroll: true
+    link-external-newwindow: true
+    link-external-icon: true
+    fig-align: center
+    fig-cap-location: bottom
+    mermaid:
+      theme: neutral
+    grid:
+      sidebar-width: 275px
+      body-width: 900px
+      margin-width: 250px
+    include-in-header:
+      text: |
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 
 execute:
   eval: false
+  echo: true
+  warning: false

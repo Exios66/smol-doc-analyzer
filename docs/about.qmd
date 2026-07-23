@@ -1,0 +1,49 @@
+---
+title: "About"
+subtitle: "Project identity, constraints, and where to go next"
+about:
+  id: about-body
+  template: trestles
+  image: assets/logo.svg
+  image-alt: "smol-doc-analyzer mark"
+  links:
+    - icon: github
+      text: GitHub
+      href: https://github.com/Exios66/smol-doc-analyzer
+    - icon: cloud
+      text: Posit Connect Cloud
+      href: https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00
+    - icon: book
+      text: Usage
+      href: usage.md
+    - icon: journal-code
+      text: Notebooks
+      href: notebooks/index.qmd
+---
+
+::: {#about-body}
+**smol-doc-analyzer** (package `1.0.0-beta`) explores whether a small,
+specialized, **locally hosted** pipeline can reach “good enough” accuracy for
+insurance document intake without sending claims documents to frontier APIs.
+
+### What you get
+
+- Dual inference paths: [DICIE](docie_pipeline.md) and the [memo chain](architecture.md)
+- Synthetic sample corpus + classical Random Forest baseline
+- Optional Discord front-end (Chloride)
+- This Quarto documentation portal (preview locally or publish to Posit Cloud)
+
+### Non-negotiables
+
+::: {.callout-important}
+## No real insurer data
+Training and demos use synthetic or public sources only.
+See [Data Provenance](data_provenance.md).
+:::
+
+### Jump in
+
+1. [Quick Start](quick-start.qmd)
+2. [Pipeline hub](pipelines/index.qmd)
+3. [Commands cheat sheet](reference/commands.qmd)
+:::

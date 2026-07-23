@@ -94,3 +94,6 @@ data/sample_corpus/exports/**
 !data/sample_corpus/.gitkeep
 !data/sample_corpus/seeds/
 !data/sample_corpus/seeds/**
+
+/.quarto/
+**/*.quarto_ipynb
