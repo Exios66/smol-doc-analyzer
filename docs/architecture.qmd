@@ -8,7 +8,7 @@ Design
 :::
 
 ::: {.hero-lead}
-**Version:** `1.0.0-beta` · [Usage](usage.md) · [Commands](reference/commands.qmd) ·
+**Version:** `1.0.0` · [Usage](usage.md) · [Commands](reference/commands.qmd) ·
 [Changelog](CHANGELOG.md)
 :::
 

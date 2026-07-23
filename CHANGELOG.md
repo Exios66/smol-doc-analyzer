@@ -5,11 +5,13 @@ in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
-with [PEP 440](https://peps.python.org/pep-0440/) package versions
-(`1.0.0-beta` ↔ `1.0.0b0`).
+with [PEP 440](https://peps.python.org/pep-0440/) package versions.
 
-Versions below `1.0.0-beta` record the incremental build-up of the repository
-from scaffolding through the current beta baseline.
+Current cadence: patch releases **+0.0.1** (`1.0.0` → `1.0.1` → …); major
+milestones jump to **`X.5.0`** or the next whole **`(X+1).0.0`**.
+
+Versions through `1.0.0-beta` record the incremental build-up of the repository
+from scaffolding through the first 1.x baseline (`1.0.0`).
 
 ---
 
@@ -192,7 +194,8 @@ with an optional local generative hook.
 | `0.5.0` | DICIE (Fig. 1) + Discord expansions + audit fixes |
 | `0.6.0` | DICIE docs, OpenRouter free fallback, RF polish |
 | `0.7.0` | SQLite sample medical / salvage corpus |
-| `1.0.0-beta` | Current beta baseline + usage guide + changelog |
+| `1.0.0-beta` | Beta baseline + usage guide + changelog |
+| `1.0.0` | Stable 1.x baseline (patch cadence +0.0.1 thereafter) |
 
 [1.0.0-beta]: https://github.com/Exios66/smol-doc-analyzer/releases/tag/v1.0.0-beta
 [0.7.0]: https://github.com/Exios66/smol-doc-analyzer/compare/v0.6.0...v0.7.0

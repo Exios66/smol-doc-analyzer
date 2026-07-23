@@ -8,7 +8,7 @@ Guides
 :::
 
 ::: {.hero-lead}
-**Version:** `1.0.0-beta` (`1.0.0b0`) — complete reference for installing,
+**Version:** `1.0.0` — complete reference for installing,
 configuring, generating data, training, running both inference pipelines,
 managing the sample corpus, evaluating, serving, and operating the Discord bot.
 :::

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smol-doc-analyzer"
-version = "1.0.0b0"
+version = "1.0.0"
 description = "Local insurance document classification, extraction, and memo generation pipeline"
 readme = "README.md"
 requires-python = ">=3.11"

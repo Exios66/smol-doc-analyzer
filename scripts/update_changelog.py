@@ -4,17 +4,19 @@
 Manual:
   python scripts/update_changelog.py
   python scripts/update_changelog.py --dry-run
-  python scripts/update_changelog.py --bump none          # Unreleased only
-  python scripts/update_changelog.py --bump prerelease    # force 1.0.0bN → bN+1
+  python scripts/update_changelog.py --bump none     # Unreleased only
+  python scripts/update_changelog.py --bump major    # → X.5.0 or (X+1).0.0
 
 Scheduled (macOS LaunchAgent, Wednesday 23:00 America/Chicago):
   ./scripts/install_changelog_launchagent.sh
 
 Version policy (``--bump auto``, default when writing):
-  - On a beta/rc prerelease (e.g. ``1.0.0b0``): any notable work → ``bN+1``
-    display form ``1.0.0-beta`` then ``1.0.0-beta.1``, …
-  - On a stable release: Added → minor, Fixed/Changed → patch, breaking → major
-  - Cuts ``[Unreleased]`` into ``## [display] — YYYY-MM-DD`` and syncs pins
+  - Normal releases: **+0.0.1** (patch), e.g. ``1.0.0`` → ``1.0.1`` → ``1.0.2``
+  - Major releases (``--bump major`` or breaking commits): jump to
+    ``X.5.0`` if ``minor < 5``, else the next whole ``(X+1).0.0``
+    (e.g. ``1.0.3`` → ``1.5.0``, ``1.5.2`` → ``2.0.0``, ``0.7.0`` → ``1.0.0``)
+  - Prerelease pins (``1.0.0b0``) are normalized to the stable base first
+  - Cuts ``[Unreleased]`` into ``## [X.Y.Z] — YYYY-MM-DD`` and syncs pins
   - Appends a row to ``data/changelog/version_log.jsonl``
 """
 
@@ -97,15 +99,20 @@ class Version:
 
     @property
     def display(self) -> str:
-        """Keep-a-Changelog / human label (1.0.0-beta, 1.0.0-beta.1, …)."""
+        """Keep-a-Changelog / human label. New bumps are plain X.Y.Z."""
         base = f"{self.major}.{self.minor}.{self.patch}"
         if self.pre_l is None:
             return base
+        # Historical prerelease labels only (legacy pins / old changelog headers).
         label = {"a": "alpha", "b": "beta", "rc": "rc"}[self.pre_l]
         n = int(self.pre_n or 0)
         if self.pre_l == "b" and n == 0:
             return f"{base}-{label}"
         return f"{base}-{label}.{n}"
+
+    def stable(self) -> "Version":
+        """Drop prerelease suffix → ``1.0.0b0`` becomes ``1.0.0``."""
+        return Version(self.major, self.minor, self.patch)
 
     @classmethod
     def parse(cls, text: str) -> "Version":
@@ -371,54 +378,36 @@ def _decide_bump(
     if not commits and not _sections_have_content(sections):
         return None, None
 
+    # Treat legacy beta/rc pins as their stable base (1.0.0b0 → 1.0.0).
+    base = current.stable()
     breaking = any(_is_breaking(s) for _, _, s in commits)
-    has_added = bool(sections.get("Added")) or any(
-        _classify(s) == "Added" for _, _, s in commits
-    )
-    has_fixish = bool(sections.get("Fixed") or sections.get("Security")) or any(
-        _classify(s) in {"Fixed", "Security"} for _, _, s in commits
-    )
 
     if mode == "auto":
-        if current.pre_l:
-            kind = "prerelease"
-        elif breaking:
-            kind = "major"
-        elif has_added:
-            kind = "minor"
-        elif has_fixish or commits:
-            kind = "patch"
-        else:
-            return None, None
+        # Default cadence: +0.0.1. Breaking commits escalate to a major milestone.
+        kind = "major" if breaking else "patch"
+    elif mode == "prerelease":
+        # Legacy alias — project no longer ships bN trains; map to patch.
+        kind = "patch"
     else:
         kind = mode
 
-    return kind, _bump_version(current, kind)
+    return kind, _bump_version(base, kind)
 
 
 def _bump_version(current: Version, kind: str) -> Version:
-    if kind == "prerelease":
-        if current.pre_l is None:
-            # Enter beta.0 on an otherwise stable base (unusual mid-pipeline).
-            return Version(current.major, current.minor, current.patch, "b", 0)
-        return Version(
-            current.major,
-            current.minor,
-            current.patch,
-            current.pre_l,
-            int(current.pre_n or 0) + 1,
-        )
-    if kind == "major":
-        return Version(current.major + 1, 0, 0)
-    if kind == "minor":
-        if current.pre_l:
-            # Still on prerelease track — prefer prerelease increment.
-            return _bump_version(current, "prerelease")
-        return Version(current.major, current.minor + 1, 0)
+    """Bump a *stable* version. ``major`` uses .5 / whole-number milestones."""
+    base = current.stable()
     if kind == "patch":
-        if current.pre_l:
-            return _bump_version(current, "prerelease")
-        return Version(current.major, current.minor, current.patch + 1)
+        return Version(base.major, base.minor, base.patch + 1)
+    if kind == "minor":
+        return Version(base.major, base.minor + 1, 0)
+    if kind == "major":
+        # Half-step (X.5.0) or next whole major ((X+1).0.0).
+        if base.minor < 5:
+            return Version(base.major, 5, 0)
+        return Version(base.major + 1, 0, 0)
+    if kind == "prerelease":
+        return _bump_version(base, "patch")
     raise ValueError(f"Unknown bump kind: {kind}")
 
 
@@ -482,11 +471,13 @@ def _apply_pin_rules(text: str, old: Version, new: Version, rules: tuple[str, ..
                 out,
             )
         elif rule == "pep440_kw":
+            # FastAPI/kwargs style: version="1.0.0" or version = "1.0.0"
             out = re.sub(
                 rf'(version\s*=\s*"){re.escape(old.pep440)}(")',
                 rf"\g<1>{new.pep440}\g<2>",
                 out,
             )
+            out = out.replace(f'version="{old.pep440}"', f'version="{new.pep440}"')
         elif rule == "pep440_ua":
             out = out.replace(
                 f"smol-doc-analyzer-discord-webhook/{old.pep440}",
@@ -703,7 +694,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Refresh CHANGELOG.md from git and incrementally bump the package "
-            "version to match enhancements (beta.N while prerelease)."
+            "version (+0.0.1 normally; major → X.5.0 or (X+1).0.0)."
         )
     )
     parser.add_argument(
@@ -730,9 +721,10 @@ def main(argv: list[str] | None = None) -> int:
         choices=("auto", "major", "minor", "patch", "prerelease", "none"),
         default="auto",
         help=(
-            "Version bump policy (default: auto). "
+            "Version bump policy (default: auto = +0.0.1 patch; breaking → major). "
+            "'major' jumps to X.5.0 or the next whole (X+1).0.0. "
             "'none' only refreshes [Unreleased]. "
-            "While on 1.0.0bN, auto/minor/patch all advance the beta number."
+            "'prerelease' is a deprecated alias for patch."
         ),
     )
     parser.add_argument(

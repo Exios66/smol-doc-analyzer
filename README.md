@@ -1,7 +1,7 @@
 # smol-doc-analyzer
 
 <p align="center">
-  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/badge/smol--doc--analyzer-v1.0.0b0-0ea5e9?style=for-the-badge&logo=python&logoColor=white" alt="smol-doc-analyzer package"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/badge/smol--doc--analyzer-v1.0.0-0ea5e9?style=for-the-badge&logo=python&logoColor=white" alt="smol-doc-analyzer package"></a>
   <a href="https://www.python.org/downloads/release/python-3110/"><img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+"></a>
   <a href="https://wisc.edu/"><img src="https://img.shields.io/badge/UW--Madison-Research-C5050C?style=for-the-badge&logo=google-scholar&logoColor=white" alt="UW-Madison"></a>
   <a href="https://chtc.cs.wisc.edu/"><img src="https://img.shields.io/badge/CHTC-HTC%20%2F%20GPU-003366?style=for-the-badge&logo=linux&logoColor=white" alt="CHTC"></a>
@@ -23,7 +23,7 @@
   <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/github/languages/count/Exios66/smol-doc-analyzer?style=flat-square&label=languages" alt="Language count"></a>
   <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/github/languages/code-size/Exios66/smol-doc-analyzer?style=flat-square&label=code%20size" alt="Code size"></a>
   <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/github/repo-size/Exios66/smol-doc-analyzer?style=flat-square&label=repo%20size" alt="Repository size"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.0--beta-orange?style=flat-square" alt="Version 1.0.0-beta"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.0-orange?style=flat-square" alt="Version 1.0.0"></a>
   <a href="https://github.com/Exios66/smol-doc-analyzer/commits/main"><img src="https://img.shields.io/github/last-commit/Exios66/smol-doc-analyzer?style=flat-square" alt="Last commit"></a>
   <a href="https://github.com/Exios66/smol-doc-analyzer/issues"><img src="https://img.shields.io/github/issues/Exios66/smol-doc-analyzer?style=flat-square" alt="Open issues"></a>
 </p>
@@ -43,7 +43,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square&logo=github" alt="PRs welcome">
 </p>
 
-**Version:** [`1.0.0-beta`](CHANGELOG.md) (`1.0.0b0`)
+**Version:** [`1.0.0`](CHANGELOG.md)
 
 A small, locally-deployable LLM pipeline for insurance document classification, extraction, and memo generation — built as a cost-efficient alternative to frontier enterprise models for high-volume document intake.
 
@@ -61,7 +61,7 @@ All three run offline, on modest hardware, with no per-token API costs.
 
 ## Status
 
-**Package version:** `1.0.0-beta` (`1.0.0b0`) — see [CHANGELOG.md](CHANGELOG.md)
+**Package version:** `1.0.0` — see [CHANGELOG.md](CHANGELOG.md)
 for the incremental history from `0.1.0` through this beta.
 
 Covers Phases 0–3 and 5, DICIE (5b), sample corpus store, Discord bot,
@@ -193,7 +193,8 @@ python -m src.discord_bot
 # See discord/smol-doc-analyzer/README.md
 
 # --- Changelog + incremental version bump (Keep a Changelog) ---
-python scripts/update_changelog.py              # cut release + bump 1.0.0bN → bN+1
+python scripts/update_changelog.py              # cut release + bump +0.0.1 (e.g. 1.0.0 → 1.0.1)
+python scripts/update_changelog.py --bump major # milestone: → X.5.0 or next whole N.0.0
 python scripts/update_changelog.py --dry-run --print-unreleased
 python scripts/update_changelog.py --bump none  # refresh [Unreleased] only
 ./scripts/install_changelog_launchagent.sh      # Wed 11pm America/Chicago (LaunchAgent)

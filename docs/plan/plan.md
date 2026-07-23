@@ -3,7 +3,7 @@ title: "Implementation plan"
 subtitle: "Phased build plan and exit criteria"
 ---
 
-**Current package version:** `1.0.0-beta` (`1.0.0b0`) — see [Changelog](../CHANGELOG.md).
+**Current package version:** `1.0.0` — see [Changelog](../CHANGELOG.md).
 
 ::: {.callout-note}
 ## Portal map
