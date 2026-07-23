@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Install a macOS LaunchAgent that refreshes CHANGELOG.md every Wednesday at
-# 11:00 PM America/Chicago (CST/CDT). Also supports a user-crontab fallback.
+# Install a macOS LaunchAgent that refreshes CHANGELOG.md and auto-bumps the
+# package version (e.g. 1.0.0b0 → 1.0.0b1) every Wednesday at 11:00 PM
+# America/Chicago (CST/CDT). Also supports a user-crontab fallback.
 #
 # Usage:
 #   ./scripts/install_changelog_launchagent.sh           # LaunchAgent (default)

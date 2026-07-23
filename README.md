@@ -192,9 +192,10 @@ python -m src.discord_bot
 ./scripts/install_discord_bot_loginitem.sh
 # See discord/smol-doc-analyzer/README.md
 
-# --- Changelog (Keep a Changelog [Unreleased] from git) ---
-python scripts/update_changelog.py              # run once now
+# --- Changelog + incremental version bump (Keep a Changelog) ---
+python scripts/update_changelog.py              # cut release + bump 1.0.0bN → bN+1
 python scripts/update_changelog.py --dry-run --print-unreleased
+python scripts/update_changelog.py --bump none  # refresh [Unreleased] only
 ./scripts/install_changelog_launchagent.sh      # Wed 11pm America/Chicago (LaunchAgent)
 # ./scripts/install_changelog_launchagent.sh --crontab   # optional user-crontab instead
 
