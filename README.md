@@ -41,7 +41,7 @@ template memo grounded in upstream extraction/vision outputs, with a hook for a
 local generative model when configured.
 
 **Docs:** [📚 Live Quarto site (Posit Connect Cloud)](https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00) ·
-[Usage](docs/usage.md) · [Architecture](docs/architecture.md) ·
+[Usage](docs/usage.md) · [Architecture](docs/architecture.qmd) ·
 [CHANGELOG](CHANGELOG.md) ·
 [Local preview / re-publish](docs/how-to/launch-quarto-site.qmd)
 
@@ -179,7 +179,7 @@ Notebook portal: [docs/notebooks/index.qmd](docs/notebooks/index.qmd).
 
 ## Repository structure
 
-See [docs/architecture.md](docs/architecture.md). Full command reference:
+See [docs/architecture.qmd](docs/architecture.qmd). Full command reference:
 [docs/usage.md](docs/usage.md).
 
 ## DICIE module (`src/docie/`)

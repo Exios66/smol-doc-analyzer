@@ -5,7 +5,7 @@ subtitle: "Regression notes after PR #20"
 
 ::: {.callout-note}
 ## Related
-[Changelog](CHANGELOG.md) · [Architecture](architecture.md) ·
+[Changelog](CHANGELOG.md) · [Architecture](architecture.qmd) ·
 [Home](index.qmd)
 :::
 

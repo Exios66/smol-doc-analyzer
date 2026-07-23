@@ -9,9 +9,9 @@ project:
     - about.qmd
     - quick-start.qmd
     - usage.md
-    - architecture.md
+    - architecture.qmd
     - data_provenance.md
-    - docie_pipeline.md
+    - docie_pipeline.qmd
     - sample_document_corpus.md
     - bugfix_audit_round2.md
     - CHANGELOG.md
@@ -51,13 +51,13 @@ website:
         text: Quick Start
       - href: usage.md
         text: Usage
-      - href: architecture.md
+      - href: architecture.qmd
         text: Architecture
       - text: Pipelines
         menu:
           - href: pipelines/index.qmd
             text: Pipeline hub
-          - href: docie_pipeline.md
+          - href: docie_pipeline.qmd
             text: DICIE Pipeline
           - href: sample_document_corpus.md
             text: Sample Corpus
@@ -120,13 +120,13 @@ website:
       - section: "Guides"
         contents:
           - usage.md
-          - architecture.md
+          - architecture.qmd
           - how-to/launch-quarto-site.qmd
           - data_provenance.md
       - section: "Pipelines"
         contents:
           - pipelines/index.qmd
-          - docie_pipeline.md
+          - docie_pipeline.qmd
           - sample_document_corpus.md
       - section: "Notebooks"
         contents:
@@ -148,6 +148,9 @@ format:
     theme:
       light: [flatly, styles.scss]
       dark: [darkly, styles.scss]
+    # Bundle CSS/JS/images into each page so figures work on Posit Cloud
+    # and when HTML is viewed without sidecar asset folders.
+    embed-resources: true
     toc: true
     toc-depth: 3
     toc-location: right
@@ -166,17 +169,14 @@ format:
     link-external-icon: true
     fig-align: center
     fig-cap-location: bottom
+    # Render Mermaid to static PNG (not client-side JS) for portable viewing
+    mermaid-format: png
     mermaid:
       theme: neutral
     grid:
       sidebar-width: 275px
       body-width: 900px
       margin-width: 250px
-    include-in-header:
-      text: |
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 
 execute:
   eval: false

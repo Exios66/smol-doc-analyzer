@@ -22,7 +22,7 @@ Re-publish after edits with `./scripts/publish_docs_site.sh`.
 
 ## Start here
 
-::: {.feature-grid}
+::::: {.feature-grid}
 
 ::: {.feature-card}
 <span class="bi bi-rocket-takeoff"></span>
@@ -38,7 +38,7 @@ Full CLI reference for both pipelines, corpus, training, eval, and Discord.
 
 ::: {.feature-card}
 <span class="bi bi-diagram-3"></span>
-### [Architecture](architecture.md)
+### [Architecture](architecture.qmd)
 Dual-pipeline design, repository map, and chronological stage contract.
 :::
 
@@ -60,12 +60,11 @@ Cheat sheet of the most common entry points.
 Synthetic-only disclosure — no real insurer data.
 :::
 
-:::
+:::::
 
 ## Two inference paths
 
 ```{mermaid}
-%%| fig-cap: "Dual inference paths in smol-doc-analyzer"
 flowchart LR
   IN[(PDF / PNG / text)] --> DICIE
   IN --> MEMO
@@ -79,8 +78,8 @@ flowchart LR
 
 | Path | Best for | Guide | Notebook |
 |------|----------|-------|----------|
-| **DICIE** | Paper Fig. 1 medical / salvage image-first flow | [DICIE Pipeline](docie_pipeline.md) | [Walkthrough](notebooks/docie_pipeline_walkthrough.ipynb) |
-| **Memo chain** | ACORD-style intake + adjuster memos | [Usage](usage.md) · [Architecture](architecture.md) | [Walkthrough](notebooks/pipeline_walkthrough.ipynb) |
+| **DICIE** | Paper Fig. 1 medical / salvage image-first flow | [DICIE Pipeline](docie_pipeline.qmd) | [Walkthrough](notebooks/docie_pipeline_walkthrough.ipynb) |
+| **Memo chain** | ACORD-style intake + adjuster memos | [Usage](usage.md) · [Architecture](architecture.qmd) | [Walkthrough](notebooks/pipeline_walkthrough.ipynb) |
 
 Explore both from the [Pipeline hub](pipelines/index.qmd).
 

@@ -14,7 +14,7 @@ Extraction framework for Insurance Applications*.
 [Commands](reference/commands.qmd)
 :::
 
-```mermaid
+```{mermaid}
 flowchart LR
   IN[PDF / images / text] --> S1[1 · Document Processing]
   S1 --> S2[2 · Classification]
@@ -184,7 +184,7 @@ chain runnable without them.
 
 ::: {.see-also}
 ### See also
-[Pipeline hub](pipelines/index.qmd) · [Architecture](architecture.md) ·
+[Pipeline hub](pipelines/index.qmd) · [Architecture](architecture.qmd) ·
 [Sample corpus](sample_document_corpus.md) ·
 [DICIE notebook](notebooks/docie_pipeline_walkthrough.ipynb) ·
 [Data Provenance](data_provenance.md)

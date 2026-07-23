@@ -28,7 +28,7 @@ insurance document intake without sending claims documents to frontier APIs.
 
 ### What you get
 
-- Dual inference paths: [DICIE](docie_pipeline.md) and the [memo chain](architecture.md)
+- Dual inference paths: [DICIE](docie_pipeline.qmd) and the [memo chain](architecture.qmd)
 - Synthetic sample corpus + classical Random Forest baseline
 - Optional Discord front-end (Chloride)
 - This Quarto documentation portal (preview locally or publish to Posit Cloud)

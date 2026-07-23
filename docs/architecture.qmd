@@ -14,7 +14,7 @@ Side-by-side comparison and notebook links:
 
 ## Pipeline overview
 
-```mermaid
+```{mermaid}
 flowchart TB
   TAX[Taxonomies YAML] --> DICIE
   TAX --> MEMO
@@ -38,7 +38,7 @@ Extraction framework for Insurance Applications*:
 
 Application profiles: `medical_bills`, `salvage_claims` (plus `acord`).
 
-- Design notes: [DICIE Pipeline](docie_pipeline.md)
+- Design notes: [DICIE Pipeline](docie_pipeline.qmd)
 - Notebook: [DICIE walkthrough](notebooks/docie_pipeline_walkthrough.ipynb)
 - Taxonomies: `taxonomy/medical_bills.yaml`, `taxonomy/salvage_claims.yaml`
 
@@ -137,7 +137,7 @@ See [discord/smol-doc-analyzer/README.md](../discord/smol-doc-analyzer/README.md
 
 ## Data flow
 
-```mermaid
+```{mermaid}
 flowchart LR
   PUB[Public corpora] --> PROF[Profiles]
   PROF --> SKEL[Skeletons]
@@ -206,6 +206,6 @@ so the single-action chain remains intact for development and CI.
 ::: {.see-also}
 ### See also
 [Pipeline hub](pipelines/index.qmd) · [Usage](usage.md) ·
-[DICIE](docie_pipeline.md) · [Notebooks](notebooks/index.qmd) ·
+[DICIE](docie_pipeline.qmd) · [Notebooks](notebooks/index.qmd) ·
 [Data Provenance](data_provenance.md) · [Plan](plan/plan.md)
 :::

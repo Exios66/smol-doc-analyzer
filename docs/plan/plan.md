@@ -7,7 +7,7 @@ subtitle: "Phased build plan and exit criteria"
 
 ::: {.callout-note}
 ## Portal map
-[Home](../index.qmd) · [Architecture](../architecture.md) ·
+[Home](../index.qmd) · [Architecture](../architecture.qmd) ·
 [Pipeline hub](../pipelines/index.qmd) · [Changelog](../CHANGELOG.md)
 :::
 

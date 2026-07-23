@@ -11,7 +11,6 @@ smol-doc-analyzer ships **two complementary inference chains**. Use this page
 as the map; each card links to design notes, CLI usage, and rendered notebooks.
 
 ```{mermaid}
-%%| fig-cap: "When to pick DICIE vs the memo chain"
 flowchart TB
   Q{Need paper Fig. 1<br/>medical / salvage<br/>image-first flow?}
   Q -->|Yes| DICIE[DICIE · src/docie/]
@@ -22,11 +21,11 @@ flowchart TB
 
 ## DICIE — Document Image Classification & Information Extraction
 
-::: {.feature-grid}
+::::: {.feature-grid}
 
 ::: {.feature-card}
 <span class="pipeline-badge">DICIE</span>
-### [Design notes](../docie_pipeline.md)
+### [Design notes](../docie_pipeline.qmd)
 Stages, taxonomies, review gates, FastAPI serve shape.
 :::
 
@@ -42,10 +41,9 @@ Stage-by-stage demo with page images and stored outputs.
 `python -m src.docie` batch + response-only recipes.
 :::
 
-:::
+:::::
 
 ```{mermaid}
-%%| fig-cap: "DICIE stage order (paper Fig. 1)"
 flowchart LR
   A[Document Processing] --> B[Classification]
   B --> C[Information Extraction]
@@ -54,11 +52,11 @@ flowchart LR
 
 ## Memo chain — markdown → classify → extract → vision → summarize
 
-::: {.feature-grid}
+::::: {.feature-grid}
 
 ::: {.feature-card}
 <span class="pipeline-badge">Memo</span>
-### [Architecture](../architecture.md)
+### [Architecture](../architecture.qmd)
 Chronological reaction contract and markdown conversion.
 :::
 
@@ -74,10 +72,9 @@ End-to-end memo-chain analysis with figures.
 `python -m src.pipeline.orchestrator` and batch_runner.
 :::
 
-:::
+:::::
 
 ```{mermaid}
-%%| fig-cap: "Memo-chain chronological stages"
 flowchart LR
   A[to_markdown] --> B[classify]
   B --> C[extract]

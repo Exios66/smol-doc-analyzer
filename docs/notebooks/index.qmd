@@ -22,7 +22,7 @@ jupyter notebook notebooks/
 
 ## Browse
 
-::: {.feature-grid}
+::::: {.feature-grid}
 
 ::: {.feature-card}
 <span class="pipeline-badge">Memo</span>
@@ -60,7 +60,7 @@ SQL-oriented views over `DocumentStore`.
 Export corpus rows into train/eval preparation paths.
 :::
 
-:::
+:::::
 
 ## Regeneration helpers
 
@@ -73,6 +73,6 @@ python scripts/build_rf_notebook.py   # Random Forest notebook builder
 ### See also
 [Pipeline hub](../pipelines/index.qmd) ·
 [Sample Document Corpus](../sample_document_corpus.md) ·
-[DICIE Pipeline](../docie_pipeline.md) ·
+[DICIE Pipeline](../docie_pipeline.qmd) ·
 [How-to: Quarto site](../how-to/launch-quarto-site.qmd)
 :::

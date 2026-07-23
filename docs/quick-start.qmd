@@ -86,12 +86,12 @@ Full steps: [How-to: launch the Quarto docs site](how-to/launch-quarto-site.qmd)
 ## Next steps
 
 - Train classifier / extractor smoke paths — [Usage](usage.md)
-- Memo chain (`src.pipeline.orchestrator`) — [Architecture](architecture.md)
+- Memo chain (`src.pipeline.orchestrator`) — [Architecture](architecture.qmd)
 - Discord bot — [Usage](usage.md)
 - Browse rendered notebooks — [Notebooks](notebooks/index.qmd)
 
 ::: {.see-also}
 ### See also
 [About](about.qmd) · [Data Provenance](data_provenance.md) ·
-[DICIE](docie_pipeline.md) · [Live Posit site](https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00)
+[DICIE](docie_pipeline.qmd) · [Live Posit site](https://connect.posit.cloud/jjb-morningstar/content/019f8d0a-2732-fecb-b056-1f69f4451c00)
 :::

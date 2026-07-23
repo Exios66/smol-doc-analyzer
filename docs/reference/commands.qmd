@@ -36,7 +36,7 @@ python -m src.docie \
 python -m src.docie.serve
 ```
 
-Guides: [DICIE Pipeline](../docie_pipeline.md) ·
+Guides: [DICIE Pipeline](../docie_pipeline.qmd) ·
 [Notebook](../notebooks/docie_pipeline_walkthrough.ipynb)
 
 ## Memo chain (`src/pipeline`)
@@ -54,7 +54,7 @@ python -m src.pipeline.batch_runner \
   --vision
 ```
 
-Guides: [Architecture](../architecture.md) ·
+Guides: [Architecture](../architecture.qmd) ·
 [Notebook](../notebooks/pipeline_walkthrough.ipynb)
 
 ## Sample corpus (`src/storage`)

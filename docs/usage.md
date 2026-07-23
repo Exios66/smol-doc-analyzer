@@ -11,9 +11,9 @@ serving, and operating the Discord bot.
 
 | Doc | Purpose |
 |-----|---------|
-| [Architecture](architecture.md) | Dual-pipeline design and repository map |
+| [Architecture](architecture.qmd) | Dual-pipeline design and repository map |
 | [Pipeline hub](pipelines/index.qmd) | Choose DICIE vs memo chain |
-| [DICIE Pipeline](docie_pipeline.md) | Paper Fig. 1 DICIE path |
+| [DICIE Pipeline](docie_pipeline.qmd) | Paper Fig. 1 DICIE path |
 | [Sample Document Corpus](sample_document_corpus.md) | SQLite medical / salvage sample store |
 | [Data Provenance](data_provenance.md) | Synthetic-only data disclosure |
 | [Quick Start](quick-start.qmd) | Condensed install + first run |

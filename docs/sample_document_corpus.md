@@ -151,6 +151,6 @@ python scripts/build_sample_corpus_notebooks.py
 
 ::: {.see-also}
 ### See also
-[Pipeline hub](pipelines/index.qmd) · [DICIE](docie_pipeline.md) ·
+[Pipeline hub](pipelines/index.qmd) · [DICIE](docie_pipeline.qmd) ·
 [Notebooks portal](notebooks/index.qmd) · [Data Provenance](data_provenance.md)
 :::
