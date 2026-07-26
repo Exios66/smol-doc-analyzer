@@ -239,3 +239,64 @@ def test_import_export_roundtrip_preserves_fields(store: DocumentStore, tmp_path
     store.export_jsonl(out, format="docie")
     rows = load_jsonl(out)
     assert rows[0]["ground_truth_fields"]["vin"] == "1HGCM82633A004352"
+
+
+def test_upsert_document_replaces_stale_ground_truth_fields(store: DocumentStore):
+    from src.storage.types import DocumentRecord, FieldRecord
+
+    doc = DocumentRecord(
+        document_id="sal-upsert-001",
+        application="salvage_claims",
+        document_type="log",
+        text="LETTER OF GUARANTEE\nClaim Number: CLM-1\nVIN: 1HGCM82633A004352\n",
+        fields=[
+            FieldRecord("claim_id", "CLM-1", "ground_truth"),
+            FieldRecord("vin", "1HGCM82633A004352", "ground_truth"),
+            FieldRecord("year", "2018", "ground_truth"),
+            FieldRecord("vin", "EXTRACTED-VIN", "extracted"),
+        ],
+    )
+    store.upsert_document(doc)
+    got = store.get_document("sal-upsert-001")
+    assert got is not None
+    assert got.ground_truth_fields()["year"] == "2018"
+    assert any(f.field_role == "extracted" and f.field_name == "vin" for f in got.fields)
+
+    # Re-import corrects GT and omits year — year must not linger; extracted stays.
+    corrected = DocumentRecord(
+        document_id="sal-upsert-001",
+        application="salvage_claims",
+        document_type="log",
+        text=doc.text,
+        fields=[
+            FieldRecord("claim_id", "CLM-1", "ground_truth"),
+            FieldRecord("vin", "1HGCM82633A004352", "ground_truth"),
+        ],
+    )
+    store.upsert_document(corrected)
+    got2 = store.get_document("sal-upsert-001")
+    assert got2 is not None
+    gt = got2.ground_truth_fields()
+    assert set(gt) == {"claim_id", "vin"}
+    assert "year" not in gt
+    assert any(f.field_role == "extracted" and f.field_value == "EXTRACTED-VIN" for f in got2.fields)
+
+
+def test_set_fields_replace_clears_omitted_keys(store: DocumentStore):
+    from src.storage.types import DocumentRecord, FieldRecord
+
+    store.upsert_document(
+        DocumentRecord(
+            document_id="med-set-001",
+            application="medical_bills",
+            document_type="hcfa",
+            text="HCFA\nPatient Name: A\n",
+            fields=[
+                FieldRecord("claim_id", "CLM-A", "ground_truth"),
+                FieldRecord("name", "A", "ground_truth"),
+            ],
+        )
+    )
+    store.set_fields("med-set-001", {"claim_id": "CLM-B"}, role="ground_truth", replace=True)
+    gt = store.get_document("med-set-001").ground_truth_fields()
+    assert gt == {"claim_id": "CLM-B"}

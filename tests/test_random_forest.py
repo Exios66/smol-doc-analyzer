@@ -485,3 +485,107 @@ def test_notebook_exists():
     assert "DEFAULT_PRESET_NAMES" in text
     assert "SEED_N = 2000" in text
     assert "seed_n=SEED_N" in text
+
+
+def test_assign_split_column_keeps_surfaces_together(tmp_path: Path):
+    """Typed + noisy rows sharing record_id must never land in different splits."""
+    rows = []
+    for i in range(20):
+        rid = f"rec-{i:02d}"
+        label = ["loss_notice", "application_commercial", "certificate_evidence"][i % 3]
+        rows.append(
+            {
+                "record_id": rid,
+                "document_type": label,
+                "text": f"doc {i} typed surface text for classification",
+                "surface": SURFACE_TYPED,
+            }
+        )
+        rows.append(
+            {
+                "record_id": rid,
+                "document_type": label,
+                "text": f"doc {i} noisy 0CR surface text for classification",
+                "surface": SURFACE_HANDWRITING_OCR,
+            }
+        )
+    frame = pd.DataFrame(rows)
+    out = assign_split_column(frame, splits_path=tmp_path / "does_not_exist.json")
+    grouped = out.groupby("record_id")["split"].nunique()
+    assert (grouped == 1).all(), grouped[grouped > 1].to_dict()
+    assert set(out["split"]) <= {"train", "val", "test"}
+
+
+def test_assign_split_column_mismatched_splits_json_does_not_crash(tmp_path: Path):
+    from src.utils.io import write_json
+
+    rows = [
+        {
+            "record_id": "a",
+            "document_type": "loss_notice",
+            "text": "typed a",
+            "surface": SURFACE_TYPED,
+        },
+        {
+            "record_id": "a",
+            "document_type": "loss_notice",
+            "text": "noisy a",
+            "surface": SURFACE_HANDWRITING_OCR,
+        },
+        {
+            "record_id": "b",
+            "document_type": "application_commercial",
+            "text": "typed b",
+            "surface": SURFACE_TYPED,
+        },
+        {
+            "record_id": "b",
+            "document_type": "application_commercial",
+            "text": "noisy b",
+            "surface": SURFACE_HANDWRITING_OCR,
+        },
+    ]
+    frame = pd.DataFrame(rows)
+    splits_path = tmp_path / "splits.json"
+    # IDs that do not appear in the frame at all.
+    write_json(splits_path, {"train": ["zzz"], "val": ["yyy"], "test": ["xxx"]})
+    out = assign_split_column(frame, splits_path=splits_path)
+    assert out["split"].notna().all()
+    assert (out.groupby("record_id")["split"].nunique() == 1).all()
+
+
+def test_assign_split_column_honors_matching_splits_json(tmp_path: Path):
+    from src.utils.io import write_json
+
+    rows = []
+    for rid, label, split in [
+        ("keep-train", "loss_notice", "train"),
+        ("keep-val", "application_commercial", "val"),
+        ("keep-test", "certificate_evidence", "test"),
+    ]:
+        for surface in (SURFACE_TYPED, SURFACE_HANDWRITING_OCR):
+            rows.append(
+                {
+                    "record_id": rid,
+                    "document_type": label,
+                    "text": f"{rid} {surface}",
+                    "surface": surface,
+                }
+            )
+    frame = pd.DataFrame(rows)
+    splits_path = tmp_path / "splits.json"
+    write_json(
+        splits_path,
+        {
+            "train": ["keep-train"],
+            "val": ["keep-val"],
+            "test": ["keep-test"],
+        },
+    )
+    out = assign_split_column(frame, splits_path=splits_path)
+    by_id = out.groupby("record_id")["split"].first().to_dict()
+    assert by_id == {
+        "keep-train": "train",
+        "keep-val": "val",
+        "keep-test": "test",
+    }

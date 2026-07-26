@@ -217,3 +217,82 @@ def test_post_webhook_success_mocked(monkeypatch):
         url="https://discord.com/api/webhooks/1/abc",
     )
     assert out == {"ok": True, "status": 204}
+
+
+def test_analyze_impl_local_path_skips_url_validation(tmp_path: Path, monkeypatch):
+    import asyncio
+
+    from src.discord_bot import tools as tools_mod
+
+    called = {"validate": 0, "download": 0}
+
+    def boom_validate(url: str) -> str:
+        called["validate"] += 1
+        raise AssertionError(f"_validate_download_url should not run for local_path ({url})")
+
+    async def boom_download(url: str, dest: Path) -> Path:
+        called["download"] += 1
+        raise AssertionError("_download_url should not run for local_path")
+
+    monkeypatch.setattr(tools_mod, "_validate_download_url", boom_validate)
+    monkeypatch.setattr(tools_mod, "_download_url", boom_download)
+
+    pdf = tmp_path / "claim.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n")
+
+    out = asyncio.run(
+        analyze_insurance_document_impl(
+            local_path=pdf,
+            enable_vision=False,
+            record_id="test-local-pdf",
+        )
+    )
+    assert called == {"validate": 0, "download": 0}
+    assert out.get("ok") is True
+    assert out["source"]["kind"] == "pdf"
+    assert out["source"]["path"] is not None
+
+
+def test_download_url_blocks_redirect_to_localhost(tmp_path: Path, monkeypatch):
+    import asyncio
+    import io
+    import urllib.error
+    from email.message import EmailMessage
+
+    from src.discord_bot import tools as tools_mod
+
+    class FakeRedirect(urllib.error.HTTPError):
+        def __init__(self):
+            headers = EmailMessage()
+            headers["Location"] = "http://127.0.0.1/secret"
+            super().__init__(
+                url="https://example.com/doc.pdf",
+                code=302,
+                msg="Found",
+                hdrs=headers,
+                fp=io.BytesIO(b""),
+            )
+
+    class FakeOpener:
+        def open(self, req, timeout=60):
+            raise FakeRedirect()
+
+    monkeypatch.setattr(
+        "urllib.request.build_opener",
+        lambda *handlers: FakeOpener(),
+    )
+
+    def validate(url: str) -> str:
+        if "127.0.0.1" in url or "localhost" in url:
+            raise ValueError(f"blocked redirect target: {url}")
+        return url
+
+    monkeypatch.setattr(tools_mod, "_validate_download_url", validate)
+
+    async def _run():
+        with pytest.raises(ValueError, match="blocked redirect target"):
+            await tools_mod._download_url(
+                "https://example.com/doc.pdf", tmp_path / "out.bin"
+            )
+
+    asyncio.run(_run())

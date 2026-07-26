@@ -129,16 +129,9 @@ def _heuristic_classify(text: str, labels: list[str]) -> tuple[str, float]:
 
 def _cache_safe_id(record_id: str) -> str:
     """Stable filesystem-safe id that avoids collisions across separators."""
-    import hashlib
+    from src.utils.io import cache_safe_id
 
-    digest = hashlib.sha1(record_id.encode("utf-8")).hexdigest()[:16]
-    readable = (
-        record_id.replace("::", "__")
-        .replace("/", "%2F")
-        .replace("\\", "%5C")
-    )
-    readable = re.sub(r"[^\w.%+-]+", "_", readable)[:80].strip("._") or "record"
-    return f"{readable}__{digest}"
+    return cache_safe_id(record_id)
 
 
 def _failed_markdown_backend(backend: str) -> bool:

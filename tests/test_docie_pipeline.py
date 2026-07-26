@@ -240,3 +240,27 @@ def test_pipeline_stage_order_contract():
         "information_extraction",
         "output_aggregation",
     ]
+
+
+def test_heuristic_extract_ignores_carrier_name():
+    text = (
+        "HCFA CMS-1500\n"
+        "Carrier Name: American Family Insurance\n"
+        "Claim Number: CLM-2024-551122\n"
+        "Date of Birth: 03/14/1988\n"
+    )
+    fields = heuristic_extract(text, ["name", "claim_id", "dob"])
+    assert "name" not in fields
+    assert fields["claim_id"][0] == "CLM-2024-551122"
+
+
+def test_heuristic_extract_patient_name_still_works():
+    text = (
+        "HCFA\n"
+        "Carrier Name: American Family Insurance\n"
+        "Patient Name: Jane Q Public\n"
+        "Claim Number: CLM-9\n"
+    )
+    fields = heuristic_extract(text, ["name", "claim_id"])
+    assert "Jane" in fields["name"][0]
+    assert "American Family" not in fields["name"][0]

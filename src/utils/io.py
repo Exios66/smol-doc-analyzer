@@ -2,9 +2,27 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Iterable, Iterator
+
+
+def cache_safe_id(record_id: str) -> str:
+    """Stable filesystem-safe id that avoids collisions across separators.
+
+    Distinct IDs that only differ by ``::`` vs ``__`` (or path separators)
+    must not map to the same filename.
+    """
+    digest = hashlib.sha1(record_id.encode("utf-8")).hexdigest()[:16]
+    readable = (
+        record_id.replace("::", "__")
+        .replace("/", "%2F")
+        .replace("\\", "%5C")
+    )
+    readable = re.sub(r"[^\w.%+-]+", "_", readable)[:80].strip("._") or "record"
+    return f"{readable}__{digest}"
 
 
 def read_json(path: Path) -> Any:

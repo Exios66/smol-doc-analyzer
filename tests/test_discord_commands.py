@@ -150,3 +150,46 @@ def test_vibes_mood_and_queue_format():
     text = format_queue(state)
     assert "Vibes queue" in text
     assert "focus" in text
+
+
+def test_run_analyze_from_interaction_attachment_uses_local_path(tmp_path: Path, monkeypatch):
+    saved = {}
+
+    class FakeAttachment:
+        filename = "loss_notice.pdf"
+        content_type = "application/pdf"
+
+        async def save(self, dest: Path):
+            dest.write_bytes(b"%PDF-1.4\n%%EOF\n")
+            saved["dest"] = Path(dest)
+
+    async def fake_impl(**kwargs):
+        saved["kwargs"] = kwargs
+        return {
+            "ok": True,
+            "discord_summary": "## Document analysis\n**Type:** loss_notice",
+            "analysis": {"document_type": "loss_notice"},
+        }
+
+    monkeypatch.setattr(
+        "src.discord_bot.commands.analyze_insurance_document_impl",
+        fake_impl,
+    )
+    monkeypatch.setattr(
+        "src.discord_bot.commands._inbox_dir",
+        lambda: tmp_path,
+    )
+
+    interaction = SimpleNamespace(id=9991)
+    out = asyncio.run(
+        _run_analyze_from_interaction(
+            interaction,
+            attachment=FakeAttachment(),
+            vision=False,
+        )
+    )
+    assert "## Document analysis" in out
+    kwargs = saved["kwargs"]
+    assert kwargs.get("local_path") is not None
+    assert kwargs.get("file_url") is None
+    assert Path(kwargs["local_path"]).exists()

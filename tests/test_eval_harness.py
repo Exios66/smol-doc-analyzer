@@ -201,3 +201,80 @@ def test_cli_dry_run(capsys):
     out = capsys.readouterr().out
     assert "would call local for classification/" in out
     assert "would call anthropic for extraction/" in out
+
+
+def test_run_eval_records_free_fallback_model_and_zero_cost():
+    from evaluation.eval_harness import FrontierBackend
+
+    class FreeFallbackBackend(FrontierBackend):
+        def __init__(self):
+            self.name = "anthropic"
+            self.model_slug = "anthropic/claude-sonnet-4.5"
+            self.pricing = ModelPricing(input_per_million=3.0, output_per_million=15.0)
+            self.client = None  # unused
+
+        def run(self, task, example):
+            return (
+                "loss_notice",
+                1000,
+                50,
+                0.2,
+                "meta-llama/llama-3.2-3b-instruct:free",
+            )
+
+    examples = [
+        {
+            "example_id": "cls-free",
+            "task": "classification",
+            "prompt_fields": {"document_text": "LOSS NOTICE"},
+            "ground_truth": "loss_notice",
+        }
+    ]
+    pricing = {"anthropic": ModelPricing(input_per_million=3.0, output_per_million=15.0)}
+    results = run_eval(
+        tasks=["classification"],
+        backends={"anthropic": FreeFallbackBackend()},
+        eval_set=examples,
+        frontier_pricing=pricing,
+        run_id="free-fallback-test",
+        dry_run=False,
+    )
+    assert len(results) == 1
+    assert results[0].model_id == "meta-llama/llama-3.2-3b-instruct:free"
+    assert results[0].cost_usd == 0.0
+    # Paid pricing would have been non-zero for these token counts.
+    assert compute_cost(pricing["anthropic"], 1000, 50) > 0
+
+
+def test_run_eval_paid_model_still_billed():
+    from evaluation.eval_harness import FrontierBackend
+
+    class PaidBackend(FrontierBackend):
+        def __init__(self):
+            self.name = "openai"
+            self.model_slug = "openai/gpt-4o"
+            self.pricing = ModelPricing(input_per_million=2.5, output_per_million=10.0)
+            self.client = None
+
+        def run(self, task, example):
+            return ("loss_notice", 1_000_000, 1_000_000, 0.5, self.model_slug)
+
+    examples = [
+        {
+            "example_id": "cls-paid",
+            "task": "classification",
+            "prompt_fields": {"document_text": "LOSS NOTICE"},
+            "ground_truth": "loss_notice",
+        }
+    ]
+    pricing = {"openai": ModelPricing(input_per_million=2.5, output_per_million=10.0)}
+    results = run_eval(
+        tasks=["classification"],
+        backends={"openai": PaidBackend()},
+        eval_set=examples,
+        frontier_pricing=pricing,
+        run_id="paid-test",
+        dry_run=False,
+    )
+    assert results[0].model_id == "openai/gpt-4o"
+    assert results[0].cost_usd == pytest.approx(12.5)

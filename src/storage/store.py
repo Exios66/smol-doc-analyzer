@@ -196,9 +196,23 @@ class DocumentStore:
         *,
         role: str = "ground_truth",
         confidence: float | None = None,
+        replace: bool = True,
     ) -> None:
+        """Set fields for ``role``.
+
+        When ``replace`` is True (default), the role's prior field set is
+        deleted first so omitted keys do not remain as stale labels.
+        """
         now = time.time()
         with _LOCK, self._connect() as conn:
+            if replace:
+                conn.execute(
+                    """
+                    DELETE FROM document_fields
+                    WHERE document_id = ? AND field_role = ?
+                    """,
+                    (document_id, role),
+                )
             for name, value in fields.items():
                 conn.execute(
                     """
