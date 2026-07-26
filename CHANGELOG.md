@@ -5,15 +5,40 @@ in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
-with [PEP 440](https://peps.python.org/pep-0440/) package versions
-(`1.0.0-beta` ↔ `1.0.0b0`).
+with [PEP 440](https://peps.python.org/pep-0440/) package versions.
 
-Versions below `1.0.0-beta` record the incremental build-up of the repository
-from scaffolding through the current beta baseline.
+Current cadence: patch releases **+0.0.1** (`1.0.0` → `1.0.1` → …); major
+milestones jump to **`X.5.0`** or the next whole **`(X+1).0.0`**.
+
+Versions through `1.0.0-beta` record the incremental build-up of the repository
+from scaffolding through the first 1.x baseline (`1.0.0`).
 
 ---
 
 ## [Unreleased]
+
+### Added
+
+- Queryable **RVL-CDIP** SQLite index (`src/rvl_cdip/`) sourced from
+  [`aharley/rvl_cdip`](https://huggingface.co/datasets/aharley/rvl_cdip); Hub
+  downloads + DB confined to `.venv/rvl_cdip/` (label files by default; ~38 GB
+  image archive opt-in via `--i-understand-large-download`)
+- CLI: `python -m src.rvl_cdip build|summary|list|show|query|download-labels|download-images|paths`
+- Docs: `docs/rvl_cdip_sql.md`
+- Tests: `tests/test_rvl_cdip_store.py`
+- Quarto documentation website under `docs/` (`_quarto.yml`, home, quick start,
+  how-to launch guide, notebooks portal with symlinks into `notebooks/`)
+- `scripts/preview_docs_site.sh` — convenience wrapper for `quarto preview docs`
+- `scripts/publish_docs_site.sh` — publish the Quarto docs site via
+  Posit Connect Cloud / Quarto Pub from your machine (no GitHub Actions)
+- Expanded Quarto portal UI: light/dark themes, custom SCSS, logo, search,
+  reader mode, breadcrumbs, page navigation, pipeline hub, commands cheat
+  sheet, about page, Mermaid diagrams, feature cards, and cross-page see-also
+  links (Posit Connect Cloud URL in README / `site-url`)
+- Portable figures: `embed-resources: true` + `mermaid-format: png`; RF notebook
+  re-executed so classification charts ship as stored outputs
+- Changelog updater (`scripts/update_changelog.py`) with Wednesday 11pm Central
+  LaunchAgent / crontab installers; incremental version bumps + version log
 
 ### Fixed
 
@@ -32,7 +57,8 @@ from scaffolding through the current beta baseline.
   (shared with pipeline cache)
 - **#35** Eval harness: record the actually-used OpenRouter model and set
   `cost_usd=0` after free-model fallback
-- RF notebook `SEED_N` resynced to `2000` (matched builder script + tests)
+- RF notebook `SEED_N` kept at `2000` (matches builder script +
+  `test_notebook_exists`; rejects drifted `48` demo value)
 
 ---
 
@@ -187,7 +213,8 @@ with an optional local generative hook.
 | `0.5.0` | DICIE (Fig. 1) + Discord expansions + audit fixes |
 | `0.6.0` | DICIE docs, OpenRouter free fallback, RF polish |
 | `0.7.0` | SQLite sample medical / salvage corpus |
-| `1.0.0-beta` | Current beta baseline + usage guide + changelog |
+| `1.0.0-beta` | Beta baseline + usage guide + changelog |
+| `1.0.0` | Stable 1.x baseline (patch cadence +0.0.1 thereafter) |
 
 [1.0.0-beta]: https://github.com/Exios66/smol-doc-analyzer/releases/tag/v1.0.0-beta
 [0.7.0]: https://github.com/Exios66/smol-doc-analyzer/compare/v0.6.0...v0.7.0

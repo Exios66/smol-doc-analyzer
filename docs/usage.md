@@ -1,18 +1,50 @@
-# Usage Guide — smol-doc-analyzer
+---
+title: "Usage"
+subtitle: "End-to-end command reference"
+---
 
-**Version:** `1.0.0-beta` (`1.0.0b0`)
+::: {.hero-kicker}
+Guides
+:::
 
-Complete reference for installing, configuring, generating data, training,
-running both inference pipelines, managing the sample corpus, evaluating,
-serving, and operating the Discord bot.
+::: {.hero-lead}
+**Version:** `1.0.0` — complete reference for installing,
+configuring, generating data, training, running both inference pipelines,
+managing the sample corpus, evaluating, serving, and operating the Discord bot.
+:::
 
 | Doc | Purpose |
 |-----|---------|
-| [architecture.md](architecture.md) | Dual-pipeline design and repository map |
-| [docie_pipeline.md](docie_pipeline.md) | Paper Fig. 1 DICIE path |
-| [sample_document_corpus.md](sample_document_corpus.md) | SQLite medical / salvage sample store |
-| [data_provenance.md](data_provenance.md) | Synthetic-only data disclosure |
-| [CHANGELOG.md](../CHANGELOG.md) | Version history through `1.0.0-beta` |
+| [Architecture](architecture.qmd) | Dual-pipeline design and repository map |
+| [Pipeline hub](pipelines/index.qmd) | Choose DICIE vs memo chain |
+| [DICIE Pipeline](docie_pipeline.qmd) | Paper Fig. 1 DICIE path |
+| [Sample Document Corpus](sample_document_corpus.md) | SQLite medical / salvage sample store |
+| [Data Provenance](data_provenance.md) | Synthetic-only data disclosure |
+| [Quick Start](quick-start.qmd) | Condensed install + first run |
+| [Commands](reference/commands.qmd) | High-frequency cheat sheet |
+| [How-to: Quarto site](how-to/launch-quarto-site.qmd) | Preview / publish this portal |
+| [Notebooks](notebooks/index.qmd) | Notebook portal |
+| [Changelog](CHANGELOG.md) | Version history through `1.0.0-beta` |
+
+### Documentation website (Quarto)
+
+Browse guides and notebooks locally (requires the
+[Quarto CLI](https://quarto.org/docs/get-started/)):
+
+```bash
+# live preview with reload (run inside docs/ — see how-to)
+cd docs && quarto preview
+# or from repo root:
+./scripts/preview_docs_site.sh
+
+# static build → docs/_site/
+cd docs && quarto render
+
+# publish publicly via Posit Connect Cloud (no GitHub Actions)
+./scripts/publish_docs_site.sh
+```
+
+Full setup notes: [How-to: launch the Quarto docs site](how-to/launch-quarto-site.qmd).
 
 ---
 
@@ -107,7 +139,7 @@ Taxonomies: `taxonomy/salvage_claims.yaml`, `taxonomy/medical_bills.yaml`,
 `taxonomy/acord_form_categories.yaml`.
 
 Module README (CLI flags, prediction schema, REST contract):
-[src/docie/README.md](../src/docie/README.md).
+[src/docie/README.md](https://github.com/Exios66/smol-doc-analyzer/blob/main/src/docie/README.md).
 
 **REST server (optional):**
 
@@ -193,6 +225,31 @@ python -m src.docie \
 ```
 
 Default DB: `data/sample_corpus/documents.db` (gitignored; regenerable).
+
+---
+
+## 4b. RVL-CDIP SQL index (`src/rvl_cdip`)
+
+Public document-image labels from
+[aharley/rvl_cdip](https://huggingface.co/datasets/aharley/rvl_cdip). Downloads
+and the SQLite DB are confined to `.venv/rvl_cdip/` (never `data/` or
+`~/.cache`). Default build uses only the ~17 MB label files; the ~38 GB image
+archive requires `--i-understand-large-download`.
+
+```bash
+python -m src.rvl_cdip build
+python -m src.rvl_cdip summary
+python -m src.rvl_cdip list --split train --label memo --limit 5
+python -m src.rvl_cdip show 'train:<image_relpath>'
+python -m src.rvl_cdip query \
+  "SELECT split, COUNT(*) AS n FROM documents GROUP BY split"
+python -m src.rvl_cdip paths
+
+# optional large download into .venv only
+# python -m src.rvl_cdip download-images --i-understand-large-download
+```
+
+Default DB: `.venv/rvl_cdip/rvl_cdip.db`. Guide: [rvl_cdip_sql.md](rvl_cdip_sql.md).
 
 ---
 
@@ -359,7 +416,7 @@ python -m src.discord_bot
 | Chat | mention bot or `--` prefix |
 | Utils | `/poll`, `/status`, `/help`, `/ping` |
 
-Details: [discord/smol-doc-analyzer/README.md](../discord/smol-doc-analyzer/README.md).
+Details: [discord/smol-doc-analyzer/README.md](https://github.com/Exios66/smol-doc-analyzer/blob/main/discord/smol-doc-analyzer/README.md).
 
 Outbound webhook (no bot process):
 

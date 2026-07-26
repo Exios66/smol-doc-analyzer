@@ -26,8 +26,12 @@ import pandas as pd
 from IPython.display import Markdown, display
 
 CWD = Path.cwd().resolve()
-REPO_ROOT = CWD if (CWD / "pyproject.toml").exists() else CWD.parent
-assert (REPO_ROOT / "pyproject.toml").exists(), f"Could not find repo root from {CWD}"
+# Walk up from docs/notebooks/ (or notebooks/) until pyproject.toml is found.
+REPO_ROOT = next(
+    (p for p in (CWD, *CWD.parents) if (p / "pyproject.toml").exists()),
+    None,
+)
+assert REPO_ROOT is not None, f"Could not find repo root from {CWD}"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

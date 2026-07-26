@@ -1,6 +1,49 @@
 # smol-doc-analyzer
 
-**Version:** [`1.0.0-beta`](CHANGELOG.md) (`1.0.0b0`)
+<p align="center">
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/badge/smol--doc--analyzer-v1.0.0-0ea5e9?style=for-the-badge&logo=python&logoColor=white" alt="smol-doc-analyzer package"></a>
+  <a href="https://www.python.org/downloads/release/python-3110/"><img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+"></a>
+  <a href="https://wisc.edu/"><img src="https://img.shields.io/badge/UW--Madison-Research-C5050C?style=for-the-badge&logo=google-scholar&logoColor=white" alt="UW-Madison"></a>
+  <a href="https://chtc.cs.wisc.edu/"><img src="https://img.shields.io/badge/CHTC-HTC%20%2F%20GPU-003366?style=for-the-badge&logo=linux&logoColor=white" alt="CHTC"></a>
+  <a href="https://openrouter.ai/"><img src="https://img.shields.io/badge/OpenRouter-LLM%20API-000000?style=for-the-badge&logo=openai&logoColor=white" alt="OpenRouter"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Exios66/smol-doc-analyzer/stargazers"><img src="https://img.shields.io/github/stars/Exios66/smol-doc-analyzer?style=flat-square&logo=github&color=yellow" alt="GitHub stars"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/graphs/contributors"><img src="https://img.shields.io/github/contributors/Exios66/smol-doc-analyzer?style=flat-square&color=informational" alt="Contributors"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/pulls"><img src="https://img.shields.io/github/issues-pr/Exios66/smol-doc-analyzer?style=flat-square&color=blueviolet" alt="Open pull requests"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/pulls?q=is%3Apr+is%3Aclosed"><img src="https://img.shields.io/github/issues-pr-closed/Exios66/smol-doc-analyzer?style=flat-square&color=success" alt="Closed pull requests"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://api.visitorbadge.io/api/visitors?path=Exios66%2Fsmol-doc-analyzer&label=Views&countColor=%230ea5e9&style=flat-square&labelStyle=none" alt="Repository views"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/forks"><img src="https://img.shields.io/github/forks/Exios66/smol-doc-analyzer?style=flat-square&logo=github" alt="Forks"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/watchers"><img src="https://img.shields.io/github/watchers/Exios66/smol-doc-analyzer?style=flat-square&logo=github" alt="Watchers"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Exios66/smol-doc-analyzer/search?l=python"><img src="https://img.shields.io/github/languages/top/Exios66/smol-doc-analyzer?style=flat-square" alt="Top language"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/github/languages/count/Exios66/smol-doc-analyzer?style=flat-square&label=languages" alt="Language count"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/github/languages/code-size/Exios66/smol-doc-analyzer?style=flat-square&label=code%20size" alt="Code size"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer"><img src="https://img.shields.io/github/repo-size/Exios66/smol-doc-analyzer?style=flat-square&label=repo%20size" alt="Repository size"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.0-orange?style=flat-square" alt="Version 1.0.0"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/commits/main"><img src="https://img.shields.io/github/last-commit/Exios66/smol-doc-analyzer?style=flat-square" alt="Last commit"></a>
+  <a href="https://github.com/Exios66/smol-doc-analyzer/issues"><img src="https://img.shields.io/github/issues/Exios66/smol-doc-analyzer?style=flat-square" alt="Open issues"></a>
+</p>
+
+<p align="center">
+  <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white" alt="PyTorch"></a>
+  <a href="https://huggingface.co/"><img src="https://img.shields.io/badge/Hugging%20Face-Transformers-FFD21E?style=flat-square&logo=huggingface&logoColor=black" alt="Hugging Face"></a>
+  <a href="https://wandb.ai/"><img src="https://img.shields.io/badge/Weights%20%26%20Biases-FFBE00?style=flat-square&logo=weightsandbiases&logoColor=black" alt="Weights & Biases"></a>
+  <a href="https://quarto.org/"><img src="https://img.shields.io/badge/Docs-Quarto-39729E?style=flat-square&logo=quarto&logoColor=white" alt="Quarto docs"></a>
+  <a href="https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud"><img src="https://img.shields.io/badge/Posit%20Connect-Live%20docs-447099?style=flat-square&logo=r&logoColor=white" alt="Posit Connect docs"></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-Optional%20serve-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="https://www.sqlite.org/"><img src="https://img.shields.io/badge/SQLite-Corpus%20store-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite"></a>
+  <a href="https://discord.com/"><img src="https://img.shields.io/badge/Discord-Chloride%20bot-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord bot"></a>
+  <a href="https://jupyter.org/"><img src="https://img.shields.io/badge/Jupyter-Notebooks-F37626?style=flat-square&logo=jupyter&logoColor=white" alt="Jupyter"></a>
+  <img src="https://img.shields.io/badge/status-beta-yellow?style=flat-square" alt="Beta status">
+  <img src="https://img.shields.io/badge/local--first-offline%20capable-2ea44f?style=flat-square" alt="Local-first">
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square&logo=github" alt="PRs welcome">
+</p>
+
+**Version:** [`1.0.0`](CHANGELOG.md)
 
 A small, locally-deployable LLM pipeline for insurance document classification, extraction, and memo generation — built as a cost-efficient alternative to frontier enterprise models for high-volume document intake.
 
@@ -18,7 +61,7 @@ All three run offline, on modest hardware, with no per-token API costs.
 
 ## Status
 
-**Package version:** `1.0.0-beta` (`1.0.0b0`) — see [CHANGELOG.md](CHANGELOG.md)
+**Package version:** `1.0.0` — see [CHANGELOG.md](CHANGELOG.md)
 for the incremental history from `0.1.0` through this beta.
 
 Covers Phases 0–3 and 5, DICIE (5b), sample corpus store, Discord bot,
@@ -40,7 +83,10 @@ Phase 4 (fine-tuned summarizer LoRA) still pending — the chain currently uses 
 template memo grounded in upstream extraction/vision outputs, with a hook for a
 local generative model when configured.
 
-**Docs:** [docs/usage.md](docs/usage.md) · [docs/architecture.md](docs/architecture.md) · [CHANGELOG.md](CHANGELOG.md)
+**Docs:** [📚 Live Quarto site (Posit Connect Cloud)](https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud) ·
+[Usage](docs/usage.md) · [Architecture](docs/architecture.qmd) ·
+[CHANGELOG](CHANGELOG.md) ·
+[Local preview / re-publish](docs/how-to/launch-quarto-site.qmd)
 
 ## Data disclosure
 
@@ -146,6 +192,14 @@ python -m src.discord_bot
 ./scripts/install_discord_bot_loginitem.sh
 # See discord/smol-doc-analyzer/README.md
 
+# --- Changelog + incremental version bump (Keep a Changelog) ---
+python scripts/update_changelog.py              # cut release + bump +0.0.1 (e.g. 1.0.0 → 1.0.1)
+python scripts/update_changelog.py --bump major # milestone: → X.5.0 or next whole N.0.0
+python scripts/update_changelog.py --dry-run --print-unreleased
+python scripts/update_changelog.py --bump none  # refresh [Unreleased] only
+./scripts/install_changelog_launchagent.sh      # Wed 11pm America/Chicago (LaunchAgent)
+# ./scripts/install_changelog_launchagent.sh --crontab   # optional user-crontab instead
+
 # full-scale generation (when ready)
 python -m src.generation.skeleton_sampler --n 5000 --out data/synthetic/skeletons/
 python -m src.generation.stage_a_document_gen --in data/synthetic/skeletons/skeletons_n5000_seed42.jsonl
@@ -158,9 +212,25 @@ On high-RAM local hosts, point `VISION_LLM_MODEL_PATH` at a downloaded Qwen2-VL
 (or similar) checkpoint and set `VISION_LLM_LOAD=1` to refine extraction from
 page images inside the same chain.
 
+## Documentation website (Quarto)
+
+Guides, architecture notes, and notebooks are published as a Quarto website
+under [`docs/`](docs/) (`docs/_quarto.yml`).
+
+```bash
+# install Quarto CLI: https://quarto.org/docs/get-started/
+cd docs && quarto preview           # live local portal (run inside docs/)
+./scripts/preview_docs_site.sh      # same from repo root, with a PATH check
+cd docs && quarto render            # static build → docs/_site/
+```
+
+How-to: [docs/how-to/launch-quarto-site.qmd](docs/how-to/launch-quarto-site.qmd).
+Quick start page: [docs/quick-start.qmd](docs/quick-start.qmd).
+Notebook portal: [docs/notebooks/index.qmd](docs/notebooks/index.qmd).
+
 ## Repository structure
 
-See [docs/architecture.md](docs/architecture.md). Full command reference:
+See [docs/architecture.qmd](docs/architecture.qmd). Full command reference:
 [docs/usage.md](docs/usage.md).
 
 ## DICIE module (`src/docie/`)
@@ -209,6 +279,30 @@ python scripts/build_sample_corpus_notebooks.py
 #   pip install -e ".[notebooks]"
 #   jupyter notebook notebooks/sample_corpus_train_test_pipeline.ipynb
 ```
+
+## RVL-CDIP SQL index (`src/rvl_cdip/`)
+
+Queryable SQLite index for the public
+[aharley/rvl_cdip](https://huggingface.co/datasets/aharley/rvl_cdip) dataset
+(400k document images, 16 classes). **All Hub downloads and the DB stay under
+`.venv/rvl_cdip/`.** The default build fetches only the small label files
+(~17 MB); the ~38 GB image archive is opt-in.
+
+```bash
+python -m src.rvl_cdip build
+python -m src.rvl_cdip summary
+python -m src.rvl_cdip list --split train --label invoice --limit 5
+python -m src.rvl_cdip query \
+  "SELECT l.name AS label, COUNT(*) AS n
+   FROM documents d JOIN labels l ON l.label_id = d.label_id
+   GROUP BY l.name ORDER BY n DESC"
+
+# optional — explicit acknowledgement required (~38 GB)
+# python -m src.rvl_cdip download-images --i-understand-large-download
+```
+
+- Design notes: [docs/rvl_cdip_sql.md](docs/rvl_cdip_sql.md)
+- Tests: `pytest tests/test_rvl_cdip_store.py`
 
 ## Discord bot (Chloride)
 

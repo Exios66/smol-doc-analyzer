@@ -1,0 +1,114 @@
+---
+title: "Notebooks"
+subtitle: "Interactive walkthroughs rendered into this portal"
+page-layout: full
+---
+
+::: {.hero-kicker}
+Notebooks portal
+:::
+
+::: {.hero-lead}
+Pages below are git symlinks to repository `notebooks/*.ipynb`. Quarto renders
+them with **`execute: eval: false`** using **stored cell outputs** and figure
+sidecar folders under `_site/notebooks/` (published with the whole site to
+Posit Connect).
+:::
+
+::: {.callout-tip}
+## Live Jupyter
+
+```bash
+pip install -e ".[notebooks]"
+jupyter notebook notebooks/
+```
+:::
+
+## Browse
+
+::::: {.feature-grid}
+
+::: {.feature-card}
+<span class="pipeline-badge">Memo</span>
+
+### [Pipeline walkthrough](pipeline_walkthrough.ipynb)
+
+Markdown → classify → extract → vision → summarize with figures.
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">DICIE</span>
+
+### [DICIE pipeline walkthrough](docie_pipeline_walkthrough.ipynb)
+
+Paper Fig. 1 stages, page images, review routing, batch `run_file`.
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">Baseline</span>
+
+### [Random Forest text + handwriting](random_forest_text_handwriting_classification.ipynb)
+
+TF-IDF + Random Forest under OCR / handwriting noise.
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">Corpus</span>
+
+### [Sample corpus walkthrough](sample_document_corpus_walkthrough.ipynb)
+
+Seed and query the SQLite medical / salvage store.
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">SQL</span>
+
+### [Sample corpus SQL integrations](sample_corpus_sql_integrations.ipynb)
+
+SQL-oriented views over `DocumentStore`.
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">Train</span>
+
+### [Sample corpus train → test](sample_corpus_train_test_pipeline.ipynb)
+
+Export corpus rows into train/eval preparation paths.
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">RVL-CDIP</span>
+
+### [RVL-CDIP recreation sampling](rvl_cdip_recreation_sampling.ipynb)
+
+SQL queries + 60–70 seeded samples per class (0–15).
+:::
+
+::: {.feature-card}
+<span class="pipeline-badge">OpenRouter</span>
+
+### [RVL-CDIP OpenRouter eval](rvl_cdip_openrouter_eval.ipynb)
+
+Vision + OCR multi-model classify / structured extract PoC.
+:::
+
+:::::
+
+## Regeneration helpers
+
+```bash
+python scripts/build_sample_corpus_notebooks.py
+python scripts/build_rf_notebook.py   # Random Forest notebook builder
+python scripts/build_rvl_cdip_recreation_notebook.py
+python scripts/build_rvl_cdip_openrouter_eval_notebook.py
+```
+
+::: {.see-also}
+### See also
+
+[Pipeline hub](../pipelines/index.qmd) ·
+[Sample Document Corpus](../sample_document_corpus.md) ·
+[RVL-CDIP SQL Index](../rvl_cdip_sql.md) ·
+[DICIE Pipeline](../docie_pipeline.qmd) ·
+[How-to: Quarto site](../how-to/launch-quarto-site.qmd)
+:::

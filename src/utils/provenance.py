@@ -38,6 +38,7 @@ ProvenanceStage = Literal[
     "sample_corpus_seed",
     "sample_corpus_import",
     "sample_corpus_export",
+    "rvl_cdip_build",
 ]
 
 

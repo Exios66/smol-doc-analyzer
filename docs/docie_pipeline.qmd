@@ -1,18 +1,32 @@
-# DICIE Pipeline (Paper Fig. 1)
+---
+title: "DICIE Pipeline"
+subtitle: "Paper Fig. 1 — process → classify → extract → respond"
+---
 
+::: {.hero-kicker}
+DICIE
+:::
+
+::: {.hero-lead}
 Implements the **Document Image Classification and Information Extraction**
 chain from Raj, Dickinson & Fung, *Document Classification and Information
 Extraction framework for Insurance Applications*.
+:::
 
-Module README (API, CLI, layout): [`src/docie/README.md`](../src/docie/README.md).
-End-to-end usage (both pipelines): [`docs/usage.md`](usage.md).
+::: {.callout-note}
+## Jump links
 
-```
-Input (PDF / page images; structured · tabular · unstructured)
-  → Stage 1  Document Processing
-  → Stage 2  Document Classification  (+ page aggregation)
-  → Stage 3  Information Extraction
-  → Output   Aggregated prediction → response / downstream
+[Usage](usage.md) · [Pipeline hub](pipelines/index.qmd) ·
+[Notebook walkthrough](notebooks/docie_pipeline_walkthrough.ipynb) ·
+[Commands](reference/commands.qmd)
+:::
+
+```{mermaid}
+flowchart LR
+  IN[PDF / images / text] --> S1[1 · Document Processing]
+  S1 --> S2[2 · Classification]
+  S2 --> S3[3 · Information Extraction]
+  S3 --> OUT[4 · Aggregate + respond]
 ```
 
 This module (`src/docie/`) is **image-first** and application-scoped. It
@@ -81,8 +95,9 @@ python -m src.docie.eval --application salvage_claims
 Gold set: `data/eval/docie_eval_set.jsonl`.
 
 For a larger regenerable sample house (claim bundles, richer skeletons, train/val/test
-splits), use the SQLite corpus in [`src/storage/`](../src/storage/) — see
-[sample_document_corpus.md](sample_document_corpus.md). Export DICIE JSONL with
+splits), use the SQLite corpus in
+[`src/storage/`](https://github.com/Exios66/smol-doc-analyzer/tree/main/src/storage)
+— see [Sample Document Corpus](sample_document_corpus.md). Export DICIE JSONL with
 `python -m src.storage export --format docie`.
 
 ## Usage
@@ -139,8 +154,8 @@ pipe = DociePipeline(application="medical_bills")
 prediction = pipe.process(record_id="x", pdf_path="bill.pdf")
 ```
 
-See [`src/docie/README.md`](../src/docie/README.md) for the full CLI flag list,
-prediction schema, and REST contract.
+See [`src/docie/README.md`](https://github.com/Exios66/smol-doc-analyzer/blob/main/src/docie/README.md)
+for the full CLI flag list, prediction schema, and REST contract.
 
 ## Relation to the chained analysis orchestrator
 
@@ -174,3 +189,12 @@ Synthetic fixtures (no real insurer data):
 
 Trained ViT / LayoutLM weights are optional; heuristic backends keep the
 chain runnable without them.
+
+::: {.see-also}
+### See also
+
+[Pipeline hub](pipelines/index.qmd) · [Architecture](architecture.qmd) ·
+[Sample corpus](sample_document_corpus.md) ·
+[DICIE notebook](notebooks/docie_pipeline_walkthrough.ipynb) ·
+[Data Provenance](data_provenance.md)
+:::

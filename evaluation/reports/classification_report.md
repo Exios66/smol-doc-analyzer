@@ -3,7 +3,7 @@
 - Split: `test`
 - N: 7
 - Accuracy: **0.4286**
-- AUC (OVR): **nan**
+- AUC (OVR): —
 - AUC (OVO): **1.0000**
 - Macro F1: **0.3444**
 - Micro F1: **0.4286**

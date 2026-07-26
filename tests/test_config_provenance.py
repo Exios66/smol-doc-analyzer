@@ -18,6 +18,8 @@ def test_config_load_defaults(tmp_path, monkeypatch):
     assert cfg.skeleton_output_dir == tmp_path / "skeletons"
     assert cfg.profiles_dir.name == "profiles"
     assert cfg.sample_corpus_db_path.name == "documents.db"
+    assert cfg.rvl_cdip_db_path.name == "rvl_cdip.db"
+    assert ".venv" in str(cfg.rvl_cdip_root)
     assert (REPO_ROOT / "data" / "schemas" / "medical_bill_skeleton.schema.json").exists()
     assert (REPO_ROOT / "data" / "schemas" / "salvage_document_skeleton.schema.json").exists()
 

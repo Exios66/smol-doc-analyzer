@@ -75,7 +75,7 @@ def create_app(
             "Document Image Classification and Information Extraction "
             "(Raj et al. Fig. 1): processing → classification → extraction → response"
         ),
-        version="1.0.0b0",
+        version="1.0.0",
     )
 
     @app.get("/health")

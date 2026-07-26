@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "source": "estimated_from_noisy_scanned_form_text_patterns",
+  "source": "funsd_noise_shape_priors",
   "char_substitution_rate": 0.025,
   "char_deletion_rate": 0.008,
   "char_insertion_rate": 0.006,
@@ -58,5 +58,6 @@
     "¬",
     "¤"
   ],
-  "line_break_noise_rate": 0.04
+  "line_break_noise_rate": 0.04,
+  "observed_mean_words": 170.0
 }

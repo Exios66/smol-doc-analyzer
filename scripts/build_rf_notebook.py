@@ -418,20 +418,73 @@ Predict document type for an arbitrary snippet (typed or OCR-like text).
         ),
         code(
             '''
-def predict_document(text: str, model=doc_clf) -> dict:
-    label = model.predict([text])[0]
+def predict_document(text: str, model=doc_clf, top_k: int = 5) -> dict:
+    """Return predicted label, confidence, and top-k class probabilities."""
     proba = model.predict_proba([text])[0]
-    conf = float(proba.max())
     ranking = sorted(
-        zip(model.classes_, proba),
+        zip(model.classes_, map(float, proba)),
         key=lambda x: x[1],
         reverse=True,
     )
+    label, conf = ranking[0]
     return {
-        "predicted_label": label,
-        "confidence": conf,
-        "top3": [(c, float(p)) for c, p in ranking[:3]],
+        "predicted_label": str(label),
+        "confidence": float(conf),
+        "top_k": [{"label": str(c), "probability": float(p)} for c, p in ranking[:top_k]],
+        # keep top3 for backward compatibility with earlier notebook cells / callers
+        "top3": [(str(c), float(p)) for c, p in ranking[:3]],
     }
+
+
+def display_prediction(result: dict, *, title: str = "Document-type prediction") -> None:
+    """Pretty-print a predict_document() result in the notebook."""
+    from IPython.display import Markdown, display
+
+    label = result["predicted_label"]
+    conf = float(result["confidence"])
+    rows = result.get("top_k") or [
+        {"label": c, "probability": p} for c, p in result.get("top3", [])
+    ]
+    top_df = pd.DataFrame(rows)
+    top_df["probability_pct"] = (top_df["probability"] * 100).round(1)
+    top_df["bar"] = top_df["probability"].map(
+        lambda p: "█" * int(round(p * 20)) + "░" * (20 - int(round(p * 20)))
+    )
+
+    display(
+        Markdown(
+            f"### {title}\\n\\n"
+            f"**Predicted:** `{label}`  \\n"
+            f"**Confidence:** {conf:.1%} ({conf:.4f})"
+        )
+    )
+    display(
+        top_df.rename(
+            columns={
+                "label": "class",
+                "probability": "p",
+                "probability_pct": "p (%)",
+                "bar": "distribution",
+            }
+        )[["class", "p", "p (%)", "distribution"]]
+        .style.format({"p": "{:.4f}", "p (%)": "{:.1f}"})
+        .hide(axis="index")
+    )
+
+    fig, ax = plt.subplots(figsize=(7, max(2.2, 0.45 * len(top_df))))
+    ax.barh(
+        top_df["label"][::-1],
+        top_df["probability"][::-1],
+        color="#3b82f6",
+        edgecolor="none",
+    )
+    ax.set_xlim(0, 1)
+    ax.set_xlabel("probability")
+    ax.set_title(f"Top-{len(top_df)} class probabilities")
+    for y, p in enumerate(top_df["probability"][::-1]):
+        ax.text(min(p + 0.02, 0.98), y, f"{p:.1%}", va="center", fontsize=9)
+    plt.tight_layout()
+    plt.show()
 
 
 demo = """PROPERTY LOSS NOTICE
@@ -442,7 +495,8 @@ Description of Loss: Pipe burst in upstairs bathroom; ceiling damage reported.
 Reported By: Jordan Lee
 """
 
-print(predict_document(demo))
+result = predict_document(demo)
+display_prediction(result)
 '''
         ),
     ]

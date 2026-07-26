@@ -123,7 +123,7 @@ async def _download_url(url: str, dest: Path) -> Path:
         while True:
             req = urllib.request.Request(
                 next_url,
-                headers={"User-Agent": "smol-doc-analyzer-discord-bot/1.0.0b0"},
+                headers={"User-Agent": "smol-doc-analyzer-discord-bot/1.0.0"},
             )
             try:
                 with opener.open(req, timeout=60) as resp:  # noqa: S310

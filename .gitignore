@@ -26,6 +26,11 @@ Thumbs.db
 **/.ipynb_checkpoints/
 *.executed.ipynb
 
+# Quarto documentation website build artifacts
+docs/_site/
+.quarto/
+**/_freeze/
+
 # Logs (runtime / debug; not source of truth)
 *.log
 logs/
@@ -72,6 +77,7 @@ models/**
 # Notebook walkthrough regenerable outputs (page caches, batch dumps, PDFs)
 data/notebook_demo/docie/
 data/notebook_demo/sample_corpus/
+data/notebook_demo/rvl_cdip_recreation/
 data/notebook_demo/**/cache/
 
 # Eval harness run artifacts (JSONL/CSV cost logs)
@@ -81,6 +87,9 @@ results/eval_run_*/
 
 # Discord agent runtime data
 data/discord/**
+
+# Changelog updater (LaunchAgent / cron state + logs)
+data/changelog/
 !data/discord/.gitkeep
 
 # Sample medical/salvage document corpus DB + regenerable exports
@@ -89,3 +98,6 @@ data/sample_corpus/exports/**
 !data/sample_corpus/.gitkeep
 !data/sample_corpus/seeds/
 !data/sample_corpus/seeds/**
+
+/.quarto/
+**/*.quarto_ipynb

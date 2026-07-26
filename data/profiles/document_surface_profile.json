@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "source": "rvl_cdip_style_mapping_to_insurance_taxonomy",
+  "source": "rvl_cdip_style_mapping_refresh",
   "description": "Maps public document-surface classes to insurance taxonomy for style conditioning only.",
   "rvl_to_taxonomy_style": {
     "form": [
@@ -112,5 +112,6 @@
       "Prepared By",
       "Report Date"
     ]
-  }
+  },
+  "observed_rvl_counts": {}
 }

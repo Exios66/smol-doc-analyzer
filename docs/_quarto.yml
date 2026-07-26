@@ -1,0 +1,195 @@
+project:
+  type: website
+  output-dir: _site
+  preview:
+    port: 5905
+    browser: true
+  render:
+    - index.qmd
+    - about.qmd
+    - quick-start.qmd
+    - usage.md
+    - architecture.qmd
+    - data_provenance.md
+    - docie_pipeline.qmd
+    - sample_document_corpus.md
+    - rvl_cdip_sql.md
+    - bugfix_audit_round2.md
+    - CHANGELOG.md
+    - how-to/launch-quarto-site.qmd
+    - plan/plan.md
+    - pipelines/index.qmd
+    - reference/commands.qmd
+    - notebooks/index.qmd
+    - notebooks/*.ipynb
+
+website:
+  title: "smol-doc-analyzer"
+  description: "Local insurance document classification, extraction, and memo generation"
+  site-url: https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud
+  repo-url: https://github.com/Exios66/smol-doc-analyzer
+  repo-actions: [source, issue]
+  favicon: assets/favicon.svg
+  page-navigation: true
+  bread-crumbs: true
+  back-to-top-navigation: true
+  reader-mode: true
+  search:
+    location: navbar
+    type: overlay
+    copy-button: true
+  open-graph: true
+  twitter-card: true
+  navbar:
+    background: primary
+    logo: assets/logo.svg
+    logo-alt: "smol-doc-analyzer"
+    title: "smol-doc-analyzer"
+    left:
+      - href: index.qmd
+        text: Home
+      - href: quick-start.qmd
+        text: Quick Start
+      - href: usage.md
+        text: Usage
+      - href: architecture.qmd
+        text: Architecture
+      - text: Pipelines
+        menu:
+          - href: pipelines/index.qmd
+            text: Pipeline hub
+          - href: docie_pipeline.qmd
+            text: DICIE Pipeline
+          - href: sample_document_corpus.md
+            text: Sample Corpus
+          - href: rvl_cdip_sql.md
+            text: RVL-CDIP SQL Index
+      - href: notebooks/index.qmd
+        text: Notebooks
+      - href: reference/commands.qmd
+        text: Commands
+      - text: More
+        menu:
+          - href: data_provenance.md
+            text: Data Provenance
+          - href: how-to/launch-quarto-site.qmd
+            text: How-to — Quarto site
+          - href: plan/plan.md
+            text: Implementation plan
+          - href: bugfix_audit_round2.md
+            text: Bugfix audit
+          - href: CHANGELOG.md
+            text: Changelog
+          - href: about.qmd
+            text: About
+    right:
+      - icon: github
+        href: https://github.com/Exios66/smol-doc-analyzer
+        aria-label: GitHub repository
+      - icon: cloud
+        href: https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud
+        aria-label: Live Posit Connect Cloud site
+  page-footer:
+    left:
+      - text: "smol-doc-analyzer · synthetic data only"
+        href: index.qmd
+    center:
+      - text: Quick Start
+        href: quick-start.qmd
+      - text: Notebooks
+        href: notebooks/index.qmd
+      - text: Commands
+        href: reference/commands.qmd
+      - text: Pipelines
+        href: pipelines/index.qmd
+    right:
+      - icon: github
+        href: https://github.com/Exios66/smol-doc-analyzer
+        aria-label: GitHub
+      - icon: cloud
+        href: https://019f8d0a-2732-fecb-b056-1f69f4451c00.share.connect.posit.cloud
+        aria-label: Posit Connect Cloud
+  sidebar:
+    style: docked
+    collapse-level: 2
+    search: true
+    contents:
+      - section: "Start"
+        contents:
+          - index.qmd
+          - about.qmd
+          - quick-start.qmd
+          - reference/commands.qmd
+      - section: "Guides"
+        contents:
+          - usage.md
+          - architecture.qmd
+          - how-to/launch-quarto-site.qmd
+          - data_provenance.md
+      - section: "Pipelines"
+        contents:
+          - pipelines/index.qmd
+          - docie_pipeline.qmd
+          - sample_document_corpus.md
+          - rvl_cdip_sql.md
+      - section: "Notebooks"
+        contents:
+          - notebooks/index.qmd
+          - notebooks/pipeline_walkthrough.ipynb
+          - notebooks/docie_pipeline_walkthrough.ipynb
+          - notebooks/random_forest_text_handwriting_classification.ipynb
+          - notebooks/sample_document_corpus_walkthrough.ipynb
+          - notebooks/sample_corpus_sql_integrations.ipynb
+          - notebooks/sample_corpus_train_test_pipeline.ipynb
+          - notebooks/rvl_cdip_recreation_sampling.ipynb
+          - notebooks/rvl_cdip_openrouter_eval.ipynb
+      - section: "Project notes"
+        contents:
+          - plan/plan.md
+          - bugfix_audit_round2.md
+          - CHANGELOG.md
+
+format:
+  html:
+    theme:
+      light: [flatly, styles.scss]
+      dark: [darkly, styles.scss]
+    # Website publish uploads the whole `_site/` tree (shared site_libs +
+    # notebook `*_files/`). Keep embed-resources off — with it on, Pandoc
+    # warns "Could not fetch resource ./other-page.html" for every in-site
+    # link to a page that has not been rendered yet in this pass.
+    embed-resources: false
+    toc: true
+    toc-depth: 3
+    toc-location: right
+    toc-title: "On this page"
+    number-sections: false
+    code-copy: true
+    code-overflow: wrap
+    code-tools: true
+    code-link: true
+    code-fold: false
+    code-block-bg: true
+    code-block-border-left: "#3caa7f"
+    highlight-style: atom-one
+    smooth-scroll: true
+    link-external-newwindow: true
+    link-external-icon: true
+    fig-align: center
+    fig-cap-location: bottom
+    # Client-side Mermaid (no Chromium at render time — more reliable on Posit)
+    mermaid:
+      theme: neutral
+    grid:
+      sidebar-width: 275px
+      body-width: 900px
+      margin-width: 250px
+    include-in-header:
+      text: |
+        <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+execute:
+  eval: false
+  echo: true
+  warning: false

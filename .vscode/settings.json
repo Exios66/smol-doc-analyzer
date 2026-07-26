@@ -22,5 +22,12 @@
     "**/data/synthetic",
     "**/data/notebook_demo",
     "**/.venv"
+  ],
+  "cursorpyright.analysis.exclude": [
+    "**/wandb",
+    "**/models",
+    "**/data/synthetic",
+    "**/data/notebook_demo",
+    "**/.venv"
   ]
 }
