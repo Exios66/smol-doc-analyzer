@@ -19,6 +19,21 @@ from scaffolding through the first 1.x baseline (`1.0.0`).
 
 ### Added
 
+- **Braintrust RVL vision eval** (`src/braintrust_eval/`): build 10×16 @ 1024²
+  padded PNG sample sets, upload to Braintrust (`DSHB_amfam_capstone_2026` /
+  `fixed_size_sampled`), run OpenRouter classification with reasoning-token
+  capture (Kimi K3), DeepSeek R1 prompt improvement, and flagship cost
+  projections (Sonnet / Opus). CLI: `python -m src.braintrust_eval`
+- Optional extra: `pip install -e ".[braintrust]"`
+- Docs: `docs/braintrust_rvl_eval.md`; prompt template
+  `evaluation/prompts/rvl_classify_vision_bt.txt`
+- OpenRouter client: surface `reasoning` / reasoning-token usage; pass
+  `extra_body.reasoning`; encode fixed-size PNGs without re-JPEG resize
+- Config / `.env`: `BRAINTRUST_API_KEY`, `BRAINTRUST_PROJECT`,
+  `BRAINTRUST_DATASET`, `BRAINTRUST_ORG`
+- Pricing: `braintrust_vision_models` block in `evaluation/pricing.yaml`
+- Tests: `tests/test_braintrust_eval.py`
+
 - Queryable **RVL-CDIP** SQLite index (`src/rvl_cdip/`) sourced from
   [`aharley/rvl_cdip`](https://huggingface.co/datasets/aharley/rvl_cdip); Hub
   downloads + DB confined to `.venv/rvl_cdip/` (label files by default; ~38 GB

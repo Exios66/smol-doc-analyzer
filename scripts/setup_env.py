@@ -41,8 +41,8 @@ def main() -> int:
             shutil.copyfile(example, target)
             print(f"wrote {target}")
             print(
-                "Edit that file and paste OPENROUTER_API_KEY / WANDB_API_KEY / "
-                "HF_TOKEN / DISCORD_TOKEN (Discord optional)."
+                "Edit that file and paste OPENROUTER_API_KEY / BRAINTRUST_API_KEY / "
+                "WANDB_API_KEY / HF_TOKEN / DISCORD_TOKEN (Discord optional)."
             )
 
     # Import after copy so Config can see the new file
@@ -61,10 +61,16 @@ def main() -> int:
     print("")
     print("Where to get keys:")
     print("  OPENROUTER_API_KEY  https://openrouter.ai/keys")
+    print("  BRAINTRUST_API_KEY  https://www.braintrust.dev/app/settings?q=api-keys")
     print("  WANDB_API_KEY       https://wandb.ai/authorize")
     print("  HF_TOKEN            https://huggingface.co/settings/tokens  (optional)")
     print("  DISCORD_TOKEN       https://discord.com/developers/applications  (optional bot)")
     print("  DISCORD_WEBHOOK_URL Channel → Integrations → Webhooks  (optional outbound)")
+    print("")
+    print("Braintrust RVL vision evals: pip install -e \".[braintrust]\" then")
+    print("  python -m src.braintrust_eval status")
+    print("  python -m src.braintrust_eval build-dataset --placeholder")
+    print("  See docs/braintrust_rvl_eval.md")
     print("")
     print("Discord bot (Chloride): pip install -e \".[discord]\" then")
     print("  python -m src.discord_bot")

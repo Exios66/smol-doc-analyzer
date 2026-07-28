@@ -14,6 +14,7 @@ project:
     - docie_pipeline.qmd
     - sample_document_corpus.md
     - rvl_cdip_sql.md
+    - braintrust_rvl_eval.md
     - bugfix_audit_round2.md
     - CHANGELOG.md
     - how-to/launch-quarto-site.qmd
@@ -64,6 +65,8 @@ website:
             text: Sample Corpus
           - href: rvl_cdip_sql.md
             text: RVL-CDIP SQL Index
+          - href: braintrust_rvl_eval.md
+            text: Braintrust RVL Vision Eval
       - href: notebooks/index.qmd
         text: Notebooks
       - href: reference/commands.qmd
