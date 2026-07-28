@@ -76,6 +76,7 @@ def secrets_status() -> dict[str, bool]:
     _load_dotenv()
     return {
         "OPENROUTER_API_KEY": bool(_secret("OPENROUTER_API_KEY")),
+        "BRAINTRUST_API_KEY": bool(_secret("BRAINTRUST_API_KEY")),
         "WANDB_API_KEY": bool(_secret("WANDB_API_KEY")),
         "HF_TOKEN": bool(_secret("HF_TOKEN") or _secret("HUGGING_FACE_HUB_TOKEN")),
         "DISCORD_TOKEN": bool(_secret("DISCORD_TOKEN")),
@@ -138,6 +139,12 @@ class Config:
     wandb_mode: str
     wandb_api_key: str
 
+    # Braintrust eval tracking (RVL fixed-size vision experiments)
+    braintrust_api_key: str
+    braintrust_project: str
+    braintrust_dataset: str
+    braintrust_org: str
+
     # Optional Hugging Face Hub token (model/dataset downloads)
     hf_token: str
 
@@ -149,14 +156,19 @@ class Config:
         summarizer_path = os.getenv("SUMMARIZER_MODEL_PATH", "").strip()
         openrouter_key = _secret("OPENROUTER_API_KEY")
         wandb_key = _secret("WANDB_API_KEY")
+        braintrust_key = _secret("BRAINTRUST_API_KEY")
         hf_token = _secret("HF_TOKEN") or _secret("HUGGING_FACE_HUB_TOKEN")
 
-        # Propagate secrets so third-party SDKs (wandb, huggingface_hub) see them.
+        # Propagate secrets so third-party SDKs (wandb, huggingface_hub, braintrust) see them.
         # Also clear placeholder values left in os.environ by .env templates.
         if wandb_key:
             os.environ["WANDB_API_KEY"] = wandb_key
         else:
             os.environ.pop("WANDB_API_KEY", None)
+        if braintrust_key:
+            os.environ["BRAINTRUST_API_KEY"] = braintrust_key
+        else:
+            os.environ.pop("BRAINTRUST_API_KEY", None)
         if hf_token:
             os.environ.setdefault("HF_TOKEN", hf_token)
             os.environ.setdefault("HUGGING_FACE_HUB_TOKEN", hf_token)
@@ -220,5 +232,13 @@ class Config:
             wandb_entity=os.getenv("WANDB_ENTITY", ""),
             wandb_mode=os.getenv("WANDB_MODE", "online"),
             wandb_api_key=wandb_key,
+            braintrust_api_key=braintrust_key,
+            braintrust_project=os.getenv(
+                "BRAINTRUST_PROJECT", "DSHB_amfam_capstone_2026"
+            ),
+            braintrust_dataset=os.getenv(
+                "BRAINTRUST_DATASET", "fixed_size_sampled"
+            ),
+            braintrust_org=os.getenv("BRAINTRUST_ORG", ""),
             hf_token=hf_token,
         )

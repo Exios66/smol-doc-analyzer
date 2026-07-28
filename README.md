@@ -304,6 +304,23 @@ python -m src.rvl_cdip query \
 - Design notes: [docs/rvl_cdip_sql.md](docs/rvl_cdip_sql.md)
 - Tests: `pytest tests/test_rvl_cdip_store.py`
 
+## Braintrust RVL vision eval (`src/braintrust_eval/`)
+
+Fixed-size **10 images × 16 classes @ 1024×1024** classification experiments on
+Braintrust (`DSHB_amfam_capstone_2026`), with OpenRouter reasoning-token capture
+(Kimi K3) and DeepSeek R1 prompt improvement.
+
+```bash
+pip install -e ".[braintrust]"
+python -m src.braintrust_eval build-dataset --placeholder   # or full RVL sample
+python -m src.braintrust_eval upload-dataset                # needs BRAINTRUST_API_KEY
+python -m src.braintrust_eval run-eval --model moonshotai/kimi-k3
+python -m src.braintrust_eval cost-estimate
+```
+
+- Guide: [docs/braintrust_rvl_eval.md](docs/braintrust_rvl_eval.md)
+- Secrets: `BRAINTRUST_API_KEY` + `OPENROUTER_API_KEY` in `.env`
+
 ## Discord bot (Chloride)
 
 Optional Discord front-end via [Chloride](https://github.com/S4IL21/chloride)

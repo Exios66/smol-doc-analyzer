@@ -153,13 +153,94 @@ def _build_openrouter_client(cfg: Config) -> OpenAI:
 
 
 def _extract_usage(response: Any) -> dict[str, int]:
+    """Normalize OpenRouter / OpenAI usage, including reasoning + cache fields."""
     usage = getattr(response, "usage", None)
     if usage is None:
-        return {"input_tokens": 0, "output_tokens": 0}
+        return {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "prompt_cached_tokens": 0,
+            "completion_reasoning_tokens": 0,
+            "total_tokens": 0,
+        }
+
+    prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+    completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+    total_tokens = int(getattr(usage, "total_tokens", 0) or 0) or (
+        prompt_tokens + completion_tokens
+    )
+
+    prompt_details = getattr(usage, "prompt_tokens_details", None)
+    completion_details = getattr(usage, "completion_tokens_details", None)
+    cached = 0
+    reasoning = 0
+    if prompt_details is not None:
+        cached = int(
+            getattr(prompt_details, "cached_tokens", None)
+            or (prompt_details.get("cached_tokens") if isinstance(prompt_details, dict) else 0)
+            or 0
+        )
+    if completion_details is not None:
+        reasoning = int(
+            getattr(completion_details, "reasoning_tokens", None)
+            or (
+                completion_details.get("reasoning_tokens")
+                if isinstance(completion_details, dict)
+                else 0
+            )
+            or 0
+        )
+
     return {
-        "input_tokens": int(getattr(usage, "prompt_tokens", 0) or 0),
-        "output_tokens": int(getattr(usage, "completion_tokens", 0) or 0),
+        "input_tokens": prompt_tokens,
+        "output_tokens": completion_tokens,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "prompt_cached_tokens": cached,
+        "completion_reasoning_tokens": reasoning,
+        "total_tokens": total_tokens,
     }
+
+
+def _extract_message_fields(message: Any) -> tuple[str, str | None]:
+    """Return ``(content, reasoning)`` from an OpenRouter chat message.
+
+    OpenRouter may place chain-of-thought in ``reasoning``, ``reasoning_content``,
+    or nested ``reasoning_details``. Prefer the first non-empty string found.
+    """
+    content = (getattr(message, "content", None) or "").strip()
+    reasoning: str | None = None
+    for attr in ("reasoning", "reasoning_content"):
+        raw = getattr(message, attr, None)
+        if isinstance(raw, str) and raw.strip():
+            reasoning = raw.strip()
+            break
+    if reasoning is None:
+        details = getattr(message, "reasoning_details", None)
+        if isinstance(details, list):
+            chunks: list[str] = []
+            for item in details:
+                if isinstance(item, dict):
+                    text = item.get("text") or item.get("content") or ""
+                else:
+                    text = getattr(item, "text", None) or getattr(item, "content", None) or ""
+                if isinstance(text, str) and text.strip():
+                    chunks.append(text.strip())
+            if chunks:
+                reasoning = "\n".join(chunks)
+        elif isinstance(details, str) and details.strip():
+            reasoning = details.strip()
+    return content, reasoning
+
+
+def encode_image_data_url_raw_png(path: Path) -> str:
+    """Encode an on-disk PNG/JPEG as a data-URL without resizing (fixed-size sets)."""
+    raw = Path(path).read_bytes()
+    mime = mimetypes.guess_type(str(path))[0] or "image/png"
+    b64 = base64.b64encode(raw).decode("ascii")
+    return f"data:{mime};base64,{b64}"
 
 
 def encode_image_data_url(
@@ -214,7 +295,16 @@ def _chat_once(
     user_prompt: str,
     max_tokens: int,
     image_data_url: str | None = None,
-) -> tuple[str, Any]:
+    temperature: float | None = None,
+    extra_body: dict[str, Any] | None = None,
+) -> tuple[str, Any, str | None]:
+    """Run one chat completion.
+
+    Returns ``(content, response, reasoning)``. Reasoning models (Kimi K3,
+    DeepSeek R1, o-series via OpenRouter) may populate ``reasoning`` while
+    leaving ``content`` as the final answer — callers must budget ``max_tokens``
+    high enough that reasoning does not consume the entire budget.
+    """
     if image_data_url:
         user_content: Any = [
             {"type": "text", "text": user_prompt},
@@ -223,25 +313,43 @@ def _chat_once(
     else:
         user_content = user_prompt
 
-    response = client.chat.completions.create(
-        model=model,
-        max_tokens=max_tokens,
-        messages=[
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content},
         ],
-    )
+    }
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+    if extra_body:
+        kwargs["extra_body"] = extra_body
+
+    response = client.chat.completions.create(**kwargs)
     if not response.choices:
         raise ValueError("Empty generation result (no choices) -- retrying.")
 
     choice = response.choices[0]
     finish_reason = getattr(choice, "finish_reason", None)
-    content = (choice.message.content or "").strip()
+    content, reasoning = _extract_message_fields(choice.message)
+    if not content and not reasoning:
+        raise ValueError(
+            f"Empty generation result (finish_reason={finish_reason}) -- retrying."
+        )
+    # Some reasoning models burn the budget on hidden CoT and return empty content.
+    # Surface that clearly so callers can raise max_tokens (Kimi K3 needs ≥500).
+    if not content and reasoning:
+        raise ValueError(
+            "Empty content with non-empty reasoning "
+            f"(finish_reason={finish_reason}); raise max_tokens so the model "
+            "has budget left after reasoning."
+        )
     if not content:
         raise ValueError(
             f"Empty generation result (finish_reason={finish_reason}) -- retrying."
         )
-    return content, response
+    return content, response, reasoning
 
 
 class GenerationClient:
@@ -316,7 +424,7 @@ class GenerationClient:
             reraise=True,
         )
         def _once() -> str:
-            content, _response = _chat_once(
+            content, _response, _reasoning = _chat_once(
                 self._client,
                 model=model,
                 system_prompt=system_prompt,
@@ -381,8 +489,20 @@ class OpenRouterClient:
     def complete(self, prompt: str, **kwargs: Any) -> dict[str, Any]:
         max_tokens = int(kwargs.get("max_tokens", 1024))
         system_prompt = kwargs.get("system_prompt", self._system_prompt)
+        temperature = kwargs.get("temperature")
+        extra_body = kwargs.get("extra_body")
+        reasoning = kwargs.get("reasoning")
+        if reasoning is not None:
+            body = dict(extra_body or {})
+            body["reasoning"] = reasoning
+            extra_body = body
         return self._complete_with_routing(
-            prompt, max_tokens, system_prompt, image_data_url=None
+            prompt,
+            max_tokens,
+            system_prompt,
+            image_data_url=None,
+            temperature=temperature,
+            extra_body=extra_body,
         )
 
     def complete_multimodal(
@@ -397,16 +517,38 @@ class OpenRouterClient:
         """Chat completion with an optional page image (vision models).
 
         Provide either ``image`` (path/bytes) or a prebuilt ``image_data_url``.
+
+        Optional kwargs:
+          - ``temperature``: sampling temperature
+          - ``reasoning``: OpenRouter reasoning config dict (effort / exclude / …)
+          - ``extra_body``: merged into the OpenAI SDK ``extra_body``
+          - ``preserve_square_png``: if True and ``image`` is a path, encode as
+            a data-URL without long-edge JPEG resize (use for fixed 1024² sets)
         """
         max_tokens = int(kwargs.get("max_tokens", 1024))
         system_prompt = kwargs.get("system_prompt", self._system_prompt)
+        temperature = kwargs.get("temperature")
+        extra_body = kwargs.get("extra_body")
+        reasoning = kwargs.get("reasoning")
+        if reasoning is not None:
+            body = dict(extra_body or {})
+            body["reasoning"] = reasoning
+            extra_body = body
         data_url = image_data_url
         if data_url is None and image is not None:
-            data_url = encode_image_data_url(image, max_long_edge=max_long_edge)
+            if kwargs.get("preserve_square_png") and isinstance(image, (str, Path)):
+                data_url = encode_image_data_url_raw_png(Path(image))
+            else:
+                data_url = encode_image_data_url(image, max_long_edge=max_long_edge)
         if data_url is None:
             raise ValueError("complete_multimodal requires image or image_data_url")
         return self._complete_with_routing(
-            prompt, max_tokens, system_prompt, image_data_url=data_url
+            prompt,
+            max_tokens,
+            system_prompt,
+            image_data_url=data_url,
+            temperature=temperature,
+            extra_body=extra_body,
         )
 
     def _complete_with_routing(
@@ -416,12 +558,20 @@ class OpenRouterClient:
         system_prompt: str,
         *,
         image_data_url: str | None,
+        temperature: float | None = None,
+        extra_body: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         errors: list[str] = []
         for model in self._model_candidates():
             try:
                 return self._complete_with_retry(
-                    model, prompt, max_tokens, system_prompt, image_data_url=image_data_url
+                    model,
+                    prompt,
+                    max_tokens,
+                    system_prompt,
+                    image_data_url=image_data_url,
+                    temperature=temperature,
+                    extra_body=extra_body,
                 )
             except Exception as exc:
                 if is_credit_unavailable_error(exc):
@@ -451,6 +601,8 @@ class OpenRouterClient:
         system_prompt: str,
         *,
         image_data_url: str | None,
+        temperature: float | None = None,
+        extra_body: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         @retry(
             stop=stop_after_attempt(self._max_retries),
@@ -459,19 +611,22 @@ class OpenRouterClient:
             reraise=True,
         )
         def _once() -> dict[str, Any]:
-            content, response = _chat_once(
+            content, response, reasoning = _chat_once(
                 self._ensure_client(),
                 model=model,
                 system_prompt=system_prompt,
                 user_prompt=prompt,
                 max_tokens=max_tokens,
                 image_data_url=image_data_url,
+                temperature=temperature,
+                extra_body=extra_body,
             )
             used_model = getattr(response, "model", None) or model
             if model != self.model:
                 logger.info("OpenRouter used free/fallback model %s", used_model)
             return {
                 "text": content,
+                "reasoning": reasoning,
                 "usage": _extract_usage(response),
                 "model": used_model,
                 "finish_reason": getattr(response.choices[0], "finish_reason", None),

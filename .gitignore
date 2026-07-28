@@ -80,6 +80,11 @@ data/notebook_demo/sample_corpus/
 data/notebook_demo/rvl_cdip_recreation/
 data/notebook_demo/**/cache/
 
+# Braintrust fixed-size sample images + run artifacts (regenerable)
+data/braintrust/fixed_size_sampled/
+data/braintrust/runs/
+!data/braintrust/.gitkeep
+
 # Eval harness run artifacts (JSONL/CSV cost logs)
 evaluation/results/**
 !evaluation/results/.gitkeep

@@ -107,6 +107,13 @@ Chain after the recreation export with
 Helpers: `src/rvl_cdip/sample_images.py`, `src/rvl_cdip/openrouter_eval.py`,
 multimodal `OpenRouterClient.complete_multimodal` in `src/utils/llm_client.py`.
 
+## Braintrust fixed-size vision eval
+
+For the **10-per-class / 1024×1024** Braintrust experiment (Kimi K3 + reasoning
+capture, DeepSeek R1 prompt improvement, Sonnet/Opus cost projections), see
+[`docs/braintrust_rvl_eval.md`](braintrust_rvl_eval.md) and
+`python -m src.braintrust_eval --help`.
+
 Related: the lighter streaming sample ingest used for characteristic profiles
 remains in `src/generation/corpus_ingest.py` (`ingest_rvl_cdip`). This module
 is the full queryable SQL house for the public dataset.
