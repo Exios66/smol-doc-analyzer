@@ -17,6 +17,15 @@ from scaffolding through the first 1.x baseline (`1.0.0`).
 
 ## [Unreleased]
 
+### Changed
+
+- Strengthened RVL vision `CLASSIFICATION_PROMPT` /
+  `evaluation/prompts/rvl_classify_vision_bt.txt` with purpose-first
+  classification policy, label boundary rules, tie-breakers, confusion
+  priorities, and few-shot examples targeting `budget`, `presentation`,
+  `specification`, `scientific_report` vs `scientific_publication`, and
+  `questionnaire` (layout/medium bias fix)
+
 ### Added
 
 - **Braintrust RVL vision eval** (`src/braintrust_eval/`): build 10×16 @ 1024²
