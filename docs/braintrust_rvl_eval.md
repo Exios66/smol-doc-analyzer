@@ -47,7 +47,7 @@ flowchart LR
 | [`src/braintrust_eval/eval_runner.py`](../src/braintrust_eval/eval_runner.py) | Local scoreboard + Braintrust `Eval` (`exact_match`) |
 | [`src/braintrust_eval/prompt_improve.py`](../src/braintrust_eval/prompt_improve.py) | DeepSeek R1 prompt revision from errors |
 | [`src/braintrust_eval/cost_estimate.py`](../src/braintrust_eval/cost_estimate.py) | Scale cost projections from observed token avgs |
-| [`evaluation/prompts/rvl_classify_vision_bt.txt`](../evaluation/prompts/rvl_classify_vision_bt.txt) | Versioned prompt template |
+| [`evaluation/prompts/rvl_classify_vision_bt.txt`](../evaluation/prompts/rvl_classify_vision_bt.txt) | Versioned prompt template (purpose-first boundaries + tie-breakers) |
 
 OpenRouter client changes in
 [`src/utils/llm_client.py`](../src/utils/llm_client.py):
@@ -160,3 +160,18 @@ After a live Sonnet/Opus run, feed that run's token averages into
 Compared with the prior external Kimi K3 run at 70.00% on the same protocol
 (10×16 @ 1024², `max_tokens=500`), the capstone `CLASSIFICATION_PROMPT` improved
 accuracy by ~7 points on this recreation.
+
+## Prompt revision (purpose-first boundaries)
+
+Misclassification analysis showed layout/medium bias on ambiguous RVL labels.
+`rvl_classify_vision_bt` / `CLASSIFICATION_PROMPT` now add:
+
+- Purpose-over-layout classification policy
+- Explicit boundaries for `budget`, `presentation`, `specification`,
+  `scientific_report` vs `scientific_publication`, `questionnaire`, `handwritten`
+- Tie-breakers and common-confusion priorities
+- Few-shot examples for the weak classes above
+
+Re-run the 10×16 eval after this change and watch for lifts in `budget`,
+`presentation`, and `specification`, plus regressions on strong classes
+(`memo`, `email`, `advertisement`, `scientific_publication`, `invoice`).

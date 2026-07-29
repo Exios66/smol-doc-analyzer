@@ -86,6 +86,16 @@ def test_capstone_prompt_and_clean_prediction():
     assert "file_folder" in prompt
     assert "scientific_publication" in prompt
     assert "Output only the class name" in prompt
+    # Purpose-first boundary rules for weak / ambiguous classes
+    assert "primary purpose" in prompt
+    assert "Tie-breaker" in prompt
+    assert "MSDS" in prompt
+    assert "prefer budget over form" in prompt
+    assert "prefer presentation over memo" in prompt
+    assert "prefer specification over form" in prompt
+    assert "prefer questionnaire over form" in prompt
+    assert "Classification policy" in prompt
+    assert "Classification policy" in clf.CLASSIFICATION_PROMPT
     assert clf.clean_prediction("I think this is a news_article page.") == "news_article"
     assert clf.normalize_capstone_label("file folder") == "file_folder"
     assert clf.to_underscore_label("scientific report") == "scientific_report"
