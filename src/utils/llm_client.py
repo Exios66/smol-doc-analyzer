@@ -15,6 +15,11 @@ you want to A/B different generation-model choices without swapping SDKs.
 When paid credits are exhausted (HTTP 402 / "requires more credits"), clients
 automatically route subsequent calls to free OpenRouter models
 (``openrouter/free`` and optional ``*:free`` fallbacks).
+
+When OpenRouter free/paid paths are exhausted (credits, daily free rate limits,
+or connection failures), clients fall back to a local Ollama OpenAI-compatible
+endpoint (default ``qwen3-vl:8b``). Multimodal calls send the page image to
+vision tags; text-only Ollama models OCR the page and classify from text.
 """
 
 from __future__ import annotations
@@ -35,6 +40,7 @@ from src.utils.config import Config
 logger = logging.getLogger(__name__)
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434/v1"
 
 # Free Models Router + a couple of commonly-available :free variants.
 # Availability rotates; the router is the preferred first hop.
@@ -44,15 +50,43 @@ DEFAULT_FREE_FALLBACK_MODELS: tuple[str, ...] = (
     "openai/gpt-oss-20b:free",
 )
 
+# Local Ollama vision-first defaults (image → label). Prefer 4b for ≤8GB Macs;
+# 8b is kept as an optional upgrade when more unified memory is available.
+DEFAULT_OLLAMA_FALLBACK_MODELS: tuple[str, ...] = (
+    "qwen3-vl:4b-instruct",
+    "qwen3-vl:2b-instruct",
+    "minicpm-v:8b",
+)
+
+# Substrings that mark an Ollama tag as multimodal (image+text in).
+_OLLAMA_VISION_NEEDLES: tuple[str, ...] = (
+    "vl",
+    "vision",
+    "llava",
+    "bakllava",
+    "minicpm-v",
+    "moondream",
+    "gemma3",
+    "pixtral",
+)
+
 # Process-wide sticky switch: once credits are known to be unavailable, skip
 # paid models for the rest of the process (avoids N×402 storms during Stage A).
 _CREDITS_UNAVAILABLE = False
+# Sticky: OpenRouter unusable for this process → prefer Ollama thereafter.
+_OLLAMA_ACTIVE = False
 
 
 def reset_credit_fallback_state() -> None:
     """Test helper — clear the process-wide free-routing sticky flag."""
     global _CREDITS_UNAVAILABLE
     _CREDITS_UNAVAILABLE = False
+
+
+def reset_ollama_fallback_state() -> None:
+    """Test helper — clear the process-wide Ollama sticky flag."""
+    global _OLLAMA_ACTIVE
+    _OLLAMA_ACTIVE = False
 
 
 def is_free_model(model: str) -> bool:
@@ -65,6 +99,34 @@ def is_free_model(model: str) -> bool:
 _is_free_model = is_free_model
 
 
+def is_ollama_model(model: str) -> bool:
+    """True for local Ollama tags (``llama3.1:…``) or ``ollama/…`` slugs."""
+    slug = (model or "").strip()
+    if not slug:
+        return False
+    lower = slug.lower()
+    if lower.startswith("ollama/"):
+        return True
+    # OpenRouter slugs are ``provider/name``; Ollama tags use ``name:tag``.
+    return "/" not in slug
+
+
+def normalize_ollama_model(model: str) -> str:
+    """Strip optional ``ollama/`` prefix for the Ollama API."""
+    slug = (model or "").strip()
+    if slug.lower().startswith("ollama/"):
+        return slug.split("/", 1)[1].strip() or slug
+    return slug
+
+
+def is_ollama_vision_model(model: str) -> bool:
+    """True when an Ollama tag is expected to accept image inputs."""
+    slug = normalize_ollama_model(model).lower()
+    if not slug:
+        return False
+    return any(n in slug for n in _OLLAMA_VISION_NEEDLES)
+
+
 def parse_free_fallback_models(raw: str | None = None) -> tuple[str, ...]:
     """Parse comma-separated free fallback slugs from env or an explicit string."""
     text = (raw if raw is not None else os.getenv("OPENROUTER_FREE_FALLBACK_MODELS", "")).strip()
@@ -72,6 +134,15 @@ def parse_free_fallback_models(raw: str | None = None) -> tuple[str, ...]:
         return DEFAULT_FREE_FALLBACK_MODELS
     models = tuple(m.strip() for m in text.split(",") if m.strip())
     return models or DEFAULT_FREE_FALLBACK_MODELS
+
+
+def parse_ollama_fallback_models(raw: str | None = None) -> tuple[str, ...]:
+    """Parse comma-separated Ollama model tags from env or an explicit string."""
+    text = (raw if raw is not None else os.getenv("OLLAMA_FALLBACK_MODELS", "")).strip()
+    if not text:
+        return DEFAULT_OLLAMA_FALLBACK_MODELS
+    models = tuple(m.strip() for m in text.split(",") if m.strip())
+    return models or DEFAULT_OLLAMA_FALLBACK_MODELS
 
 
 def prefer_free_models() -> bool:
@@ -83,13 +154,29 @@ def prefer_free_models() -> bool:
     return False
 
 
-def is_credit_unavailable_error(exc: BaseException) -> bool:
-    """Detect OpenRouter / provider errors that mean paid credits are exhausted."""
-    status = getattr(exc, "status_code", None)
-    if status == 402:
-        return True
+def prefer_ollama() -> bool:
+    """True when OLLAMA_PREFER / PREFER_OLLAMA is set."""
+    for key in ("OLLAMA_PREFER", "PREFER_OLLAMA"):
+        val = os.getenv(key, "").strip().lower()
+        if val in {"1", "true", "yes", "on"}:
+            return True
+    return False
 
-    # openai.APIError and friends often nest the body on `.body` / `.message`
+
+def ollama_fallback_enabled() -> bool:
+    """Ollama fallback is on by default; set OLLAMA_FALLBACK=0 to disable."""
+    val = os.getenv("OLLAMA_FALLBACK", "1").strip().lower()
+    return val not in {"0", "false", "no", "off"}
+
+
+def ollama_base_url() -> str:
+    return (
+        os.getenv("OLLAMA_BASE_URL", "").strip()
+        or DEFAULT_OLLAMA_BASE_URL
+    )
+
+
+def _error_haystack(exc: BaseException) -> str:
     parts: list[str] = [str(exc)]
     body = getattr(exc, "body", None)
     if body is not None:
@@ -97,8 +184,16 @@ def is_credit_unavailable_error(exc: BaseException) -> bool:
     message = getattr(exc, "message", None)
     if message is not None:
         parts.append(str(message))
+    return " ".join(parts).lower()
 
-    haystack = " ".join(parts).lower()
+
+def is_credit_unavailable_error(exc: BaseException) -> bool:
+    """Detect OpenRouter / provider errors that mean paid credits are exhausted."""
+    status = getattr(exc, "status_code", None)
+    if status == 402:
+        return True
+
+    haystack = _error_haystack(exc)
     needles = (
         "payment required",
         "requires more credits",
@@ -112,9 +207,49 @@ def is_credit_unavailable_error(exc: BaseException) -> bool:
     return any(n in haystack for n in needles)
 
 
+def is_openrouter_free_quota_error(exc: BaseException) -> bool:
+    """Detect OpenRouter free-tier daily / soft rate-limit exhaustion."""
+    haystack = _error_haystack(exc)
+    needles = (
+        "free-models-per-day",
+        "free_model",
+        "free tier",
+        "openrouter_free_tier",
+        "rate limit exceeded: free",
+    )
+    return any(n in haystack for n in needles)
+
+
+def is_connection_error(exc: BaseException) -> bool:
+    """True for network / connection failures (OpenRouter unreachable, etc.)."""
+    name = type(exc).__name__.lower()
+    if "connection" in name or "timeout" in name or "connect" in name:
+        return True
+    haystack = _error_haystack(exc)
+    needles = (
+        "connection refused",
+        "connection error",
+        "connecterror",
+        "timed out",
+        "name or service not known",
+        "nodename nor servname",
+        "failed to establish a new connection",
+    )
+    return any(n in haystack for n in needles)
+
+
+def should_fall_through_to_ollama(exc: BaseException) -> bool:
+    """Errors that should abandon the current OpenRouter candidate for Ollama."""
+    return (
+        is_credit_unavailable_error(exc)
+        or is_openrouter_free_quota_error(exc)
+        or is_connection_error(exc)
+    )
+
+
 def _is_retryable_transient(exc: BaseException) -> bool:
-    """Retry rate limits / 5xx / empty responses — not credit exhaustion."""
-    if is_credit_unavailable_error(exc):
+    """Retry rate limits / 5xx / empty responses — not credit / free-quota exhaustion."""
+    if is_credit_unavailable_error(exc) or is_openrouter_free_quota_error(exc):
         return False
     status = getattr(exc, "status_code", None)
     if isinstance(status, int) and (status == 429 or status >= 500):
@@ -135,6 +270,16 @@ def _mark_credits_unavailable(reason: BaseException | str) -> None:
     _CREDITS_UNAVAILABLE = True
 
 
+def _mark_ollama_active(reason: BaseException | str) -> None:
+    global _OLLAMA_ACTIVE
+    if not _OLLAMA_ACTIVE:
+        logger.warning(
+            "OpenRouter unavailable (%s); routing to local Ollama",
+            reason if isinstance(reason, str) else type(reason).__name__,
+        )
+    _OLLAMA_ACTIVE = True
+
+
 def _build_openrouter_client(cfg: Config) -> OpenAI:
     if not cfg.openrouter_api_key:
         raise RuntimeError(
@@ -150,6 +295,105 @@ def _build_openrouter_client(cfg: Config) -> OpenAI:
             "X-Title": cfg.openrouter_app_name or "smol-doc-analyzer",
         },
     )
+
+
+def _build_ollama_client(cfg: Config | None = None) -> OpenAI:
+    """OpenAI-compatible client pointed at a local Ollama server."""
+    base = (
+        (cfg.ollama_base_url if cfg is not None else "") or ollama_base_url()
+    ).rstrip("/")
+    return OpenAI(base_url=base, api_key="ollama")
+
+
+def _ocr_text_from_data_url(image_data_url: str) -> str:
+    """Best-effort OCR for text-only Ollama fallbacks on vision tasks."""
+    if not image_data_url or "," not in image_data_url:
+        return ""
+    try:
+        raw_b64 = image_data_url.split(",", 1)[1]
+        raw = base64.b64decode(raw_b64)
+    except Exception:  # noqa: BLE001
+        return ""
+    try:
+        from PIL import Image
+        import pytesseract  # type: ignore
+    except ImportError:
+        logger.warning(
+            "Ollama vision fallback needs pillow+pytesseract; sending prompt without OCR"
+        )
+        return ""
+    try:
+        with Image.open(io.BytesIO(raw)) as im:
+            text = pytesseract.image_to_string(im.convert("RGB")) or ""
+        return " ".join(text.split())
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("OCR for Ollama fallback failed: %s", exc)
+        return ""
+
+
+def _downscale_data_url_for_ollama(
+    image_data_url: str, *, max_long_edge: int = 768, jpeg_quality: int = 80
+) -> str:
+    """Re-encode a data-URL smaller for local VLM memory (esp. 8GB machines)."""
+    if not image_data_url or "," not in image_data_url:
+        return image_data_url
+    try:
+        raw = base64.b64decode(image_data_url.split(",", 1)[1])
+    except Exception:  # noqa: BLE001
+        return image_data_url
+    try:
+        return encode_image_data_url(
+            raw, max_long_edge=max_long_edge, jpeg_quality=jpeg_quality
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Ollama image downscale failed (%s); using original", exc)
+        return image_data_url
+
+
+def _prompt_for_ollama_text(prompt: str, image_data_url: str | None) -> str:
+    """Augment a vision prompt with OCR text so text-only Llama can classify."""
+    footer = (
+        "\n\nIMPORTANT (local text model): Reply with EXACTLY one label from the "
+        "valid list above — a single lowercase underscore token such as "
+        "`letter` or `scientific_report`. No explanation, no punctuation."
+    )
+    if not image_data_url:
+        return f"{prompt}{footer}"
+    ocr = _ocr_text_from_data_url(image_data_url)
+    if not ocr:
+        return (
+            f"{prompt}\n\n"
+            "[Note: page image OCR returned empty text. Still output exactly "
+            "one valid label token.]"
+            f"{footer}"
+        )
+    return f"{prompt}\n\n--- OCR text from page image ---\n{ocr}{footer}"
+
+
+def _prompt_for_ollama_vision(prompt: str) -> str:
+    """Tighten the classification prompt for local vision models."""
+    return (
+        f"{prompt}\n\n"
+        "IMPORTANT (local vision model): Look at the attached page image and "
+        "reply with EXACTLY one label from the valid list — a single lowercase "
+        "underscore token such as `letter` or `scientific_report`. "
+        "No explanation, no punctuation."
+    )
+
+
+def _ollama_multimodal_payload(
+    model: str, prompt: str, image_data_url: str | None
+) -> tuple[str, str | None]:
+    """Return ``(user_prompt, image_or_none)`` for an Ollama candidate.
+
+    Vision tags receive a downscaled image; text-only tags get OCR-augmented text.
+    """
+    if image_data_url and is_ollama_vision_model(model):
+        return (
+            _prompt_for_ollama_vision(prompt),
+            _downscale_data_url_for_ollama(image_data_url),
+        )
+    return _prompt_for_ollama_text(prompt, image_data_url), None
 
 
 def _extract_usage(response: Any) -> dict[str, int]:
@@ -352,70 +596,136 @@ def _chat_once(
     return content, response, reasoning
 
 
+def _dedupe_models(*groups: Sequence[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for group in groups:
+        for m in group:
+            if m and m not in seen:
+                seen.add(m)
+                out.append(m)
+    return out
+
+
 class GenerationClient:
     def __init__(self, cfg: Config):
-        self._client = _build_openrouter_client(cfg)
+        self._cfg = cfg
+        self._client: OpenAI | None = None
+        self._ollama_client: OpenAI | None = None
         self._model = cfg.generation_model
         self._max_retries = max(1, int(cfg.max_retries))
         self._free_fallbacks = tuple(cfg.openrouter_free_fallback_models)
+        self._ollama_fallbacks = tuple(cfg.ollama_fallback_models)
         self._prefer_free = bool(cfg.openrouter_prefer_free) or prefer_free_models()
+        self._prefer_ollama = bool(cfg.ollama_prefer) or prefer_ollama()
+        self._ollama_enabled = bool(cfg.ollama_fallback_enabled) and ollama_fallback_enabled()
+
+    def _ensure_openrouter(self) -> OpenAI:
+        if self._client is None:
+            self._client = _build_openrouter_client(self._cfg)
+        return self._client
+
+    def _ensure_ollama(self) -> OpenAI:
+        if self._ollama_client is None:
+            self._ollama_client = _build_ollama_client(self._cfg)
+        return self._ollama_client
 
     def generate(self, system_prompt: str, user_prompt: str, max_tokens: int = 1024) -> str:
         return self._generate_with_routing(system_prompt, user_prompt, max_tokens)
 
-    def _model_candidates(self) -> list[str]:
+    def _openrouter_candidates(self) -> list[str]:
         global _CREDITS_UNAVAILABLE
+        if is_ollama_model(self._model) and not self._model.lower().startswith("ollama/"):
+            # Bare Ollama tags are not OpenRouter slugs.
+            return []
         if self._prefer_free or _CREDITS_UNAVAILABLE or _is_free_model(self._model):
             ordered = list(self._free_fallbacks)
             if _is_free_model(self._model) and self._model not in ordered:
                 ordered.insert(0, self._model)
-            # De-dupe while preserving order
-            seen: set[str] = set()
-            out: list[str] = []
-            for m in ordered:
-                if m not in seen:
-                    seen.add(m)
-                    out.append(m)
-            return out or list(DEFAULT_FREE_FALLBACK_MODELS)
+            return _dedupe_models(ordered) or list(DEFAULT_FREE_FALLBACK_MODELS)
+        return _dedupe_models([self._model], self._free_fallbacks)
 
-        return [self._model, *self._free_fallbacks]
+    def _ollama_candidates(self) -> list[str]:
+        ordered: list[str] = []
+        if is_ollama_model(self._model):
+            ordered.append(normalize_ollama_model(self._model))
+        ordered.extend(normalize_ollama_model(m) for m in self._ollama_fallbacks)
+        return _dedupe_models(ordered) or list(DEFAULT_OLLAMA_FALLBACK_MODELS)
 
     def _generate_with_routing(
         self, system_prompt: str, user_prompt: str, max_tokens: int
     ) -> str:
         errors: list[str] = []
-        for model in self._model_candidates():
-            try:
-                return self._generate_with_retry(
-                    model, system_prompt, user_prompt, max_tokens
-                )
-            except Exception as exc:
-                if is_credit_unavailable_error(exc):
-                    _mark_credits_unavailable(exc)
-                    errors.append(f"{model}: credits unavailable")
-                    continue
-                # Non-credit failure on a free candidate: try next free model.
-                if _is_free_model(model):
-                    logger.warning(
-                        "Free model %s failed (%s); trying next free fallback",
+        use_ollama_first = (
+            self._prefer_ollama
+            or _OLLAMA_ACTIVE
+            or (is_ollama_model(self._model) and self._ollama_enabled)
+        )
+
+        if not use_ollama_first:
+            for model in self._openrouter_candidates():
+                try:
+                    return self._generate_with_retry(
+                        self._ensure_openrouter(),
                         model,
-                        exc,
+                        system_prompt,
+                        user_prompt,
+                        max_tokens,
+                        via="openrouter",
                     )
-                    errors.append(f"{model}: {exc}")
+                except Exception as exc:
+                    if is_credit_unavailable_error(exc):
+                        _mark_credits_unavailable(exc)
+                        errors.append(f"{model}: credits unavailable")
+                        continue
+                    if is_openrouter_free_quota_error(exc):
+                        _mark_ollama_active(exc)
+                        errors.append(f"{model}: free quota exhausted")
+                        break
+                    if _is_free_model(model) or should_fall_through_to_ollama(exc):
+                        if should_fall_through_to_ollama(exc):
+                            _mark_ollama_active(exc)
+                        logger.warning(
+                            "OpenRouter model %s failed (%s); trying next fallback",
+                            model,
+                            exc,
+                        )
+                        errors.append(f"{model}: {exc}")
+                        continue
+                    raise
+
+        if self._ollama_enabled or use_ollama_first or _OLLAMA_ACTIVE:
+            if not use_ollama_first and errors:
+                _mark_ollama_active("; ".join(errors[:2]))
+            for model in self._ollama_candidates():
+                try:
+                    return self._generate_with_retry(
+                        self._ensure_ollama(),
+                        model,
+                        system_prompt,
+                        user_prompt,
+                        max_tokens,
+                        via="ollama",
+                    )
+                except Exception as exc:
+                    logger.warning("Ollama model %s failed (%s); trying next", model, exc)
+                    errors.append(f"ollama/{model}: {exc}")
                     continue
-                raise
 
         raise RuntimeError(
-            "OpenRouter generation failed for all model candidates "
+            "Generation failed for all model candidates "
             f"({', '.join(errors) or 'no candidates'})"
         )
 
     def _generate_with_retry(
         self,
+        client: OpenAI,
         model: str,
         system_prompt: str,
         user_prompt: str,
         max_tokens: int,
+        *,
+        via: str,
     ) -> str:
         @retry(
             stop=stop_after_attempt(self._max_retries),
@@ -425,14 +735,14 @@ class GenerationClient:
         )
         def _once() -> str:
             content, _response, _reasoning = _chat_once(
-                self._client,
+                client,
                 model=model,
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 max_tokens=max_tokens,
             )
-            if model != self._model:
-                logger.info("OpenRouter used free/fallback model %s", model)
+            if model != self._model or via == "ollama":
+                logger.info("Used %s model %s", via, model)
             return content
 
         return _once()
@@ -448,19 +758,26 @@ class OpenRouterClient:
     The underlying HTTP client is constructed lazily so dry-run / import paths
     do not require ``OPENROUTER_API_KEY``.
 
-    On credit exhaustion, falls back to free OpenRouter models (same policy as
-    ``GenerationClient``).
+    On credit / free-quota exhaustion, falls back to free OpenRouter models, then
+    to local Ollama (``qwen3-vl:8b`` by default). Vision Ollama tags receive the
+    page image; text-only tags OCR the page first.
     """
 
     def __init__(self, model: str, cfg: Config | None = None, **kwargs: Any):
         self.model = model
         self._cfg = cfg or Config.load()
         self._client: OpenAI | None = None
+        self._ollama_client: OpenAI | None = None
         self._max_retries = max(1, int(self._cfg.max_retries))
         self._free_fallbacks: Sequence[str] = tuple(
             self._cfg.openrouter_free_fallback_models
         )
+        self._ollama_fallbacks: Sequence[str] = tuple(self._cfg.ollama_fallback_models)
         self._prefer_free = bool(self._cfg.openrouter_prefer_free) or prefer_free_models()
+        self._prefer_ollama = bool(self._cfg.ollama_prefer) or prefer_ollama()
+        self._ollama_enabled = (
+            bool(self._cfg.ollama_fallback_enabled) and ollama_fallback_enabled()
+        )
         self._system_prompt = kwargs.get(
             "system_prompt",
             "You are an insurance document analysis assistant. Follow the task instructions exactly.",
@@ -471,20 +788,35 @@ class OpenRouterClient:
             self._client = _build_openrouter_client(self._cfg)
         return self._client
 
-    def _model_candidates(self) -> list[str]:
+    def _ensure_ollama(self) -> OpenAI:
+        if self._ollama_client is None:
+            self._ollama_client = _build_ollama_client(self._cfg)
+        return self._ollama_client
+
+    def _openrouter_candidates(self) -> list[str]:
         global _CREDITS_UNAVAILABLE
+        if is_ollama_model(self.model) and not self.model.lower().startswith("ollama/"):
+            return []
         if self._prefer_free or _CREDITS_UNAVAILABLE or _is_free_model(self.model):
             ordered = list(self._free_fallbacks)
             if _is_free_model(self.model) and self.model not in ordered:
                 ordered.insert(0, self.model)
-            seen: set[str] = set()
-            out: list[str] = []
-            for m in ordered:
-                if m not in seen:
-                    seen.add(m)
-                    out.append(m)
-            return out or list(DEFAULT_FREE_FALLBACK_MODELS)
-        return [self.model, *self._free_fallbacks]
+            return _dedupe_models(ordered) or list(DEFAULT_FREE_FALLBACK_MODELS)
+        return _dedupe_models([self.model], self._free_fallbacks)
+
+    def _ollama_candidates(self) -> list[str]:
+        ordered: list[str] = []
+        if is_ollama_model(self.model):
+            ordered.append(normalize_ollama_model(self.model))
+        ordered.extend(normalize_ollama_model(m) for m in self._ollama_fallbacks)
+        return _dedupe_models(ordered) or list(DEFAULT_OLLAMA_FALLBACK_MODELS)
+
+    def _use_ollama_first(self) -> bool:
+        return (
+            self._prefer_ollama
+            or _OLLAMA_ACTIVE
+            or (is_ollama_model(self.model) and self._ollama_enabled)
+        )
 
     def complete(self, prompt: str, **kwargs: Any) -> dict[str, Any]:
         max_tokens = int(kwargs.get("max_tokens", 1024))
@@ -562,39 +894,75 @@ class OpenRouterClient:
         extra_body: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         errors: list[str] = []
-        for model in self._model_candidates():
-            try:
-                return self._complete_with_retry(
-                    model,
-                    prompt,
-                    max_tokens,
-                    system_prompt,
-                    image_data_url=image_data_url,
-                    temperature=temperature,
-                    extra_body=extra_body,
-                )
-            except Exception as exc:
-                if is_credit_unavailable_error(exc):
-                    _mark_credits_unavailable(exc)
-                    errors.append(f"{model}: credits unavailable")
-                    continue
-                if _is_free_model(model):
-                    logger.warning(
-                        "Free model %s failed (%s); trying next free fallback",
+        use_ollama_first = self._use_ollama_first()
+
+        if not use_ollama_first:
+            for model in self._openrouter_candidates():
+                try:
+                    return self._complete_with_retry(
+                        self._ensure_client(),
                         model,
-                        exc,
+                        prompt,
+                        max_tokens,
+                        system_prompt,
+                        image_data_url=image_data_url,
+                        temperature=temperature,
+                        extra_body=extra_body,
+                        via="openrouter",
                     )
-                    errors.append(f"{model}: {exc}")
+                except Exception as exc:
+                    if is_credit_unavailable_error(exc):
+                        _mark_credits_unavailable(exc)
+                        errors.append(f"{model}: credits unavailable")
+                        continue
+                    if is_openrouter_free_quota_error(exc):
+                        _mark_ollama_active(exc)
+                        errors.append(f"{model}: free quota exhausted")
+                        break
+                    if _is_free_model(model) or should_fall_through_to_ollama(exc):
+                        if should_fall_through_to_ollama(exc):
+                            _mark_ollama_active(exc)
+                        logger.warning(
+                            "OpenRouter model %s failed (%s); trying next fallback",
+                            model,
+                            exc,
+                        )
+                        errors.append(f"{model}: {exc}")
+                        continue
+                    raise
+
+        if self._ollama_enabled or use_ollama_first or _OLLAMA_ACTIVE:
+            if not use_ollama_first and errors:
+                _mark_ollama_active("; ".join(errors[:2]))
+            for model in self._ollama_candidates():
+                ollama_prompt, ollama_image = _ollama_multimodal_payload(
+                    model, prompt, image_data_url
+                )
+                try:
+                    return self._complete_with_retry(
+                        self._ensure_ollama(),
+                        model,
+                        ollama_prompt,
+                        max_tokens,
+                        system_prompt,
+                        image_data_url=ollama_image,
+                        temperature=temperature,
+                        extra_body=None,
+                        via="ollama",
+                    )
+                except Exception as exc:
+                    logger.warning("Ollama model %s failed (%s); trying next", model, exc)
+                    errors.append(f"ollama/{model}: {exc}")
                     continue
-                raise
 
         raise RuntimeError(
-            "OpenRouter completion failed for all model candidates "
+            "Completion failed for all model candidates "
             f"({', '.join(errors) or 'no candidates'})"
         )
 
     def _complete_with_retry(
         self,
+        client: OpenAI,
         model: str,
         prompt: str,
         max_tokens: int,
@@ -603,6 +971,7 @@ class OpenRouterClient:
         image_data_url: str | None,
         temperature: float | None = None,
         extra_body: dict[str, Any] | None = None,
+        via: str = "openrouter",
     ) -> dict[str, Any]:
         @retry(
             stop=stop_after_attempt(self._max_retries),
@@ -612,7 +981,7 @@ class OpenRouterClient:
         )
         def _once() -> dict[str, Any]:
             content, response, reasoning = _chat_once(
-                self._ensure_client(),
+                client,
                 model=model,
                 system_prompt=system_prompt,
                 user_prompt=prompt,
@@ -622,13 +991,13 @@ class OpenRouterClient:
                 extra_body=extra_body,
             )
             used_model = getattr(response, "model", None) or model
-            if model != self.model:
-                logger.info("OpenRouter used free/fallback model %s", used_model)
+            if model != self.model or via == "ollama":
+                logger.info("Used %s model %s", via, used_model)
             return {
                 "text": content,
                 "reasoning": reasoning,
                 "usage": _extract_usage(response),
-                "model": used_model,
+                "model": used_model if via == "openrouter" else f"ollama/{used_model}",
                 "finish_reason": getattr(response.choices[0], "finish_reason", None),
             }
 

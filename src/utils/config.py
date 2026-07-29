@@ -104,6 +104,11 @@ class Config:
     openrouter_free_fallback_models: tuple[str, ...]
     # Start on free models immediately (skip paid GENERATION_MODEL).
     openrouter_prefer_free: bool
+    # Local Ollama OpenAI-compatible fallback (after OpenRouter free/paid fail).
+    ollama_base_url: str
+    ollama_fallback_models: tuple[str, ...]
+    ollama_prefer: bool
+    ollama_fallback_enabled: bool
 
     skeleton_output_dir: Path
     document_output_dir: Path
@@ -187,6 +192,21 @@ class Config:
             os.getenv(k, "").strip().lower() in {"1", "true", "yes", "on"}
             for k in ("OPENROUTER_PREFER_FREE", "GENERATION_PREFER_FREE")
         )
+        ollama_raw = os.getenv("OLLAMA_FALLBACK_MODELS", "").strip()
+        if ollama_raw:
+            ollama_fallbacks = tuple(m.strip() for m in ollama_raw.split(",") if m.strip())
+        else:
+            ollama_fallbacks = (
+                "qwen3-vl:4b-instruct",
+                "qwen3-vl:2b-instruct",
+                "minicpm-v:8b",
+            )
+        prefer_ollama = any(
+            os.getenv(k, "").strip().lower() in {"1", "true", "yes", "on"}
+            for k in ("OLLAMA_PREFER", "PREFER_OLLAMA")
+        )
+        ollama_fb_raw = os.getenv("OLLAMA_FALLBACK", "1").strip().lower()
+        ollama_fallback_enabled = ollama_fb_raw not in {"0", "false", "no", "off"}
 
         return cls(
             openrouter_api_key=openrouter_key,
@@ -197,6 +217,11 @@ class Config:
             openrouter_app_name=os.getenv("OPENROUTER_APP_NAME", ""),
             openrouter_free_fallback_models=free_fallbacks,
             openrouter_prefer_free=prefer_free,
+            ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1").strip()
+            or "http://localhost:11434/v1",
+            ollama_fallback_models=ollama_fallbacks,
+            ollama_prefer=prefer_ollama,
+            ollama_fallback_enabled=ollama_fallback_enabled,
             skeleton_output_dir=_path("SKELETON_OUTPUT_DIR", "data/synthetic/skeletons"),
             document_output_dir=_path("DOCUMENT_OUTPUT_DIR", "data/synthetic/documents"),
             memo_output_dir=_path("MEMO_OUTPUT_DIR", "data/synthetic/memos"),

@@ -17,6 +17,9 @@ Examples::
   # 4) Live Kimi K3 Braintrust experiment (captures reasoning)
   python -m src.braintrust_eval run-eval --model moonshotai/kimi-k3
 
+  # 4b) Local Ollama Qwen3-VL (native image → label)
+  python -m src.braintrust_eval run-eval --prefer-ollama
+
   # 5) Cost projections (Kimi observed avgs → Sonnet/Opus)
   python -m src.braintrust_eval cost-estimate
 
@@ -78,7 +81,16 @@ def _cmd_upload_dataset(args: argparse.Namespace) -> int:
 
 
 def _cmd_run_eval(args: argparse.Namespace) -> int:
+    import os
+
     from src.braintrust_eval.eval_runner import run_braintrust_eval, run_local_loop
+
+    if getattr(args, "prefer_ollama", False):
+        os.environ["OLLAMA_PREFER"] = "1"
+        os.environ.setdefault("OLLAMA_FALLBACK", "1")
+        # Local Qwen3-VL via Ollama (native image input).
+        if args.model == DEFAULT_VISION_REASONING_MODEL:
+            args.model = "qwen3-vl:4b-instruct"
 
     if args.local:
         summary = run_local_loop(
@@ -194,6 +206,14 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS)
     r.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE)
     r.add_argument("--dry-run", action="store_true")
+    r.add_argument(
+        "--prefer-ollama",
+        action="store_true",
+        help=(
+            "Skip OpenRouter; use local Ollama (default model "
+            "qwen3-vl:4b-instruct). Vision models receive the page image."
+        ),
+    )
     r.add_argument(
         "--local",
         action="store_true",

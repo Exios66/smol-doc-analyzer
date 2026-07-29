@@ -12,10 +12,15 @@ from src.utils import llm_client
 from src.utils.config import Config
 from src.utils.llm_client import (
     DEFAULT_FREE_FALLBACK_MODELS,
+    DEFAULT_OLLAMA_FALLBACK_MODELS,
     GenerationClient,
+    OpenRouterClient,
     is_credit_unavailable_error,
+    is_openrouter_free_quota_error,
     parse_free_fallback_models,
+    parse_ollama_fallback_models,
     reset_credit_fallback_state,
+    reset_ollama_fallback_state,
 )
 
 
@@ -30,8 +35,10 @@ class _FakeAPIError(Exception):
 @pytest.fixture(autouse=True)
 def _reset_sticky():
     reset_credit_fallback_state()
+    reset_ollama_fallback_state()
     yield
     reset_credit_fallback_state()
+    reset_ollama_fallback_state()
 
 
 def _cfg(**overrides) -> Config:
@@ -44,6 +51,10 @@ def _cfg(**overrides) -> Config:
             "max_retries": 1,
             "openrouter_free_fallback_models": DEFAULT_FREE_FALLBACK_MODELS,
             "openrouter_prefer_free": False,
+            "ollama_base_url": "http://localhost:11434/v1",
+            "ollama_fallback_models": DEFAULT_OLLAMA_FALLBACK_MODELS,
+            "ollama_prefer": False,
+            "ollama_fallback_enabled": True,
         }
     )
     data.update(overrides)
@@ -149,3 +160,116 @@ def test_config_loads_free_fallback_env(monkeypatch):
     cfg = Config.load()
     assert cfg.openrouter_free_fallback_models == ("openrouter/free", "foo/bar:free")
     assert cfg.openrouter_prefer_free is True
+
+
+def test_is_openrouter_free_quota_error():
+    exc = _FakeAPIError(
+        "Rate limit exceeded: free-models-per-day",
+        status_code=429,
+        body={"error": {"message": "Rate limit exceeded: free-models-per-day"}},
+    )
+    assert is_openrouter_free_quota_error(exc)
+
+
+def test_parse_ollama_fallback_models_default_and_custom(monkeypatch):
+    monkeypatch.delenv("OLLAMA_FALLBACK_MODELS", raising=False)
+    assert parse_ollama_fallback_models()[0] == "qwen3-vl:4b-instruct"
+    assert parse_ollama_fallback_models("a:1, b:2") == ("a:1", "b:2")
+
+
+def test_is_ollama_vision_model():
+    from src.utils.llm_client import is_ollama_vision_model
+
+    assert is_ollama_vision_model("qwen3-vl:4b-instruct")
+    assert is_ollama_vision_model("minicpm-v:8b")
+    assert is_ollama_vision_model("granite3.2-vision")
+    assert not is_ollama_vision_model("llama3.1:8b-instruct-q4_K_M")
+
+
+def test_openrouter_client_falls_back_to_ollama_on_free_quota(monkeypatch):
+    cfg = _cfg(openrouter_prefer_free=True)
+    client = OpenRouterClient(model="openrouter/free", cfg=cfg)
+    mock_or = MagicMock()
+    mock_ollama = MagicMock()
+    client._client = mock_or
+    client._ollama_client = mock_ollama
+
+    quota_err = _FakeAPIError(
+        "Rate limit exceeded: free-models-per-day",
+        status_code=429,
+        body={"error": {"message": "Rate limit exceeded: free-models-per-day"}},
+    )
+
+    ollama_response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="letter"),
+                finish_reason="stop",
+            )
+        ],
+        usage=SimpleNamespace(prompt_tokens=3, completion_tokens=1),
+        model="qwen3-vl:4b-instruct",
+    )
+
+    mock_or.chat.completions.create.side_effect = quota_err
+    mock_ollama.chat.completions.create.return_value = ollama_response
+
+    result = client.complete("classify this", max_tokens=32)
+    assert result["text"] == "letter"
+    assert result["model"] == "ollama/qwen3-vl:4b-instruct"
+    assert llm_client._OLLAMA_ACTIVE is True
+    assert mock_ollama.chat.completions.create.called
+
+
+def test_prefer_ollama_skips_openrouter():
+    cfg = _cfg(ollama_prefer=True)
+    client = OpenRouterClient(model="moonshotai/kimi-k3", cfg=cfg)
+    mock_or = MagicMock()
+    mock_ollama = MagicMock()
+    client._client = mock_or
+    client._ollama_client = mock_ollama
+    mock_ollama.chat.completions.create.return_value = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="invoice"),
+                finish_reason="stop",
+            )
+        ],
+        usage=None,
+        model="qwen3-vl:4b-instruct",
+    )
+    result = client.complete("x", max_tokens=16)
+    assert result["text"] == "invoice"
+    mock_or.chat.completions.create.assert_not_called()
+    assert mock_ollama.chat.completions.create.call_args.kwargs["model"] == (
+        "qwen3-vl:4b-instruct"
+    )
+
+
+def test_ollama_vision_passes_image_data_url():
+    cfg = _cfg(ollama_prefer=True)
+    client = OpenRouterClient(model="qwen3-vl:4b-instruct", cfg=cfg)
+    mock_ollama = MagicMock()
+    client._ollama_client = mock_ollama
+    mock_ollama.chat.completions.create.return_value = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="memo"),
+                finish_reason="stop",
+            )
+        ],
+        usage=None,
+        model="qwen3-vl:4b-instruct",
+    )
+    data_url = "data:image/png;base64,aaaa"
+    result = client.complete_multimodal(
+        "classify",
+        image_data_url=data_url,
+        max_tokens=16,
+    )
+    assert result["text"] == "memo"
+    content = mock_ollama.chat.completions.create.call_args.kwargs["messages"][1][
+        "content"
+    ]
+    assert isinstance(content, list)
+    assert any(part.get("type") == "image_url" for part in content)
