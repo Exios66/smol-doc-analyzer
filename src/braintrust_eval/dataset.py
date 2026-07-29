@@ -16,6 +16,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Sequence
 
+from src.braintrust_eval.classifier import to_underscore_label
 from src.rvl_cdip.paths import LABEL_NAMES
 from src.rvl_cdip.sample_images import materialize_samples
 from src.rvl_cdip.store import RvlCdipStore
@@ -208,12 +209,14 @@ def build_fixed_size_sampled(
                 geom = pad_to_square_png(src, out_png, size=size)
                 used_placeholder = False
 
+        label_underscore = to_underscore_label(label)
         exported.append(
             {
                 "document_id": doc_id,
                 "split": row.get("split"),
                 "label_id": label_id,
                 "label": label,
+                "label_underscore": label_underscore,
                 "image_relpath": row.get("image_relpath"),
                 "source_image_abspath": row.get("image_abspath"),
                 "fixed_image_path": str(out_png),

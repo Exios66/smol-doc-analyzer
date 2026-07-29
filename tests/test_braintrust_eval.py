@@ -72,6 +72,23 @@ def test_exact_match_scorer():
     assert exact_match_scorer({}, {"prediction": "Invoice"}, "invoice") == 1.0
     assert exact_match_scorer({}, {"prediction": "memo"}, "letter") == 0.0
     assert exact_match_scorer({}, "form", "form") == 1.0
+    # Spaced gold vs underscore prediction (capstone / RVL bridge)
+    assert (
+        exact_match_scorer({}, {"prediction": "file_folder"}, "file folder") == 1.0
+    )
+    assert (
+        exact_match_scorer({}, {"prediction": "news article"}, "news_article") == 1.0
+    )
+
+
+def test_capstone_prompt_and_clean_prediction():
+    prompt = clf.render_classification_prompt()
+    assert "file_folder" in prompt
+    assert "scientific_publication" in prompt
+    assert "Output only the class name" in prompt
+    assert clf.clean_prediction("I think this is a news_article page.") == "news_article"
+    assert clf.normalize_capstone_label("file folder") == "file_folder"
+    assert clf.to_underscore_label("scientific report") == "scientific_report"
 
 
 def test_run_local_loop_dry(tmp_path: Path):
