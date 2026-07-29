@@ -375,42 +375,168 @@ main code:not(.sourceCode *) {
   }
 }
 
-/* Dark mode — same mint language, deeper surfaces */
+/* Dark mode — same mint language, deeper surfaces, high-contrast text */
 .quarto-dark {
-  --sda-ink: #e6f4ee;
-  --sda-muted: #b7d2c5;
-  --sda-line: rgba(134, 208, 177, 0.18);
+  /* Readable ink on deep green surfaces (WCAG-friendly vs #0f1a16 / #12241e) */
+  --sda-ink: #f2faf6;
+  --sda-muted: #c8e0d4;
+  --sda-line: rgba(181, 228, 207, 0.28);
   --sda-surface: #1a2e27;
   --sda-surface-soft: #12241e;
   --sda-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   --sda-shadow-hover: 0 14px 32px rgba(0, 0, 0, 0.45);
-  --sda-accent-soft: rgba(86, 184, 146, 0.14);
-  --sda-accent-softer: rgba(86, 184, 146, 0.06);
-  --sda-accent-border: rgba(86, 184, 146, 0.28);
+  --sda-accent-soft: rgba(134, 208, 177, 0.18);
+  --sda-accent-softer: rgba(134, 208, 177, 0.08);
+  --sda-accent-border: rgba(181, 228, 207, 0.35);
+
+  /*
+   * Light theme uses mint-700/800/900 as *text* on pale backgrounds.
+   * Remap those tokens in dark mode so shared rules stay legible.
+   */
+  --sda-mint-700: #9fd9c0;
+  --sda-mint-800: #c5ebe0;
+  --sda-mint-900: #e6f4ee;
+
+  /* Bootstrap / Quarto chrome */
+  --bs-body-color: #eef7f2;
+  --bs-body-bg: #0f1a16;
+  --bs-secondary-color: #c8e0d4;
+  --bs-tertiary-color: #a8c9ba;
+  --bs-heading-color: #f2faf6;
+  --bs-link-color: #9fd9c0;
+  --bs-link-hover-color: #d9f2e6;
+  --bs-border-color: rgba(181, 228, 207, 0.28);
+  --bs-code-color: #b5e4cf;
+
+  color: var(--bs-body-color);
 
   body {
+    color: var(--bs-body-color);
     background:
-      radial-gradient(90% 50% at 0% 0%, rgba(86, 184, 146, 0.08), transparent 55%),
+      radial-gradient(90% 50% at 0% 0%, rgba(134, 208, 177, 0.1), transparent 55%),
       var(--bs-body-bg, #0f1a16);
   }
 
+  /* Core content typography */
+  main,
+  main p,
+  main li,
+  main td,
+  main th,
+  main dd,
+  main dt,
+  .content,
+  .quarto-title-meta,
+  .quarto-title-meta-contents,
+  .page-columns {
+    color: var(--bs-body-color);
+  }
+
+  main h1,
+  main h2,
+  main h3,
+  main h4,
+  main h5,
+  main h6,
+  .content h1,
+  .content h2,
+  .content h3,
+  .content h4,
+  .content h5,
+  .content h6 {
+    color: var(--bs-heading-color);
+  }
+
+  main a,
+  .content a {
+    color: var(--bs-link-color);
+  }
+
+  main a:hover,
+  .content a:hover {
+    color: var(--bs-link-hover-color);
+  }
+
+  /* Sidebar + TOC (often the worst offenders for low-contrast dark text) */
   .sidebar {
     background: #12241e !important;
+    color: var(--bs-body-color);
+  }
+
+  .sidebar a,
+  .sidebar .sidebar-item,
+  .sidebar .sidebar-item-text,
+  .sidebar nav[role="doc-toc"] ul a,
+  #TOC a,
+  .toc-active,
+  nav[role="doc-toc"] a {
+    color: #d7ebe2 !important;
+  }
+
+  .sidebar a:hover,
+  .sidebar nav[role="doc-toc"] ul a:hover,
+  #TOC a:hover,
+  nav[role="doc-toc"] a:hover {
+    color: #f2faf6 !important;
+  }
+
+  .sidebar nav[role="doc-toc"] ul a.active,
+  #TOC a.active,
+  .sidebar .sidebar-item-container .active,
+  .sidebar .sidebar-item-container .active > .sidebar-item-text,
+  nav[role="doc-toc"] a.active {
+    background: var(--sda-accent-soft);
+    color: #f2faf6 !important;
+    font-weight: 650;
+  }
+
+  /* Navbar / menus (when theme toggle puts light text on mint bar this stays fine;
+     ensure dropdowns and search UI are readable) */
+  .navbar .nav-link,
+  .navbar .navbar-title,
+  .navbar .navbar-brand {
+    color: #f4fbf7 !important;
+  }
+
+  .quarto-navbar-tools .aa-DetachedSearchButton,
+  .navbar .bi,
+  .navbar .quarto-color-scheme-toggle {
+    color: #e6f4ee !important;
+  }
+
+  .dropdown-menu {
+    background: #1a2e27;
+    border-color: var(--sda-accent-border);
+  }
+
+  .dropdown-menu .dropdown-item {
+    color: #eef7f2 !important;
+  }
+
+  .dropdown-menu .dropdown-item:hover,
+  .dropdown-menu .dropdown-item:focus {
+    background: var(--sda-accent-soft);
+    color: #fff !important;
   }
 
   #title-block-header {
     border-bottom-color: var(--sda-accent-border);
     background:
-      radial-gradient(120% 80% at 0% 0%, rgba(86, 184, 146, 0.12), transparent 55%),
-      linear-gradient(180deg, rgba(18, 36, 30, 0.85) 0%, transparent 100%);
+      radial-gradient(120% 80% at 0% 0%, rgba(134, 208, 177, 0.14), transparent 55%),
+      linear-gradient(180deg, rgba(18, 36, 30, 0.9) 0%, transparent 100%);
   }
 
   #title-block-header .title {
     color: var(--sda-ink);
   }
 
+  #title-block-header .subtitle,
+  .quarto-title-meta {
+    color: var(--sda-muted);
+  }
+
   .hero-kicker {
-    color: var(--sda-mint-300);
+    color: #e6f4ee;
     background: var(--sda-accent-soft);
     border-color: var(--sda-accent-border);
   }
@@ -420,20 +546,22 @@ main code:not(.sourceCode *) {
   }
 
   .feature-card {
-    background: linear-gradient(180deg, #1a2e27 0%, #12241e 100%);
+    background: linear-gradient(180deg, #1c322a 0%, #142820 100%);
     border-color: var(--sda-line);
+    color: var(--bs-body-color);
   }
 
   .feature-card::before {
     background: linear-gradient(90deg, var(--sda-mint-400), var(--sda-mint-300));
   }
 
+  .feature-card h3,
   .feature-card h3 a {
-    color: var(--sda-mint-300);
+    color: #e6f4ee;
   }
 
   .feature-card h3 a:hover {
-    color: var(--sda-mint-200);
+    color: #fff;
   }
 
   .feature-card p {
@@ -441,65 +569,133 @@ main code:not(.sourceCode *) {
   }
 
   .feature-card .bi {
-    color: var(--sda-mint-300);
+    color: #9fd9c0;
   }
 
   .pipeline-badge {
     background: var(--sda-accent-soft);
-    color: var(--sda-mint-300);
+    color: #e6f4ee;
     border-color: var(--sda-accent-border);
   }
 
   .see-also {
     background: linear-gradient(90deg, var(--sda-accent-soft), var(--sda-accent-softer));
+    color: var(--bs-body-color);
   }
 
   .see-also h2,
   .see-also h3 {
-    color: var(--sda-mint-300);
+    color: #e6f4ee;
+  }
+
+  .see-also a {
+    color: #b5e4cf;
+  }
+
+  /* Tables */
+  main table,
+  main .table {
+    color: var(--bs-body-color);
+    border-color: var(--sda-line);
   }
 
   main table thead th {
-    background: var(--sda-accent-soft);
-    color: var(--sda-mint-200);
+    background: rgba(134, 208, 177, 0.2);
+    color: #f2faf6;
+  }
+
+  main table tbody td {
+    color: #e8f5ef;
+    border-color: var(--sda-line);
   }
 
   main table tbody tr:nth-child(even) {
-    background: rgba(18, 36, 30, 0.65);
+    background: rgba(18, 36, 30, 0.85);
+  }
+
+  /* Callouts / panels */
+  .callout,
+  .callout-body,
+  .callout-title,
+  .callout-header {
+    color: var(--bs-body-color);
+  }
+
+  .callout {
+    background: #152822;
+    border-color: var(--sda-accent-border);
+  }
+
+  .panel-tabset .nav-tabs .nav-link {
+    color: var(--sda-muted);
+  }
+
+  .panel-tabset .nav-tabs .nav-link.active {
+    color: #f2faf6;
+    background: #1a2e27;
+    border-color: var(--sda-accent-border);
   }
 
   .about-entity .about-link {
     background: var(--sda-accent-soft);
     border-color: var(--sda-accent-border);
+    color: #eef7f2 !important;
   }
 
   .about-entity .about-link:hover {
-    background: rgba(86, 184, 146, 0.22);
-    border-color: rgba(134, 208, 177, 0.4);
+    background: rgba(134, 208, 177, 0.28);
+    border-color: rgba(181, 228, 207, 0.5);
+    color: #fff !important;
   }
 
   #about-body h3 {
-    color: var(--sda-mint-300);
+    color: #e6f4ee;
   }
 
-  .sidebar nav[role="doc-toc"] ul a.active,
-  #TOC a.active {
-    background: var(--sda-accent-soft);
-    color: var(--sda-mint-300);
+  /* Code */
+  div.sourceCode,
+  pre.sourceCode,
+  pre.code-copy-outer-scaffold {
+    background: #101c18 !important;
+    border-color: var(--sda-line);
+    color: #e6f4ee;
   }
 
   .cell-output-display .mermaid,
   pre.mermaid {
     background: #12241e;
     border-color: var(--sda-line);
+    color: var(--bs-body-color);
   }
 
   main code:not(.sourceCode *) {
-    color: var(--sda-mint-300);
-    background: var(--sda-accent-soft);
+    color: #d9f2e6;
+    background: rgba(134, 208, 177, 0.16);
+  }
+
+  /* Breadcrumbs / secondary chrome */
+  .breadcrumb,
+  .breadcrumb-item,
+  .breadcrumb-item a,
+  .quarto-alternate-formats a,
+  .page-navigation a {
+    color: #c8e0d4 !important;
+  }
+
+  .breadcrumb-item.active {
+    color: #f2faf6 !important;
   }
 
   .nav-footer {
-    background: #0f1a16 !important;
+    background: #0b1411 !important;
+    color: #cfe9dc !important;
+  }
+
+  .nav-footer a {
+    color: #b5e4cf !important;
+  }
+
+  .nav-footer a:hover {
+    color: #fff !important;
   }
 }
