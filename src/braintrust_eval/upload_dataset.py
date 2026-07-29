@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Sequence
 
+from src.braintrust_eval.classifier import normalize_capstone_label
 from src.braintrust_eval.dataset import DEFAULT_OUT_DIR, load_samples
 from src.utils.config import Config
 
@@ -59,10 +60,14 @@ def upload_dataset(
     )
 
     if clear_existing:
-        # Dataset.clear() exists on recent SDKs; fall back to insert-only.
-        clearer = getattr(dataset, "clear", None)
+        # Prefer an unbound method on the class — instance __getattr__ may
+        # consult remote metadata and raise KeyError for missing attrs.
+        clearer = getattr(type(dataset), "clear", None)
         if callable(clearer):
-            clearer()
+            clearer(dataset)
+        else:
+            # Older SDKs: delete+recreate is not exposed; insert upserts by id.
+            pass
 
     n = 0
     for row in rows:
@@ -74,15 +79,19 @@ def upload_dataset(
             filename=image_path.name,
             content_type="image/png",
         )
+        expected = normalize_capstone_label(
+            row.get("label_underscore") or row.get("label")
+        )
         dataset.insert(
             input={
                 "document_id": row["document_id"],
                 "label_id": int(row["label_id"]),
                 "image": attachment,
             },
-            expected=str(row["label"]),
+            expected=expected,
             metadata={
-                "label": row["label"],
+                "label": expected,
+                "label_spaced": row.get("label"),
                 "label_id": int(row["label_id"]),
                 "fixed_image_path": str(image_path),
                 "fixed_image_relpath": row.get("fixed_image_relpath"),

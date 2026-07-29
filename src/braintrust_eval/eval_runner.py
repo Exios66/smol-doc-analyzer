@@ -13,22 +13,22 @@ from src.braintrust_eval.classifier import (
     DEFAULT_VISION_REASONING_MODEL,
     ClassificationResult,
     classify_image,
+    normalize_capstone_label,
     render_classification_prompt,
 )
 from src.braintrust_eval.dataset import load_samples
-from src.rvl_cdip.openrouter_eval import normalize_rvl_label
 from src.utils.config import Config, REPO_ROOT
 from src.utils.io import write_json
 
 
 def exact_match_scorer(input: Any, output: Any, expected: Any) -> float:
-    """Braintrust scorer: 1.0 if normalized prediction equals gold label."""
+    """Braintrust scorer: 1.0 if underscore-normalized prediction equals gold."""
     pred = output
     if isinstance(output, dict):
         pred = output.get("prediction") or output.get("label") or ""
     return (
         1.0
-        if normalize_rvl_label(pred) == normalize_rvl_label(expected)
+        if normalize_capstone_label(pred) == normalize_capstone_label(expected)
         else 0.0
     )
 
@@ -58,6 +58,9 @@ def _attachment_to_temp_png(attachment: Any) -> Path:
 def _local_eval_cases(samples: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     cases: list[dict[str, Any]] = []
     for row in samples:
+        expected = normalize_capstone_label(
+            row.get("label_underscore") or row.get("label")
+        )
         cases.append(
             {
                 "input": {
@@ -65,9 +68,9 @@ def _local_eval_cases(samples: Sequence[dict[str, Any]]) -> list[dict[str, Any]]
                     "label_id": int(row["label_id"]),
                     "fixed_image_path": row["fixed_image_path"],
                 },
-                "expected": row["label"],
+                "expected": expected,
                 "metadata": {
-                    "label": row["label"],
+                    "label": expected,
                     "label_id": int(row["label_id"]),
                     "placeholder": bool(row.get("placeholder")),
                 },
@@ -95,7 +98,9 @@ def run_local_loop(
         results.append(
             classify_image(
                 image_path=Path(str(row["fixed_image_path"])),
-                expected_label=str(row["label"]),
+                expected_label=str(
+                    row.get("label_underscore") or row.get("label") or ""
+                ),
                 document_id=str(row["document_id"]),
                 model_id=model_id,
                 max_tokens=max_tokens,

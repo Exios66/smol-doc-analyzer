@@ -64,6 +64,27 @@ def test_extract_image_from_archive(venv_layout: Path):
     assert again == out
 
 
+def test_extract_images_batch_single_pass(venv_layout: Path):
+    pytest.importorskip("PIL")
+    png = _tiny_png_bytes()
+    rels = [
+        "imagesa/a/b/c/abc00c00/000.tif",
+        "imagesb/b/c/d/bcd00c00/001.tif",
+    ]
+    arch = rvl_paths.archive_path()
+    arch.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(arch, "w:gz") as tf:
+        for rel in rels:
+            # Mirror real archive nesting: images/<relpath>
+            info = tarfile.TarInfo(name=f"images/{rel}")
+            info.size = len(png)
+            tf.addfile(info, io.BytesIO(png))
+
+    found = si.extract_images_batch(rels)
+    assert set(found) == set(rels)
+    assert all(p.is_file() and p.read_bytes() == png for p in found.values())
+
+
 def test_materialize_prefers_existing_abspath(venv_layout: Path, tmp_path: Path):
     img = rvl_paths.images_dir() / "x" / "doc.tif"
     img.parent.mkdir(parents=True)

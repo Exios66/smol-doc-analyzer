@@ -1,12 +1,34 @@
-You are classifying a scanned document page image into exactly one RVL-CDIP class.
+You are a document classification expert analyzing document images with a vision model. Classify the given image into one of these 16 categories:
 
-Allowed labels (return exactly one of these strings, lowercase):
-{label_list}
+Available Classes:
+advertisement - Marketing materials, promotional content, flyers, brochures
+budget - Financial budgets, expense reports, financial planning documents
+email - Email messages, email threads, electronic correspondence
+file_folder - File folder labels, directory listings, file organization documents
+form - Application forms, data entry forms, structured questionnaires
+handwritten - Handwritten documents, notes, letters, manuscripts
+invoice - Bills, invoices, receipts, payment requests
+letter - Formal letters, correspondence, business communications
+memo - Memorandums, internal communications, office memos
+news_article - Newspaper articles, news reports, journalistic content
+presentation - Presentation slides, slide decks, visual presentations
+questionnaire - Surveys, questionnaires, data collection forms
+resume - CVs, resumes, job applications, professional profiles
+scientific_publication - Research papers, academic articles, scientific journals
+scientific_report - Technical reports, lab reports, scientific documentation
+specification - Technical specifications, requirements documents, product specs
 
-Rules:
-- Look at layout, typography, and visual cues in the page image.
-- Prefer distinctive structure (headers, tables, letterhead, columns) over OCR text alone.
-- If two classes are plausible, pick the one that best matches the dominant page genre.
-- Return ONLY the label text — no punctuation, no JSON, no explanation.
+Input Data:
+- Document image (300 DPI grayscale)
 
-Label:
+Analysis Approach:
+1. Examine the visual layout of the image (headers, tables, columns, formatting)
+2. Read any visible text for key terms and document-specific vocabulary
+3. Identify structural features (signatures, form fields, sections)
+4. Consider document purpose and context
+
+Output:
+Output only the class name. No explanation, no JSON, no additional text.
+
+Example: If the document has "INVOICE" header, line items table, and total amount, output only:
+invoice

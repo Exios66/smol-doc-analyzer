@@ -1,8 +1,9 @@
 """OpenRouter vision classifier used by Braintrust RVL-CDIP experiments.
 
-Matches the historical ``CLASSIFICATION_PROMPT`` + Kimi K3 settings
-(``max_tokens=500``, ``temperature=0.1``) and surfaces reasoning tokens when
-OpenRouter returns them.
+Ports ``CLASSIFICATION_PROMPT`` from the AMFAM Doc Intel capstone
+(https://github.com/grantmooslin/AMFAM_Doc_intel_capstone) with underscore
+class names, plus Kimi K3 settings (``max_tokens=500``, ``temperature=0.1``)
+and OpenRouter reasoning-token capture.
 """
 
 from __future__ import annotations
@@ -12,27 +13,71 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from src.rvl_cdip.openrouter_eval import label_list_str, normalize_rvl_label
 from src.rvl_cdip.paths import LABEL_NAMES
 from src.utils.config import Config
 from src.utils.llm_client import OpenRouterClient
 from src.utils.prompts import load_prompt
 
-# Historical constant name from the external Braintrust PoC.
+# Capstone / Braintrust class ids (underscore form). Order matches RVL label_ids.
+UNDERSCORE_LABELS: tuple[str, ...] = tuple(
+    name.replace(" ", "_") for name in LABEL_NAMES
+)
+
+VALID_CLASSES: tuple[str, ...] = (
+    "advertisement",
+    "budget",
+    "email",
+    "file_folder",
+    "form",
+    "handwritten",
+    "invoice",
+    "letter",
+    "memo",
+    "news_article",
+    "presentation",
+    "questionnaire",
+    "resume",
+    "scientific_publication",
+    "scientific_report",
+    "specification",
+)
+
+# Exact prompt text from grantmooslin/AMFAM_Doc_intel_capstone openrouter_classifier.py
 CLASSIFICATION_PROMPT = """\
-You are classifying a scanned document page image into exactly one RVL-CDIP class.
+You are a document classification expert analyzing document images with a vision model. Classify the given image into one of these 16 categories:
 
-Allowed labels (return exactly one of these strings, lowercase):
-{label_list}
+Available Classes:
+advertisement - Marketing materials, promotional content, flyers, brochures
+budget - Financial budgets, expense reports, financial planning documents
+email - Email messages, email threads, electronic correspondence
+file_folder - File folder labels, directory listings, file organization documents
+form - Application forms, data entry forms, structured questionnaires
+handwritten - Handwritten documents, notes, letters, manuscripts
+invoice - Bills, invoices, receipts, payment requests
+letter - Formal letters, correspondence, business communications
+memo - Memorandums, internal communications, office memos
+news_article - Newspaper articles, news reports, journalistic content
+presentation - Presentation slides, slide decks, visual presentations
+questionnaire - Surveys, questionnaires, data collection forms
+resume - CVs, resumes, job applications, professional profiles
+scientific_publication - Research papers, academic articles, scientific journals
+scientific_report - Technical reports, lab reports, scientific documentation
+specification - Technical specifications, requirements documents, product specs
 
-Rules:
-- Look at layout, typography, and visual cues in the page image.
-- Prefer distinctive structure (headers, tables, letterhead, columns) over OCR text alone.
-- If two classes are plausible, pick the one that best matches the dominant page genre.
-- Return ONLY the label text — no punctuation, no JSON, no explanation.
+Input Data:
+- Document image (300 DPI grayscale)
 
-Label:
-"""
+Analysis Approach:
+1. Examine the visual layout of the image (headers, tables, columns, formatting)
+2. Read any visible text for key terms and document-specific vocabulary
+3. Identify structural features (signatures, form fields, sections)
+4. Consider document purpose and context
+
+Output:
+Output only the class name. No explanation, no JSON, no additional text.
+
+Example: If the document has "INVOICE" header, line items table, and total amount, output only:
+invoice"""
 
 SYSTEM_PROMPT = (
     "You are a careful document analysis assistant for insurance-style intake. "
@@ -49,6 +94,41 @@ DEFAULT_FLAGSHIP_MODELS: tuple[str, ...] = (
 
 DEFAULT_MAX_TOKENS = 500
 DEFAULT_TEMPERATURE = 0.1
+
+
+def to_underscore_label(value: Any) -> str:
+    """Canonicalize spaced or underscore RVL labels to capstone underscore form."""
+    raw = str(value or "").strip().lower().replace("-", "_")
+    if raw in VALID_CLASSES or raw in UNDERSCORE_LABELS:
+        return raw.replace(" ", "_")
+    spaced = raw.replace("_", " ")
+    if spaced in LABEL_NAMES:
+        return spaced.replace(" ", "_")
+    # Tolerate "scientific report" / mixed punctuation
+    compact = " ".join(raw.replace("_", " ").split())
+    if compact in LABEL_NAMES:
+        return compact.replace(" ", "_")
+    return raw.replace(" ", "_")
+
+
+def clean_prediction(text: str | None) -> str:
+    """Extract a valid underscore class name from LLM response (capstone logic)."""
+    if not text:
+        return ""
+    lowered = text.strip().lower().replace("-", "_")
+    # Prefer longest class match so scientific_publication beats publication, etc.
+    for cls in sorted(VALID_CLASSES, key=len, reverse=True):
+        if cls in lowered or cls.replace("_", " ") in lowered:
+            return cls
+    return to_underscore_label(lowered.splitlines()[0] if lowered else "")
+
+
+def normalize_capstone_label(value: Any) -> str:
+    """Map gold or predicted labels onto underscore class names for scoring."""
+    cleaned = clean_prediction(str(value or ""))
+    if cleaned in VALID_CLASSES:
+        return cleaned
+    return to_underscore_label(value)
 
 
 @dataclass
@@ -73,26 +153,26 @@ class ClassificationResult:
     def exact_match(self) -> bool:
         return (
             not self.error
-            and normalize_rvl_label(self.prediction) == normalize_rvl_label(self.label)
+            and normalize_capstone_label(self.prediction)
+            == normalize_capstone_label(self.label)
         )
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
-def render_classification_prompt(
-    *,
-    prompt_template: str | None = None,
-    labels: tuple[str, ...] = LABEL_NAMES,
-) -> str:
-    """Render the classification prompt with the official RVL label list."""
-    template = prompt_template
-    if template is None:
-        try:
-            template = load_prompt("rvl_classify_vision_bt")
-        except FileNotFoundError:
-            template = CLASSIFICATION_PROMPT
-    return template.format(label_list=label_list_str(labels))
+def render_classification_prompt(*, prompt_template: str | None = None) -> str:
+    """Load the capstone classification prompt (no format placeholders)."""
+    if prompt_template is not None:
+        # Allow improved prompts that still use {label_list}.
+        if "{label_list}" in prompt_template:
+            label_list = "\n".join(f"- {name}" for name in UNDERSCORE_LABELS)
+            return prompt_template.format(label_list=label_list)
+        return prompt_template
+    try:
+        return load_prompt("rvl_classify_vision_bt")
+    except FileNotFoundError:
+        return CLASSIFICATION_PROMPT
 
 
 def default_reasoning_config(model_id: str) -> dict[str, Any] | None:
@@ -134,13 +214,14 @@ def classify_image(
     """
     doc_id = document_id or image_path.stem
     prompt = render_classification_prompt(prompt_template=prompt_template)
+    gold = normalize_capstone_label(expected_label)
 
     if dry_run:
         return ClassificationResult(
             document_id=doc_id,
-            label=expected_label,
-            prediction=normalize_rvl_label(expected_label),
-            raw_text=normalize_rvl_label(expected_label),
+            label=gold,
+            prediction=gold,
+            raw_text=gold,
             reasoning="[dry-run] no model call",
             model_id=model_id,
             dry_run=True,
@@ -170,8 +251,8 @@ def classify_image(
         raw = str(resp.get("text") or "")
         return ClassificationResult(
             document_id=doc_id,
-            label=expected_label,
-            prediction=normalize_rvl_label(raw),
+            label=gold,
+            prediction=clean_prediction(raw),
             raw_text=raw,
             reasoning=resp.get("reasoning"),
             model_id=str(resp.get("model") or model_id),
@@ -191,7 +272,7 @@ def classify_image(
     except Exception as exc:  # noqa: BLE001 — record per-row failure
         return ClassificationResult(
             document_id=doc_id,
-            label=expected_label,
+            label=gold,
             prediction="",
             raw_text="",
             model_id=model_id,

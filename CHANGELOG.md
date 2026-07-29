@@ -24,6 +24,10 @@ from scaffolding through the first 1.x baseline (`1.0.0`).
   `fixed_size_sampled`), run OpenRouter classification with reasoning-token
   capture (Kimi K3), DeepSeek R1 prompt improvement, and flagship cost
   projections (Sonnet / Opus). CLI: `python -m src.braintrust_eval`
+- Capstone-aligned `CLASSIFICATION_PROMPT` (underscore labels + per-class
+  descriptions from AMFAM Doc Intel); batch tar extract for RVL sample images
+- Live Kimi K3 recreation: **77.36%** exact_match on 160×1024² test images
+  (experiment `moonshotai_kimi-k3_10x16_1024`)
 - Optional extra: `pip install -e ".[braintrust]"`
 - Docs: `docs/braintrust_rvl_eval.md`; prompt template
   `evaluation/prompts/rvl_classify_vision_bt.txt`

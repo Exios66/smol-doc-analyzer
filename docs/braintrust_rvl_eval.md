@@ -6,6 +6,12 @@ subtitle: "Fixed-size 10×16 classification experiments with reasoning models"
 Replicate and improve the **Kimi K3 / 1024×1024 / 10-per-class** Braintrust
 experiment inside this repo.
 
+The classification prompt matches
+[`CLASSIFICATION_PROMPT`](https://github.com/grantmooslin/AMFAM_Doc_intel_capstone/blob/main/src/openrouter_classifier.py)
+from the AMFAM Doc Intel capstone (underscore class names + per-class
+descriptions). Gold labels from the HF RVL index (spaced) are normalized to the
+same underscore form for Braintrust `exact_match` scoring.
+
 Project defaults (override via `.env`):
 
 | Env | Default |
@@ -140,3 +146,17 @@ After a live Sonnet/Opus run, feed that run's token averages into
 | Scorer | `exact_match` on normalized RVL label |
 | Primary vision model | `moonshotai/kimi-k3` |
 | Prompt analyst | `deepseek/deepseek-r1` |
+
+## Latest live run (this repo)
+
+| Field | Value |
+|-------|------|
+| Experiment | `moonshotai_kimi-k3_10x16_1024` |
+| Dataset | `fixed_size_sampled` (160 real 1024² PNGs, seed 42) |
+| Accuracy (`exact_match_scorer`) | **77.36%** |
+| Errors | 0 |
+| Braintrust | [experiment](https://www.braintrust.dev/app/UW-Madison-DSHB/p/DSHB_amfam_capstone_2026/experiments/moonshotai_kimi-k3_10x16_1024) |
+
+Compared with the prior external Kimi K3 run at 70.00% on the same protocol
+(10×16 @ 1024², `max_tokens=500`), the capstone `CLASSIFICATION_PROMPT` improved
+accuracy by ~7 points on this recreation.

@@ -14,10 +14,11 @@ from typing import Any, Sequence
 from src.braintrust_eval.classifier import (
     CLASSIFICATION_PROMPT,
     DEFAULT_PROMPT_IMPROVE_MODEL,
+    UNDERSCORE_LABELS,
     default_reasoning_config,
+    normalize_capstone_label,
     render_classification_prompt,
 )
-from src.rvl_cdip.paths import LABEL_NAMES
 from src.utils.config import Config
 from src.utils.llm_client import OpenRouterClient
 from src.utils.prompts import load_prompt
@@ -25,8 +26,8 @@ from src.utils.prompts import load_prompt
 IMPROVE_SYSTEM = (
     "You are an expert at writing vision-LLM classification prompts for "
     "scanned business documents (RVL-CDIP taxonomy). Return an improved prompt "
-    "template that still uses a {label_list} placeholder and still requires the "
-    "model to output ONLY the lowercase label string."
+    "that lists the 16 underscore class names with short descriptions and still "
+    "requires the model to output ONLY the lowercase underscore class name."
 )
 
 IMPROVE_USER = """\
@@ -35,18 +36,18 @@ Current classification prompt template:
 {current_prompt}
 ---
 
-Official labels: {labels}
+Official underscore labels: {labels}
 
 Misclassification examples (gold → predicted) with model reasoning when available:
 {error_block}
 
-Write an improved prompt template that:
-1. Keeps the {{label_list}} placeholder exactly.
+Write an improved prompt that:
+1. Keeps all 16 underscore class names (file_folder, news_article, etc.).
 2. Adds brief, high-signal visual discriminators for commonly confused pairs.
-3. Still ends by asking for ONLY the label text (no JSON / explanation).
+3. Still ends by asking for ONLY the class name (no JSON / explanation).
 4. Stays concise (prefer under 500 words).
 
-Return ONLY the new prompt template text.
+Return ONLY the new prompt text.
 """
 
 
@@ -67,8 +68,8 @@ def select_errors(
         r
         for r in predictions
         if not r.get("error")
-        and str(r.get("prediction") or "").strip().lower()
-        != str(r.get("label") or "").strip().lower()
+        and normalize_capstone_label(r.get("prediction"))
+        != normalize_capstone_label(r.get("label"))
     ]
     # Prefer rows that have reasoning text for analysis.
     errors.sort(key=lambda r: (0 if r.get("reasoning") else 1, r.get("document_id") or ""))
@@ -108,7 +109,7 @@ def improve_prompt(
 
     user = IMPROVE_USER.format(
         current_prompt=base_prompt,
-        labels=", ".join(LABEL_NAMES),
+        labels=", ".join(UNDERSCORE_LABELS),
         error_block=format_error_block(errors),
     )
 
@@ -131,9 +132,6 @@ def improve_prompt(
         reasoning=default_reasoning_config(model_id),
     )
     improved = str(resp.get("text") or "").strip()
-    # Ensure placeholder survives careless edits.
-    if "{label_list}" not in improved:
-        improved = improved.rstrip() + "\n\nAllowed labels:\n{label_list}\n\nLabel:\n"
 
     return {
         "model_id": str(resp.get("model") or model_id),

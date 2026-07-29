@@ -173,15 +173,154 @@ def materialize_sample_image(sample: dict[str, Any]) -> MaterializeResult:
     )
 
 
+def extract_images_batch(
+    image_relpaths: Sequence[str],
+    *,
+    archive: Path | None = None,
+    dest_root: Path | None = None,
+) -> dict[str, Path]:
+    """Extract many members from ``rvl-cdip.tar.gz`` in a single sequential pass.
+
+    Avoids re-scanning the ~38 GB gzipped archive once per image (which is what
+    calling :func:`extract_image_from_archive` in a loop does via ``getnames()``).
+    """
+    arch = archive or archive_path()
+    if not arch.is_file():
+        return {}
+    dest_root = assert_path_under_venv(dest_root or images_dir())
+
+    needed: dict[str, Path] = {}
+    for rel in image_relpaths:
+        rel_norm = str(rel).lstrip("/")
+        if not rel_norm:
+            continue
+        dest = dest_root / rel_norm
+        if dest.is_file() and dest.stat().st_size > 0:
+            needed[rel_norm] = dest.resolve()
+        else:
+            needed.setdefault(rel_norm, dest)  # Path placeholder until extracted
+
+    pending = {rel for rel, path in needed.items() if not path.is_file()}
+    if not pending:
+        return {rel: path for rel, path in needed.items() if path.is_file()}
+
+    # Suffix index: archive members may be prefixed (e.g. images/...).
+    pending_by_suffix = {rel: rel for rel in pending}
+    found: dict[str, Path] = {
+        rel: path for rel, path in needed.items() if path.is_file()
+    }
+
+    logger.info(
+        "Batch-extracting %d images from %s (single pass)",
+        len(pending),
+        arch,
+    )
+    # Fast lookup: exact member name, images/<rel>, or */<rel>
+    pending_lookup: dict[str, str] = {}
+    for rel in pending:
+        pending_lookup[rel] = rel
+        pending_lookup[f"images/{rel}"] = rel
+
+    with tarfile.open(arch, "r:*") as tf:
+        for member in tf:
+            if not member.isfile() or not pending_lookup:
+                if not pending_lookup:
+                    break
+                continue
+            norm = member.name.lstrip("./")
+            match_rel = pending_lookup.get(norm)
+            if match_rel is None:
+                for rel in list(pending):
+                    if norm.endswith("/" + rel):
+                        match_rel = rel
+                        break
+            if match_rel is None or match_rel not in pending:
+                continue
+            dest = dest_root / match_rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            extracted = tf.extractfile(member)
+            if extracted is None:
+                continue
+            dest.write_bytes(extracted.read())
+            found[match_rel] = dest.resolve()
+            pending.discard(match_rel)
+            pending_lookup.pop(match_rel, None)
+            pending_lookup.pop(f"images/{match_rel}", None)
+
+    pending_by_suffix = {rel: rel for rel in pending}
+
+    if pending_by_suffix:
+        logger.warning(
+            "Archive batch extract missing %d/%d members (e.g. %s)",
+            len(pending_by_suffix),
+            len(pending),
+            next(iter(pending_by_suffix)),
+        )
+    return found
+
+
 def materialize_samples(
     samples: Sequence[dict[str, Any]],
     *,
     run_ocr: bool = False,
 ) -> list[MaterializeResult]:
     """Materialize images (and optional OCR) for a batch of samples."""
+    # Resolve what is already on disk; batch-extract the rest in one tar pass.
+    prelim: list[MaterializeResult | None] = [None] * len(samples)
+    missing_rels: list[str] = []
+    for idx, sample in enumerate(samples):
+        doc_id = str(sample.get("document_id") or "")
+        rel = str(sample.get("image_relpath") or "")
+        existing = resolve_image_path(sample)
+        if existing is not None:
+            prelim[idx] = MaterializeResult(
+                document_id=doc_id,
+                image_relpath=rel,
+                image_path=existing,
+                extracted=False,
+            )
+        elif rel:
+            missing_rels.append(rel.lstrip("/"))
+        else:
+            prelim[idx] = MaterializeResult(
+                document_id=doc_id,
+                image_relpath=rel,
+                image_path=None,
+                error="missing image_relpath",
+            )
+
+    extracted_map = extract_images_batch(missing_rels) if missing_rels else {}
+    arch = archive_path()
+
     results: list[MaterializeResult] = []
-    for sample in samples:
-        result = materialize_sample_image(sample)
+    for idx, sample in enumerate(samples):
+        if prelim[idx] is not None:
+            result = prelim[idx]
+            assert result is not None
+        else:
+            doc_id = str(sample.get("document_id") or "")
+            rel = str(sample.get("image_relpath") or "").lstrip("/")
+            path = extracted_map.get(rel)
+            if path is None:
+                hint = (
+                    f"image not on disk and archive missing ({arch})"
+                    if not arch.is_file()
+                    else f"member not found in archive for {rel}"
+                )
+                result = MaterializeResult(
+                    document_id=doc_id,
+                    image_relpath=rel,
+                    image_path=None,
+                    error=hint,
+                )
+            else:
+                result = MaterializeResult(
+                    document_id=doc_id,
+                    image_relpath=rel,
+                    image_path=path,
+                    extracted=True,
+                )
+
         if run_ocr and result.image_path is not None:
             ocr_path, ocr_text, ocr_err = ocr_image(result.image_path)
             result.ocr_path = ocr_path
